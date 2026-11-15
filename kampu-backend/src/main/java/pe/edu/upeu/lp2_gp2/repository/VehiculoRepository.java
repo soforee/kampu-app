@@ -1,5 +1,9 @@
 package pe.edu.upeu.lp2_gp2.repository;
 
+import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 import pe.edu.upeu.lp2_gp2.entity.Vehiculo;
@@ -14,4 +18,9 @@ public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
     Optional<Vehiculo> findByPlacaIgnoreCase(String placa);
 
     boolean existsByProveedorId(Long proveedorId);
+
+    // Bloqueo de la fila (SELECT ... FOR UPDATE): dos asignaciones simultáneas del mismo recurso se esperan
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select v from Vehiculo v where v.vehiculoId = :id")
+    Optional<Vehiculo> findByIdParaActualizar(@Param("id") Long id);
 }

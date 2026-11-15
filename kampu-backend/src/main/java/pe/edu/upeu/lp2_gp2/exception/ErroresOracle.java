@@ -43,6 +43,8 @@ public final class ErroresOracle {
             Map.entry("CHK_DET_MONTOS", "El precio debe ser mayor a 0 y el descuento no puede superar el importe."),
             Map.entry("CHK_SAL_CUPOS", "Los cupos disponibles no pueden ser negativos ni superar los cupos máximos."),
             Map.entry("CHK_RES_MONTOS", "El monto pagado no puede superar el total de la reserva."),
+            Map.entry("CHK_RES_CONFIRMADA", "Una reserva confirmada necesita un pago aprobado."),
+            Map.entry("CHK_RES_ANULADA", "Una reserva anulada no puede conservar pagos aprobados."),
             Map.entry("CHK_PAG_TC", "El tipo de cambio de un pago en soles debe ser 1."),
             // FOREIGN KEY
             Map.entry("FK_OP_VEH", "El vehículo indicado no existe."),

@@ -28,12 +28,14 @@ public class ProveedorServiceImpl implements IProveedorService {
     private final ProveedorRepository proveedorRepository;
     private final VehiculoRepository vehiculoRepository;
     private final PersonalRepository personalRepository;
+    private final IOperacionTransporteService operaciones;
 
     public ProveedorServiceImpl(ProveedorRepository proveedorRepository, VehiculoRepository vehiculoRepository,
-                                PersonalRepository personalRepository) {
+                                PersonalRepository personalRepository, IOperacionTransporteService operaciones) {
         this.proveedorRepository = proveedorRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.personalRepository = personalRepository;
+        this.operaciones = operaciones;
     }
 
     @Override
@@ -64,7 +66,9 @@ public class ProveedorServiceImpl implements IProveedorService {
     public ProveedorDTO actualizar(Long id, ProveedorRequestDTO dto) {
         Proveedor p = obtener(id);
         copiar(dto, p, id);
-        return buscarPorIdInterno(proveedorRepository.saveAndFlush(p));
+        Proveedor guardado = proveedorRepository.saveAndFlush(p);
+        operaciones.verificarAsignacionesPendientes(null, null, id);
+        return buscarPorIdInterno(guardado);
     }
 
     @Override

@@ -18,6 +18,8 @@ public class FileStorageServiceImpl implements IFileStorageService {
     @Value("${storage.location}")
     private String storageLocation;
 
+    private static final String CARPETA_DEMO = "demo";
+
     private Path raiz() {
         return Paths.get(storageLocation).toAbsolutePath().normalize();
     }
@@ -53,6 +55,8 @@ public class FileStorageServiceImpl implements IFileStorageService {
         if (ruta == null || ruta.isBlank()) return;
         Path archivo = raiz().resolve(ruta).normalize();
         if (!archivo.startsWith(raiz())) return;
+        // images/demo/ viene con el proyecto (datos de demostración): reemplazar la foto no la borra del disco
+        if (archivo.startsWith(raiz().resolve(CARPETA_DEMO).normalize())) return;
         try {
             Files.deleteIfExists(archivo);
         } catch (IOException e) {

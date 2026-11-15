@@ -22,13 +22,6 @@ export type EstadoOperacion = 'PROGRAMADO' | 'ASIGNADO' | 'EMBARQUE' | 'EN_RUTA'
 export type EstadoEjecucion = 'POR_EMPEZAR' | 'EN_CURSO' | 'TERMINADO' | 'CANCELADO';
 export type EstadoPagoPaquete = 'PAGADO_COMPLETO' | 'FALTA_PAGAR' | 'PENDIENTE_PAGO' | 'ANULADO';
 
-export interface UsuarioSistema {
-  usuarioId: number;
-  username: string;
-  rol: Rol;
-  estado: EstadoRegistro;
-}
-
 export interface PaqueteTour {
   paqueteId: number;
   nombre: string;

@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.repository;
 
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,4 +22,9 @@ public interface PersonalRepository extends JpaRepository<Personal, Long> {
     // Teléfono repetido comparando solo dígitos (mismo criterio que el índice único). idExcluir = -1 al crear.
     @Query(value = "SELECT COUNT(*) FROM PERSONAL WHERE TRANSLATE(telefono, '0+-() ', '0') = :digitos AND personal_id <> :idExcluir", nativeQuery = true)
     long contarTelefono(@Param("digitos") String digitos, @Param("idExcluir") Long idExcluir);
+
+    // Bloqueo de la fila (SELECT ... FOR UPDATE): dos asignaciones simultáneas del mismo recurso se esperan
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Personal p where p.personalId = :id")
+    Optional<Personal> findByIdParaActualizar(@Param("id") Long id);
 }

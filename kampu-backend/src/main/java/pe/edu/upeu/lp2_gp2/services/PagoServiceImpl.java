@@ -86,9 +86,12 @@ public class PagoServiceImpl implements IPagoService {
     public PagoDTO resolver(Long pagoId, String estado) {
         Pago p = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con Id: " + pagoId));
-        if (!"PENDIENTE".equals(p.getEstadoTransaccion())) throw new BusinessException("Solo se resuelven pagos pendientes.");
+        // Primero se bloquea la reserva (mismo orden que registrar y anular) y luego se relee el pago:
+        // así dos resoluciones simultáneas, o una anulación, no trabajan sobre un estado ya cambiado.
         Reserva r = reservaRepository.findByIdParaActualizar(p.getReservaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada."));
+        em.refresh(p, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        if (!"PENDIENTE".equals(p.getEstadoTransaccion())) throw new BusinessException("Solo se resuelven pagos pendientes.");
         if ("ANULADA".equals(r.getEstadoReserva())) throw new BusinessException("La reserva está anulada.");
         if ("APROBADO".equals(estado)
                 && conversor.aPEN(p.getMonto(), p.getMoneda()).compareTo(saldo(r).add(ConversorMoneda.TOLERANCIA)) > 0) {

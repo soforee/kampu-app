@@ -213,9 +213,9 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
             throw new BusinessException(o.getCodigoOperacion() + " está en estado " + o.getEstado() + "; solo se asignan operaciones PROGRAMADO.");
         }
         Map<Long, Proveedor> proveedores = proveedores();
-        Vehiculo mejorV = null;
-        Personal mejorC = null;
-        double mejorPuntaje = Double.MAX_VALUE;
+        // 1) Pares elegibles del mismo proveedor, del mejor al peor
+        record Par(Long vehiculoId, Long conductorId, double puntaje) { }
+        List<Par> pares = new ArrayList<>();
         List<Personal> conductores = personalRepository.findAllByOrderByPersonalIdAsc().stream()
                 .filter(c -> !"GUIA".equals(c.getRol()))
                 .filter(c -> motivoConductor(c, proveedores.get(c.getProveedorId()), o) == null).toList();
@@ -226,18 +226,20 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                 if (!c.getProveedorId().equals(v.getProveedorId())) continue;
                 double puntaje = (esPropio(p) ? 0 : 100_000) + (v.getCapacidadPax() - o.getPaxProgramados()) * 100
                         + horasDelDia(c.getPersonalId(), o);
-                if (puntaje < mejorPuntaje) {
-                    mejorPuntaje = puntaje;
-                    mejorV = v;
-                    mejorC = c;
-                }
+                pares.add(new Par(v.getVehiculoId(), c.getPersonalId(), puntaje));
             }
         }
-        if (mejorV == null) {
+        pares.sort(Comparator.comparingDouble(Par::puntaje));
+        // 2) Se bloquea el par y se vuelve a validar: otra asignación simultánea pudo tomarlo mientras tanto
+        Par elegido = null;
+        for (Par par : pares) {
+            if (recursosLibres(o, par.vehiculoId(), par.conductorId()) == null) { elegido = par; break; }
+        }
+        if (elegido == null) {
             throw new BusinessException("No hay vehículo y conductor elegibles de un mismo proveedor para " + o.getCodigoOperacion() + ".");
         }
-        o.setVehiculoId(mejorV.getVehiculoId());
-        o.setConductorId(mejorC.getPersonalId());
+        o.setVehiculoId(elegido.vehiculoId());
+        o.setConductorId(elegido.conductorId());
         o.setEstado(EstadoOperacion.ASIGNADO.name());
         operacionRepository.saveAndFlush(o);
         registrar(o, "Asignación automática");
@@ -295,19 +297,48 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     }
 
     private void validarRecursos(OperacionTransporte o) {
-        Vehiculo v = vehiculoRepository.findById(o.getVehiculoId())
+        String motivo = recursosLibres(o, o.getVehiculoId(), o.getConductorId());
+        if (motivo != null) throw new BusinessException(motivo);
+    }
+
+    /**
+     * Bloquea el vehículo y el conductor (siempre en ese orden: sin interbloqueos) y recién entonces revisa
+     * cruces, capacidad, licencia y horas. Así dos asignaciones simultáneas del mismo recurso se esperan y la
+     * segunda ve la primera. null si el par puede atender la operación; si no, el motivo.
+     */
+    // Se llama dentro de la transacción que guardó el cambio: los motivos se calculan con los datos ya
+    // modificados y, si alguno falla, la excepción revierte la edición.
+    @Override
+    @Transactional
+    public void verificarAsignacionesPendientes(Long vehiculoId, Long conductorId, Long proveedorId) {
+        Long sinId = -1L;
+        for (OperacionTransporte o : operacionRepository.asignadasPendientes(vehiculoId == null ? sinId : vehiculoId,
+                conductorId == null ? sinId : conductorId, proveedorId == null ? sinId : proveedorId, LocalDateTime.now())) {
+            Vehiculo v = vehiculoRepository.findById(o.getVehiculoId()).orElseThrow();
+            Personal c = personalRepository.findById(o.getConductorId()).orElseThrow();
+            Proveedor p = proveedorRepository.findById(v.getProveedorId()).orElseThrow();
+            String motivo = motivoVehiculo(v, p, o);
+            if (motivo == null) motivo = motivoConductor(c, p, o);
+            if (motivo != null) {
+                throw new BusinessException("No se puede guardar: el traslado " + etiqueta(o) + " ya asignado quedaría con "
+                        + motivo + ". Reasígnalo o cancélalo primero en Tráfico.");
+            }
+        }
+    }
+
+    private String recursosLibres(OperacionTransporte o, Long vehiculoId, Long conductorId) {
+        Vehiculo v = vehiculoRepository.findByIdParaActualizar(vehiculoId)
                 .orElseThrow(() -> new BusinessException("El vehículo seleccionado no existe."));
-        Personal c = personalRepository.findById(o.getConductorId())
+        Personal c = personalRepository.findByIdParaActualizar(conductorId)
                 .orElseThrow(() -> new BusinessException("El conductor seleccionado no existe."));
         if (!v.getProveedorId().equals(c.getProveedorId())) {
-            throw new BusinessException("El vehículo " + v.getPlaca() + " y el conductor " + c.getNombreCompleto()
-                    + " deben ser del mismo proveedor.");
+            return "El vehículo " + v.getPlaca() + " y el conductor " + c.getNombreCompleto() + " deben ser del mismo proveedor.";
         }
         Proveedor p = proveedorRepository.findById(v.getProveedorId()).orElseThrow();
         String motivo = motivoVehiculo(v, p, o);
-        if (motivo != null) throw new BusinessException(etiqueta(o) + " - vehículo: " + motivo);
+        if (motivo != null) return etiqueta(o) + " - vehículo: " + motivo;
         motivo = motivoConductor(c, p, o);
-        if (motivo != null) throw new BusinessException(etiqueta(o) + " - conductor: " + motivo);
+        return motivo == null ? null : etiqueta(o) + " - conductor: " + motivo;
     }
 
     // null si el vehículo puede atender la operación
