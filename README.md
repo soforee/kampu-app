@@ -327,6 +327,11 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 
 Ejemplos de URL: Oracle XE 21c → `jdbc:oracle:thin:@localhost:1521/XEPDB1`; Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
 
+Contacto de la agencia que muestra la página principal (correo, teléfono y WhatsApp, ciudad y redes):
+`KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO` (con código de país), `KAMPU_CONTACTO_CIUDAD`,
+`KAMPU_CONTACTO_INSTAGRAM` y `KAMPU_CONTACTO_FACEBOOK` (URL completas; si quedan vacías no se muestra su botón).
+Los valores por defecto son de demostración: cámbialos antes de publicar el sitio.
+
 ```bash
 cd kampu-backend
 ./mvnw spring-boot:run
@@ -335,7 +340,7 @@ cd kampu-backend
 (En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `Lp2Gp2Application` desde IntelliJ.)
 
 - Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
-- Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`.
+- Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
 - `spring.jpa.hibernate.ddl-auto` está en **`none`**: Hibernate no crea ni altera tablas; manda el script.
 
 ### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201

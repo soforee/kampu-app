@@ -19,4 +19,6 @@ export interface Contacto {
   email: string;
   telefono: string;
   ciudad: string;
+  instagram?: string;
+  facebook?: string;
 }
