@@ -247,7 +247,8 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     // Al terminar el viaje, las reservas confirmadas quedan COMPLETADAS (queda en AUDITORIA)
     private void completarReservas(Long salidaId) {
         for (DetalleReserva d : detalleRepository.findBySalidaId(salidaId)) {
-            reservaRepository.findById(d.getReservaId()).ifPresent(r -> {
+            // Con bloqueo: una anulación simultánea no puede quedar pisada por COMPLETADA
+            reservaRepository.findByIdParaActualizar(d.getReservaId()).ifPresent(r -> {
                 if (CONFIRMADA.equals(r.getEstadoReserva())) {
                     r.setEstadoReserva(COMPLETADA);
                     reservaRepository.save(r);
