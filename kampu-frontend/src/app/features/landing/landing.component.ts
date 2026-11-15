@@ -9,7 +9,6 @@ import { LandingSearchComponent } from './components/landing-search.component';
 import { LandingToursComponent } from './components/landing-tours.component';
 import { LandingBeneficiosComponent } from './components/landing-beneficios.component';
 import { LandingFooterComponent } from './components/landing-footer.component';
-import { LandingTestimoniosComponent } from './components/landing-testimonios.component';
 import { IconComponent } from '../../shared/icon.component';
 import { Contacto, FiltroBusqueda, TourCard } from './landing.models';
 
@@ -17,7 +16,7 @@ import { Contacto, FiltroBusqueda, TourCard } from './landing.models';
   selector: 'app-landing',
   standalone: true,
   imports: [LandingNavbarComponent, LandingHeroComponent, LandingSearchComponent, LandingToursComponent,
-    LandingBeneficiosComponent, LandingFooterComponent, LandingTestimoniosComponent, IconComponent],
+    LandingBeneficiosComponent, LandingFooterComponent, IconComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -29,9 +28,10 @@ export class LandingComponent {
     'from-emerald-600 to-zinc-900', 'from-brand-600 to-zinc-900', 'from-earth-400 to-zinc-900'
   ];
 
-  contacto: Contacto = { email: 'reservas@kampu.pe', telefono: '+51 984 000 000', ciudad: 'Cusco, Perú' };
+  // Contacto de la agencia: lo define el backend (kampu.contacto en application.yaml)
+  contacto = signal<Contacto>({ email: '', telefono: '', ciudad: '' });
   // wa.me necesita solo dígitos con el código de país
-  whatsapp = this.contacto.telefono.replace(/\D/g, '');
+  whatsapp = computed(() => this.contacto().telefono.replace(/\D/g, ''));
 
   paquetes = signal<PaqueteTour[]>([]);
   salidas = signal<SalidaProgramada[]>([]);
@@ -62,6 +62,7 @@ export class LandingComponent {
   });
 
   constructor() {
+    this.http.get<Contacto>(`${API}/contacto`).subscribe({ next: c => this.contacto.set(c), error: () => {} });
     this.http.get<PaqueteTour[]>(`${API}/paquetes`).subscribe({
       next: lista => {
         this.paquetes.set(lista);

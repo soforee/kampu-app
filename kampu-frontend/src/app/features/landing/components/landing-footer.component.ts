@@ -17,11 +17,15 @@ export class LandingFooterComponent {
 
   anio = new Date().getFullYear();
 
-  redes = [
-    { nombre: 'Instagram', url: 'https://instagram.com' },
-    { nombre: 'Facebook', url: 'https://facebook.com' },
-    { nombre: 'WhatsApp', url: 'https://wa.me/' }
-  ];
+  // Solo las redes configuradas en el backend; WhatsApp usa el teléfono de contacto
+  get redes(): { nombre: string; url: string }[] {
+    const whatsapp = this.contacto.telefono.replace(/\D/g, '');
+    return [
+      { nombre: 'Instagram', url: this.contacto.instagram ?? '' },
+      { nombre: 'Facebook', url: this.contacto.facebook ?? '' },
+      { nombre: 'WhatsApp', url: whatsapp ? 'https://wa.me/' + whatsapp : '' }
+    ].filter(r => r.url);
+  }
 
   get telefonoLink(): string {
     return 'tel:' + this.contacto.telefono.replace(/\s/g, '');

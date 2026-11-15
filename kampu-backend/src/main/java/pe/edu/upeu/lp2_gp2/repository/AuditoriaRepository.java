@@ -10,7 +10,6 @@ import java.util.List;
 
 @Repository
 public interface AuditoriaRepository extends JpaRepository<Auditoria, Long>, JpaSpecificationExecutor<Auditoria> {
-    List<Auditoria> findByEntidadAndEntidadIdOrderByAuditoriaIdAsc(String entidad, Long entidadId);
 
     @Query("SELECT DISTINCT a.entidad FROM Auditoria a ORDER BY a.entidad")
     List<String> entidades();

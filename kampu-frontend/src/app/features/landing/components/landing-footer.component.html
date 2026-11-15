@@ -36,9 +36,15 @@
       <div>
         <h3 class="footer-titulo">Contacto</h3>
         <ul class="mt-5 space-y-3 text-sm">
-          <li><a [href]="'mailto:' + contacto.email" class="footer-link"><app-icon name="mail" size="w-4 h-4" [trazo]="1.5" />{{ contacto.email }}</a></li>
-          <li><a [href]="telefonoLink" class="footer-link"><app-icon name="phone" size="w-4 h-4" [trazo]="1.5" />{{ contacto.telefono }}</a></li>
-          <li class="flex items-center gap-2 text-white/60"><app-icon name="map-pin" size="w-4 h-4" [trazo]="1.5" />{{ contacto.ciudad }}</li>
+          @if (contacto.email) {
+            <li><a [href]="'mailto:' + contacto.email" class="footer-link"><app-icon name="mail" size="w-4 h-4" [trazo]="1.5" />{{ contacto.email }}</a></li>
+          }
+          @if (contacto.telefono) {
+            <li><a [href]="telefonoLink" class="footer-link"><app-icon name="phone" size="w-4 h-4" [trazo]="1.5" />{{ contacto.telefono }}</a></li>
+          }
+          @if (contacto.ciudad) {
+            <li class="flex items-center gap-2 text-white/60"><app-icon name="map-pin" size="w-4 h-4" [trazo]="1.5" />{{ contacto.ciudad }}</li>
+          }
         </ul>
       </div>
     </div>

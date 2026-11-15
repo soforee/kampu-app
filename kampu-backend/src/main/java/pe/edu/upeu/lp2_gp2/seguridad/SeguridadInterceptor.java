@@ -56,11 +56,11 @@ public class SeguridadInterceptor implements HandlerInterceptor {
         SesionActual.limpiar();
     }
 
-    // Catálogo público (página de inicio), login y registro
+    // Catálogo público y contacto (página de inicio), login y registro
     private boolean esPublica(String metodo, String ruta) {
         if (ruta.equals("/auth/login") || ruta.equals("/auth/registro")) return true;
         boolean lectura = "GET".equals(metodo);
-        return lectura && (ruta.equals("/paquetes") || ruta.matches("/paquetes/\\d+")
+        return lectura && (ruta.equals("/contacto") || ruta.equals("/paquetes") || ruta.matches("/paquetes/\\d+")
                 || ruta.equals("/salidas") || ruta.matches("/salidas/\\d+"));
     }
 
