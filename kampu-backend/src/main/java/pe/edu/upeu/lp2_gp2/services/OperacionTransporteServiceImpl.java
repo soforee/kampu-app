@@ -306,6 +306,26 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
      * cruces, capacidad, licencia y horas. Así dos asignaciones simultáneas del mismo recurso se esperan y la
      * segunda ve la primera. null si el par puede atender la operación; si no, el motivo.
      */
+    // Se llama dentro de la transacción que guardó el cambio: los motivos se calculan con los datos ya
+    // modificados y, si alguno falla, la excepción revierte la edición.
+    @Override
+    @Transactional
+    public void verificarAsignacionesPendientes(Long vehiculoId, Long conductorId, Long proveedorId) {
+        Long sinId = -1L;
+        for (OperacionTransporte o : operacionRepository.asignadasPendientes(vehiculoId == null ? sinId : vehiculoId,
+                conductorId == null ? sinId : conductorId, proveedorId == null ? sinId : proveedorId, LocalDateTime.now())) {
+            Vehiculo v = vehiculoRepository.findById(o.getVehiculoId()).orElseThrow();
+            Personal c = personalRepository.findById(o.getConductorId()).orElseThrow();
+            Proveedor p = proveedorRepository.findById(v.getProveedorId()).orElseThrow();
+            String motivo = motivoVehiculo(v, p, o);
+            if (motivo == null) motivo = motivoConductor(c, p, o);
+            if (motivo != null) {
+                throw new BusinessException("No se puede guardar: el traslado " + etiqueta(o) + " ya asignado quedaría con "
+                        + motivo + ". Reasígnalo o cancélalo primero en Tráfico.");
+            }
+        }
+    }
+
     private String recursosLibres(OperacionTransporte o, Long vehiculoId, Long conductorId) {
         Vehiculo v = vehiculoRepository.findByIdParaActualizar(vehiculoId)
                 .orElseThrow(() -> new BusinessException("El vehículo seleccionado no existe."));

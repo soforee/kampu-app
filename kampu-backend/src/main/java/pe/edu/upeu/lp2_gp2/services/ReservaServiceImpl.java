@@ -208,6 +208,16 @@ public class ReservaServiceImpl implements IReservaService {
         if (sesion != null && sesion.usuarioId() != null) usuarioId = sesion.usuarioId();
         if (usuarioId == null) throw new BusinessException("Indica el usuario que anula la reserva (inicia sesión de nuevo).");
         if (!usuarioRepository.existsById(usuarioId)) throw new BusinessException("El usuario que anula no existe.");
+        // Una vez iniciado el viaje los cupos y pagos ya se usaron: solo el administrador puede anular
+        if (sesion == null || !"ADMIN".equals(sesion.rol())) {
+            for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
+                SalidaProgramada salida = salidaRepository.findById(d.getSalidaId()).orElse(null);
+                if (salida != null && !salida.getFechaInicio().isAfter(LocalDate.now())) {
+                    throw new BusinessException("La salida ya inició (" + salida.getFechaInicio()
+                            + "): solo un administrador puede anular esta reserva.");
+                }
+            }
+        }
         boolean hayReembolso = r.getMontoPagado() != null && r.getMontoPagado().signum() > 0;
         String forma = formaReembolso == null || formaReembolso.isBlank() ? null : formaReembolso.trim();
         if (hayReembolso && forma == null) throw new BusinessException("Indica la forma de reembolso.");
