@@ -22,7 +22,7 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 4. **Modelo v4 de 14 tablas** (+ `AUDITORIA`): `PROVEEDORES`, `PERSONAL` (guías y conductores) y `VEHICULOS` reemplazan a
    empresas/guías/conductores/rutas de la v3. Columnas añadidas a lo que trae el script v4 van marcadas `-- (+v4)`.
 5. **Exactamente dos objetos por categoría** (PL/SQL, triggers, vistas, paquetes) y **script de particionamiento por nivel de usuario**.
-6. Contraseñas con **BCrypt** (se aceptan las de texto plano antiguas de usuarios internos) y sesión con **token Bearer**.
+6. Contraseñas con **BCrypt** y sesión con **token Bearer**. Si una base antigua guarda la contraseña de un usuario interno en texto plano, se convierte a hash en su siguiente inicio de sesión. Tras 5 intentos fallidos en 10 minutos la cuenta se bloquea temporalmente.
 
 ### Cuentas
 
@@ -361,6 +361,8 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 `/lp2_gp2/images` → `http://localhost:8082`. **Orden de arranque:** Oracle → backend → frontend.
 
 ## 4. Pruebas realizadas
+
+**Pruebas automatizadas:** `./pruebas/ejecutar.sh` (API, casos rechazados y concurrencia). Ver `pruebas/README.md`; solo sobre una base recién instalada con los datos de demostración.
 
 - Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
   validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,
