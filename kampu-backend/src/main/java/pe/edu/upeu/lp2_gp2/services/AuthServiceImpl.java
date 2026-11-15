@@ -37,27 +37,42 @@ public class AuthServiceImpl implements IAuthService {
     private final JdbcTemplate jdbc;
     private final PkgSeguridadRepository seguridad;
     private final AuditoriaService auditoria;
+    private final IntentosLogin intentos;
     private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
 
     public AuthServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
                            TokenService tokens, JdbcTemplate jdbc, PkgSeguridadRepository seguridad,
-                           AuditoriaService auditoria) {
+                           AuditoriaService auditoria, IntentosLogin intentos) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.tokens = tokens;
         this.jdbc = jdbc;
         this.seguridad = seguridad;
         this.auditoria = auditoria;
+        this.intentos = intentos;
     }
 
     // Inicio de sesión auditado: LOGIN si entra, LOGIN_FALLIDO (con el motivo) si no.
-    // Se registran en transacción propia: el login es de solo lectura y el fallido termina en excepción.
+    // Se registran en transacción propia porque el fallido termina en excepción.
+    // Tras 5 fallos en 10 minutos la cuenta se bloquea temporalmente (IntentosLogin).
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public SesionDTO login(LoginRequestDTO dto) {
         String id = dto.username().trim();
         try {
-            SesionDTO s = autenticar(id, dto.password());
+            long espera = intentos.minutosBloqueo(id);
+            if (espera > 0) {
+                throw new BusinessException("Demasiados intentos fallidos. Vuelve a intentarlo en "
+                        + espera + (espera == 1 ? " minuto." : " minutos."));
+            }
+            SesionDTO s;
+            try {
+                s = autenticar(id, dto.password());
+            } catch (BusinessException ex) {
+                intentos.fallo(id);
+                throw ex;
+            }
+            intentos.exito(id);
             auditoria.registrarIndependiente(new RegistroAuditoria("LOGIN", "SESION",
                     s.usuarioId() != null ? s.usuarioId() : s.clienteId(), null, null, null,
                     "Inicio de sesión (" + s.rol() + ")", s.username(), s.rol()));
@@ -75,7 +90,7 @@ public class AuthServiceImpl implements IAuthService {
         Optional<UsuarioSistema> usuario = usuarioRepository.findByUsernameIgnoreCase(id);
         if (usuario.isPresent()) {
             UsuarioSistema u = usuario.get();
-            if (!coincide(dto.password(), u.getPasswordHash())) throw new BusinessException(CREDENCIALES);
+            if (!coincide(dto.password(), u)) throw new BusinessException(CREDENCIALES);
             if (!"ACTIVO".equals(u.getEstado())) throw new BusinessException("Tu usuario está inactivo. Contacta al administrador.");
             return dto(tokens.crear(u.getUsuarioId(), null, u.getUsername(), u.getUsername(), u.getRol()), u.getEstado());
         }
@@ -143,10 +158,18 @@ public class AuthServiceImpl implements IAuthService {
         return dto(s, "ACTIVO");
     }
 
-    // Personal interno: hash BCrypt o (datos de demostración) texto plano
-    private boolean coincide(String clave, String guardada) {
-        if (guardada == null) return false;
-        return guardada.startsWith("$2") ? bcrypt.matches(clave, guardada) : guardada.equals(clave);
+    // Personal interno: se compara con el hash BCrypt. Una base instalada con versiones anteriores puede
+    // tener la contraseña en texto plano: si coincide, se reemplaza por su hash en ese mismo inicio de sesión
+    // y desde entonces solo vale el hash.
+    private boolean coincide(String clave, UsuarioSistema u) {
+        String guardada = u.getPasswordHash();
+        if (guardada == null || clave == null) return false;
+        if (guardada.startsWith("$2")) return bcrypt.matches(clave, guardada);
+        if (!java.security.MessageDigest.isEqual(guardada.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                clave.getBytes(java.nio.charset.StandardCharsets.UTF_8))) return false;
+        jdbc.update("UPDATE USUARIOS_SISTEMA SET password_hash = ? WHERE usuario_id = ? AND password_hash = ?",
+                bcrypt.encode(clave), u.getUsuarioId(), guardada);
+        return true;
     }
 
     private SesionDTO dto(SesionUsuario s, String estado) {

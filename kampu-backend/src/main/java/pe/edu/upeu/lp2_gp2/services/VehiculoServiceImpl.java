@@ -20,12 +20,14 @@ public class VehiculoServiceImpl implements IVehiculoService {
     private final VehiculoRepository vehiculoRepository;
     private final ProveedorRepository proveedorRepository;
     private final OperacionTransporteRepository operacionRepository;
+    private final IOperacionTransporteService operaciones;
 
     public VehiculoServiceImpl(VehiculoRepository vehiculoRepository, ProveedorRepository proveedorRepository,
-                               OperacionTransporteRepository operacionRepository) {
+                               OperacionTransporteRepository operacionRepository, IOperacionTransporteService operaciones) {
         this.vehiculoRepository = vehiculoRepository;
         this.proveedorRepository = proveedorRepository;
         this.operacionRepository = operacionRepository;
+        this.operaciones = operaciones;
     }
 
     @Override
@@ -56,7 +58,9 @@ public class VehiculoServiceImpl implements IVehiculoService {
             throw new BusinessException("El vehículo tiene operaciones registradas: no puede cambiar de proveedor.");
         }
         copiar(dto, v, id);
-        return VehiculoDTO.desde(vehiculoRepository.saveAndFlush(v));
+        Vehiculo guardado = vehiculoRepository.saveAndFlush(v);
+        operaciones.verificarAsignacionesPendientes(id, null, null);
+        return VehiculoDTO.desde(guardado);
     }
 
     @Override

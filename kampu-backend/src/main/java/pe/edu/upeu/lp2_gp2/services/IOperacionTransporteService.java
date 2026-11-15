@@ -16,4 +16,6 @@ public interface IOperacionTransporteService {
     List<RecursoCandidatoDTO> candidatos(Long id);
     List<EstadoOperacionDTO> estados();
     EstimacionDuracionDTO estimarDuracion(Long origenId, Long destinoId);
+    /** Tras editar un vehículo, conductor o proveedor: falla si deja inválido un traslado ya asignado que aún no sale. */
+    void verificarAsignacionesPendientes(Long vehiculoId, Long conductorId, Long proveedorId);
 }
