@@ -40,6 +40,14 @@ public interface OperacionTransporteRepository extends JpaRepository<OperacionTr
     List<OperacionTransporte> delConductorEnElDia(@Param("id") Long id, @Param("excluir") Long excluir,
                                                   @Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
+    // Operaciones ASIGNADAS que aún no salen y usan el vehículo, el conductor o algún vehículo del proveedor
+    @Query("select o from OperacionTransporte o where o.estado = 'ASIGNADO' and o.horaSalida > :desde " +
+            "and (o.vehiculoId = :vehiculo or o.conductorId = :conductor " +
+            "or o.vehiculoId in (select v.vehiculoId from Vehiculo v where v.proveedorId = :proveedor)) " +
+            "order by o.horaSalida")
+    List<OperacionTransporte> asignadasPendientes(@Param("vehiculo") Long vehiculoId, @Param("conductor") Long conductorId,
+                                                  @Param("proveedor") Long proveedorId, @Param("desde") LocalDateTime desde);
+
     @Query(value = "SELECT SEQ_CODIGO_OPERACION.NEXTVAL FROM dual", nativeQuery = true)
     Long siguienteCodigo();
 }

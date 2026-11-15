@@ -219,7 +219,10 @@ CREATE TABLE RESERVAS (
     CONSTRAINT fk_res_usuario FOREIGN KEY (usuario_anula_id) REFERENCES USUARIOS_SISTEMA(usuario_id),  -- (+v4)
     CONSTRAINT chk_res_est    CHECK (estado_reserva IN ('PENDIENTE', 'CONFIRMADA', 'ANULADA', 'COMPLETADA')),
     CONSTRAINT chk_pago_est   CHECK (estado_pago IN ('PENDIENTE', 'PARCIAL', 'PAGADO', 'REEMBOLSADO')),
-    CONSTRAINT chk_res_montos CHECK (monto_total >= 0 AND monto_pagado BETWEEN 0 AND monto_total)    -- (+v4)
+    CONSTRAINT chk_res_montos CHECK (monto_total >= 0 AND monto_pagado BETWEEN 0 AND monto_total),   -- (+v4)
+    -- Coherencia estado / dinero: confirmar exige adelanto; anular reembolsa todo
+    CONSTRAINT chk_res_confirmada CHECK (estado_reserva <> 'CONFIRMADA' OR monto_pagado > 0),
+    CONSTRAINT chk_res_anulada    CHECK (estado_reserva <> 'ANULADA' OR monto_pagado = 0)
 );
 CREATE INDEX idx_res_cliente ON RESERVAS (cliente_id);
 

@@ -167,7 +167,8 @@ public class ReservaServiceImpl implements IReservaService {
     @Override
     @Transactional
     public ReservaDTO confirmar(Long id) {
-        Reserva r = obtener(id);
+        // Bloqueo de la fila: si alguien anula a la vez, uno espera al otro y no se pisan los estados
+        Reserva r = obtenerParaActualizar(id);
         if (!"PENDIENTE".equals(r.getEstadoReserva())) throw new BusinessException("Solo se confirman reservas pendientes.");
         // El cupo se asegura con dinero: sin adelanto aprobado la reserva sigue pendiente
         if (r.getMontoPagado() == null || r.getMontoPagado().signum() <= 0) {
@@ -182,7 +183,7 @@ public class ReservaServiceImpl implements IReservaService {
     @Override
     @Transactional
     public ReservaDTO completar(Long id) {
-        Reserva r = obtener(id);
+        Reserva r = obtenerParaActualizar(id);
         if (!"CONFIRMADA".equals(r.getEstadoReserva())) throw new BusinessException("Solo se completan reservas confirmadas.");
         for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
             SalidaProgramada salida = salidaRepository.findById(d.getSalidaId()).orElse(null);
@@ -198,8 +199,7 @@ public class ReservaServiceImpl implements IReservaService {
     @Override
     @Transactional
     public ReservaDTO anular(Long id, Long usuarioId, String formaReembolso) {
-        Reserva r = reservaRepository.findByIdParaActualizar(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con Id: " + id));
+        Reserva r = obtenerParaActualizar(id);
         if (!"PENDIENTE".equals(r.getEstadoReserva()) && !"CONFIRMADA".equals(r.getEstadoReserva())) {
             throw new BusinessException("Solo se anulan reservas pendientes o confirmadas.");
         }
@@ -208,6 +208,16 @@ public class ReservaServiceImpl implements IReservaService {
         if (sesion != null && sesion.usuarioId() != null) usuarioId = sesion.usuarioId();
         if (usuarioId == null) throw new BusinessException("Indica el usuario que anula la reserva (inicia sesión de nuevo).");
         if (!usuarioRepository.existsById(usuarioId)) throw new BusinessException("El usuario que anula no existe.");
+        // Una vez iniciado el viaje los cupos y pagos ya se usaron: solo el administrador puede anular
+        if (sesion == null || !"ADMIN".equals(sesion.rol())) {
+            for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
+                SalidaProgramada salida = salidaRepository.findById(d.getSalidaId()).orElse(null);
+                if (salida != null && !salida.getFechaInicio().isAfter(LocalDate.now())) {
+                    throw new BusinessException("La salida ya inició (" + salida.getFechaInicio()
+                            + "): solo un administrador puede anular esta reserva.");
+                }
+            }
+        }
         boolean hayReembolso = r.getMontoPagado() != null && r.getMontoPagado().signum() > 0;
         String forma = formaReembolso == null || formaReembolso.isBlank() ? null : formaReembolso.trim();
         if (hayReembolso && forma == null) throw new BusinessException("Indica la forma de reembolso.");
@@ -258,6 +268,11 @@ public class ReservaServiceImpl implements IReservaService {
         String anula = r.getUsuarioAnulaId() == null ? null
                 : usuarioRepository.findById(r.getUsuarioAnulaId()).map(u -> u.getUsername()).orElse(null);
         return ReservaDTO.desde(r, detalles.isEmpty() ? null : detalles.get(0), anula);
+    }
+
+    private Reserva obtenerParaActualizar(Long id) {
+        return reservaRepository.findByIdParaActualizar(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con Id: " + id));
     }
 
     private Reserva obtener(Long id) {

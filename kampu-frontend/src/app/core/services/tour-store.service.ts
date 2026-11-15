@@ -148,7 +148,6 @@ export class TourStore {
   cargarClientes() { this.cargarLista('clientes', this.clientes, false); }
   cargarSalidas() { this.cargarLista('salidas', this.salidas, false); this.cargarResumen(); }
   cargarReservas() { this.cargarLista('reservas', this.reservas, false); }
-  cargarPasajeros() { this.cargarLista('pasajeros', this.pasajeros, false); }
   cargarPagos() { this.cargarLista('pagos', this.pagos, false); }
 
   getPaquete(id?: number | null) { return this.paquetes().find(p => p.paqueteId === id); }
@@ -157,16 +156,11 @@ export class TourStore {
   getProveedor(id?: number | null) { return this.proveedores().find(p => p.proveedorId === id); }
   getLugar(id?: number | null) { return this.lugares().find(l => l.lugarId === id); }
   getVehiculo(id?: number | null) { return this.vehiculos().find(v => v.vehiculoId === id); }
-  getOperacion(id?: number | null) { return this.operaciones().find(o => o.operacionId === id); }
   getEstadoOperacion(codigo?: string | null) { return this.estadosOperacion().find(e => e.codigo === codigo); }
   getCliente(id?: number | null) { return this.clientes().find(c => c.clienteId === id); }
   getSalida(id?: number | null) { return this.salidas().find(s => s.salidaId === id); }
   getReserva(id?: number | null) { return this.reservas().find(r => r.reservaId === id); }
   operacionesDe(salidaId: number) { return this.operaciones().filter(o => o.salidaId === salidaId); }
-  nombreLugar(id?: number | null): string {
-    const l = this.getLugar(id);
-    return l ? `${l.nombre} (${l.ciudad})` : '';
-  }
   nombreProveedor(id?: number | null): string { return this.getProveedor(id)?.nombreComercial ?? '—'; }
 
   nombreCliente(r?: Reserva | null): string {
@@ -179,10 +173,6 @@ export class TourStore {
   codigoReserva(id: number) { return 'R-' + String(id).padStart(4, '0'); }
   saldo(r: Reserva): number {
     return r.estadoReserva === 'ANULADA' ? 0 : Math.max(redondear(r.montoTotal - r.montoPagado), 0);
-  }
-  cuposOcupados(salidaId: number): number {
-    const s = this.getSalida(salidaId);
-    return s ? s.cuposMaximos - s.cuposDisponibles : 0;
   }
 
   private guardarEn<T>(url: string, d: unknown, id: number | null): Observable<T> {
@@ -255,7 +245,6 @@ export class TourStore {
     return this.http.post<Reserva>(`${API}/reservas`, cuerpo);
   }
 
-  urlBoleta(id: number): string { return `${API}/reservas/${id}/boleta`; }
   verBoleta(id: number): Observable<string> {
     return this.http.get(`${API}/reservas/${id}/boleta`, { responseType: 'text' });
   }

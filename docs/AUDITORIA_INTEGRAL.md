@@ -299,3 +299,57 @@ La identidad (verde oliva y amarillo pastel, tipografía Nunito) se mantiene en 
 | Pruebas automatizadas | **Incompleto** (H4) |
 | Error 500 en tu instalación | No verificado (A3) |
 | Envío de correo con SMTP real | No verificado |
+
+## 13. Correcciones aplicadas (fase 7) y validación final (fase 8)
+
+Aprobadas el 15/11/2026. Cada corrección se probó antes y después contra Oracle 23ai Free y el backend en ejecución.
+
+| Hallazgo | Corrección | Comprobación |
+|---|---|---|
+| **C1** confirmar o completar contra anular | Las tres operaciones toman la reserva con `SELECT … FOR UPDATE`. Además, `chk_res_confirmada` (confirmada ⇒ pagado > 0) y `chk_res_anulada` (anulada ⇒ pagado = 0) en `RESERVAS`. | Antes: 6 de 8 carreras dejaban reservas CONFIRMADAS con los pagos reembolsados. Después: 8 de 8 terminan coherentes (se serializan: se confirma y luego se anula), y las consultas de cuadre salen vacías. |
+| **C2** doble asignación en Tráfico | Se bloquean el vehículo y luego el conductor antes de revisar cruces. La asignación automática pasa al siguiente par si el mejor ya fue tomado. | Antes: 3 de 3 dobles asignaciones manuales, y la misma unidad en 4 de 6 automáticas. Después: manual 200/400 en las 3 carreras; automática con 6 unidades y 6 conductores distintos. |
+| **A1** contraseñas en texto plano | Hash BCrypt en `02_data.sql` y en `UsuarioInicialConfig` (I6). En una base antigua, la contraseña se convierte a hash en el siguiente inicio de sesión correcto. | Con texto plano guardado: una clave errónea da 400, la correcta da 200 y queda guardado `$2a$10$…`; después entra con el hash. |
+| **A2** sin límite de intentos | Tras 5 fallos en 10 minutos, la cuenta queda bloqueada hasta que venza el más antiguo. Queda en la bitácora como `LOGIN_FALLIDO`. | El 6.º intento, aun con la clave correcta, se rechaza; otras cuentas no se ven afectadas. |
+| **M2** recursos invalidados | Al editar un vehículo, conductor o proveedor se revisan los traslados ASIGNADOS que aún no salen, con las mismas reglas que la asignación. Si alguno queda inválido, no se guarda. | Pasar a mantenimiento, bajar la capacidad, inactivar al conductor o suspender al proveedor del traslado KMP-006 da 400 y nada cambia. Un cambio inocuo da 200. |
+| **M3** anular un viaje iniciado | Solo el Administrador anula una reserva cuya salida ya empezó. | Ventas: 400. Admin: 200 (ANULADA). |
+| **M4** resolver un pago leído antes del bloqueo | Se bloquea la reserva y se relee el pago con bloqueo antes de validarlo. | 6 carreras aprobar contra rechazar: siempre una 200 y otra 400, y el monto pagado coincide con los aprobados. |
+| **H4** sin pruebas en el repositorio | `pruebas/` contiene `api.py` (129), `negativos.py` (24), `concurrencia.py` (6 escenarios), `cuadre.sql` y `ejecutar.sh`, con código de salida ≠ 0 si algo falla. | Ver el resultado final más abajo. |
+| **B1** lupa fuera del campo | Ícono envuelto en `search-icon`. | Ahora queda dentro del campo. |
+| **B2** Auditoría en celular | Se reprodujo con 1117 px de ancho. La causa era un texto `sr-only` de la tabla que salía del contenedor con scroll. Se corrigió con un contenedor `relative`. | Las 14 rutas (Admin y portal) más la página principal miden 390 px en celular, sin errores de consola. |
+| **B3** "Tour Manager" pegado a la línea | La regla del menú fijado anulaba el centrado vertical (`transform: none`). | El texto termina a 21 px de la línea. |
+| **B4** se borraba la foto de demostración | `images/demo/` nunca se borra. | Tras reemplazar la foto del paquete 1, `machu-picchu.jpg` sigue en disco. |
+| **M7** testimonios inventados y contacto fijo | Se quitó el componente de testimonios. El contacto sale de `kampu.contacto` (variables `KAMPU_CONTACTO_*`, `GET /api/v1/contacto` público). Las redes solo se muestran si se configuran. | La página principal no muestra testimonios. El pie y WhatsApp usan el contacto del backend. Los enlaces genéricos a instagram.com y facebook.com ya no aparecen. |
+| **I1–I5** | Se quitaron `@angular/animations`, las 6 dependencias de Karma y Jasmine (con el destino `test` y `tsconfig.spec.json`), 5 métodos y un tipo sin uso del frontend, una consulta sin uso y la dependencia comentada del `pom.xml`. | `package-lock.json` sin cambios de versión en ningún paquete. `ng build` correcto. |
+
+### Validación final
+
+Sobre una base reinstalada:
+
+- **Oracle 23ai Free y XE 21c:** los 3 scripts instalan con 0 errores. Las restricciones nuevas quedan `ENABLED VALIDATED`.
+- **Backend:** compila y arranca con `ddl-auto=validate`.
+- **`./pruebas/ejecutar.sh`:** 129 de 129 correctas, 24 de 24 negativas y 6 de 6 escenarios de concurrencia. Termina con código de salida 0.
+- **`cuadre.sql`:** 4 de 4 consultas vacías.
+- **Frontend:** `ng build` correcto. Persiste el aviso de tamaño del paquete inicial (516 kB frente a 512 kB; es B7, no incluido en esta ronda).
+
+### Pendiente de tu decisión o de información
+
+- **M1:** al cambiar la fecha de una salida con traslados, ¿se bloquea el cambio o se mueven los traslados?
+- **H3:** ¿se habilitan los descuentos o se elimina la columna?
+- **Panel principal:** ¿se quitan los dos gráficos o se deja solo "Vendido por mes"?
+- **A3:** para diagnosticar el error 500 de tu instalación hace falta la línea `Error no controlado en …` de la consola del backend.
+- **No incluidos en esta ronda:** H1 (gestión de usuarios), H2 (cambio de contraseña), M5 (sesiones en memoria), M6 (cargas completas de tablas), B5–B7.
+
+### Estado actualizado por módulo
+
+| Módulo | Estado |
+|---|---|
+| Reservas y pagos | Correcto |
+| Tráfico y transporte | Correcto |
+| Logística | Correcto |
+| Seguridad y permisos | Correcto (sesiones en memoria: M5) |
+| Auditoría | Correcto |
+| Página principal | Correcto |
+| Pruebas automatizadas | Correcto (API; no hay pruebas unitarias de frontend) |
+| Salidas programadas | Correcto con observaciones (M1, pendiente de decisión) |
+| Gestión de usuarios internos | Incompleto (H1) |
+| Error 500 en tu instalación | No verificado (A3) |

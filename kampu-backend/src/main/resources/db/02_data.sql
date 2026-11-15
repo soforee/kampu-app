@@ -17,11 +17,11 @@
 EXEC PKG_SEGURIDAD_ROLES.iniciar_sesion('admin', 'ADMIN');
 
 -- ---------------------------------------------------------------------
--- Usuarios internos (contraseña en texto plano o hash BCrypt: el backend acepta ambos)
+-- Usuarios internos (password_hash = BCrypt de admin123, ventas123, operador123)
 -- ---------------------------------------------------------------------
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (1, 'admin', 'admin123', 'ADMIN', 'ACTIVO');
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (2, 'ventas', 'ventas123', 'VENDEDOR', 'ACTIVO');
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (3, 'operador', 'operador123', 'OPERADOR', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (1, 'admin', '$2a$10$kc235gNf9QJtsh4dMGO5tOBwUVRFTPg4Vg.lT52B1DyhFQ/xSHyl2', 'ADMIN', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (2, 'ventas', '$2a$10$a0Fl0GrAYQDbInSsBz59meqdKbq9pduZZk4as0ZQYUb91Io8WmCSy', 'VENDEDOR', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (3, 'operador', '$2a$10$LiuJIulFTf5VZh3NOv./zem59zfIVXM.dHwqJrWGVT253bx.BxS8S', 'OPERADOR', 'ACTIVO');
 
 -- ---------------------------------------------------------------------
 -- Clientes (password_hash = BCrypt de 'cliente123' para los que tienen cuenta web)

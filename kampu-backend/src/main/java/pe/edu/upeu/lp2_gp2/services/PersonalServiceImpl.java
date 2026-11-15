@@ -24,13 +24,16 @@ public class PersonalServiceImpl implements IPersonalService {
     private final ProveedorRepository proveedorRepository;
     private final SalidaProgramadaRepository salidaRepository;
     private final OperacionTransporteRepository operacionRepository;
+    private final IOperacionTransporteService operaciones;
 
     public PersonalServiceImpl(PersonalRepository personalRepository, ProveedorRepository proveedorRepository,
-                               SalidaProgramadaRepository salidaRepository, OperacionTransporteRepository operacionRepository) {
+                               SalidaProgramadaRepository salidaRepository, OperacionTransporteRepository operacionRepository,
+                               IOperacionTransporteService operaciones) {
         this.personalRepository = personalRepository;
         this.proveedorRepository = proveedorRepository;
         this.salidaRepository = salidaRepository;
         this.operacionRepository = operacionRepository;
+        this.operaciones = operaciones;
     }
 
     @Override
@@ -64,7 +67,9 @@ public class PersonalServiceImpl implements IPersonalService {
             throw new BusinessException("Conduce operaciones de transporte: su rol debe incluir CONDUCTOR (CONDUCTOR o AMBOS).");
         }
         copiar(dto, p, id);
-        return PersonalDTO.desde(personalRepository.saveAndFlush(p));
+        Personal guardado = personalRepository.saveAndFlush(p);
+        operaciones.verificarAsignacionesPendientes(null, id, null);
+        return PersonalDTO.desde(guardado);
     }
 
     @Override

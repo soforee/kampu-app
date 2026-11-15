@@ -22,7 +22,7 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 4. **Modelo v4 de 14 tablas** (+ `AUDITORIA`): `PROVEEDORES`, `PERSONAL` (guías y conductores) y `VEHICULOS` reemplazan a
    empresas/guías/conductores/rutas de la v3. Columnas añadidas a lo que trae el script v4 van marcadas `-- (+v4)`.
 5. **Exactamente dos objetos por categoría** (PL/SQL, triggers, vistas, paquetes) y **script de particionamiento por nivel de usuario**.
-6. Contraseñas con **BCrypt** (se aceptan las de texto plano antiguas de usuarios internos) y sesión con **token Bearer**.
+6. Contraseñas con **BCrypt** y sesión con **token Bearer**. Si una base antigua guarda la contraseña de un usuario interno en texto plano, se convierte a hash en su siguiente inicio de sesión. Tras 5 intentos fallidos en 10 minutos la cuenta se bloquea temporalmente.
 
 ### Cuentas
 
@@ -327,6 +327,11 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 
 Ejemplos de URL: Oracle XE 21c → `jdbc:oracle:thin:@localhost:1521/XEPDB1`; Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
 
+Contacto de la agencia que muestra la página principal (correo, teléfono y WhatsApp, ciudad y redes):
+`KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO` (con código de país), `KAMPU_CONTACTO_CIUDAD`,
+`KAMPU_CONTACTO_INSTAGRAM` y `KAMPU_CONTACTO_FACEBOOK` (URL completas; si quedan vacías no se muestra su botón).
+Los valores por defecto son de demostración: cámbialos antes de publicar el sitio.
+
 ```bash
 cd kampu-backend
 ./mvnw spring-boot:run
@@ -335,7 +340,7 @@ cd kampu-backend
 (En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `Lp2Gp2Application` desde IntelliJ.)
 
 - Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
-- Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`.
+- Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
 - `spring.jpa.hibernate.ddl-auto` está en **`none`**: Hibernate no crea ni altera tablas; manda el script.
 
 ### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201
@@ -361,6 +366,8 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 `/lp2_gp2/images` → `http://localhost:8082`. **Orden de arranque:** Oracle → backend → frontend.
 
 ## 4. Pruebas realizadas
+
+**Pruebas automatizadas:** `./pruebas/ejecutar.sh` (API, casos rechazados y concurrencia). Ver `pruebas/README.md`; solo sobre una base recién instalada con los datos de demostración.
 
 - Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
   validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,

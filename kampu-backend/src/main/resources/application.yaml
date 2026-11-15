@@ -58,3 +58,11 @@ kampu:
   rutas:
     osrm-url: ${OSRM_URL:https://router.project-osrm.org}
     osrm-habilitado: ${OSRM_HABILITADO:true}
+  # Datos de contacto de la agencia que muestra la página principal (GET /api/v1/contacto).
+  # Las redes son opcionales: si se dejan vacías, no aparece su botón.
+  contacto:
+    email: ${KAMPU_CONTACTO_EMAIL:reservas@kampu.pe}
+    telefono: ${KAMPU_CONTACTO_TELEFONO:+51 984 000 000}
+    ciudad: ${KAMPU_CONTACTO_CIUDAD:Cusco, Perú}
+    instagram: ${KAMPU_CONTACTO_INSTAGRAM:}
+    facebook: ${KAMPU_CONTACTO_FACEBOOK:}
