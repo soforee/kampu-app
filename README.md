@@ -1,5 +1,7 @@
 <div align="center">
 
+  <img src="assets/logo-kampu.png" alt="Logo Kampu" width="180" />
+
   # 🌎 KAMPU — Tour Manager
   **Sistema integral de gestión operativa y comercial para agencias de turismo.**
 
@@ -37,6 +39,7 @@ El proyecto está organizado como un monorepo dividido en dos aplicaciones princ
 
 ```text
 kampu-tour-manager/
+├── assets/                # Recursos visuales y logotipo del proyecto
 ├── kampu-frontend/        # Aplicación web SPA desarrollada en Angular
 │   └── src/app/
 │       ├── core/          # Modelos, servicios, interceptores y utilidades (moneda, fechas, filtros)
