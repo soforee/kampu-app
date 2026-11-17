@@ -1,26 +1,25 @@
 <p align="center">
-  <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="340" />
+  <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="300" />
 </p>
 
 <h3 align="center">Plataforma integral de gestión operativa y comercial<br />para agencias de turismo y operadores de viajes</h3>
 
 <p align="center">
-  <img src="https://skillicons.dev/icons?i=angular,java,spring,oracle&theme=dark" alt="Stack: Angular, Java, Spring Boot, Oracle" />
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/angular/angular-original.svg" alt="Angular" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/java/java-original.svg" alt="Java" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/spring/spring-original.svg" alt="Spring Boot" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/oracle/oracle-original.svg" alt="Oracle" height="40" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/soforee/kampu-app/stargazers"><img src="https://img.shields.io/github/stars/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Stars" /></a>
-  <a href="https://github.com/soforee/kampu-app/network/members"><img src="https://img.shields.io/github/forks/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Forks" /></a>
-  <a href="https://github.com/soforee/kampu-app/commits/main"><img src="https://img.shields.io/github/last-commit/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Último commit" /></a>
-  <img src="https://img.shields.io/badge/estado-en%20desarrollo-2f3640?style=flat-square" alt="Estado" />
-</p>
-
-<p align="center">
-  <a href="#descripción-general"><b>Descripción</b></a> &nbsp;|&nbsp;
-  <a href="#módulos-principales"><b>Módulos</b></a> &nbsp;|&nbsp;
-  <a href="#arquitectura"><b>Arquitectura</b></a> &nbsp;|&nbsp;
-  <a href="#instalación"><b>Instalación</b></a> &nbsp;|&nbsp;
-  <a href="#equipo"><b>Equipo</b></a>
+  <a href="#descripción-general">Descripción</a> &nbsp;·&nbsp;
+  <a href="#módulos-principales">Módulos</a> &nbsp;·&nbsp;
+  <a href="#arquitectura">Arquitectura</a> &nbsp;·&nbsp;
+  <a href="#instalación">Instalación</a> &nbsp;·&nbsp;
+  <a href="#equipo">Equipo</a>
 </p>
 
 ---
@@ -122,12 +121,10 @@ kampu-app/
 
 ### Requisitos previos
 
-<p>
-  <img src="https://img.shields.io/badge/Java-17+-2f3640?style=flat-square&logo=openjdk&logoColor=white" alt="Java 17+" />
-  <img src="https://img.shields.io/badge/Node.js-18+-2f3640?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
-  <img src="https://img.shields.io/badge/Angular%20CLI-2f3640?style=flat-square&logo=angular&logoColor=white" alt="Angular CLI" />
-  <img src="https://img.shields.io/badge/Oracle-2f3640?style=flat-square&logo=oracle&logoColor=white" alt="Oracle" />
-</p>
+* **Java JDK 17** o superior
+* **Node.js 18+** y **npm**
+* **Angular CLI**
+* Motor de base de datos relacional configurado según `application.yaml`
 
 ### 1. Clonar el repositorio
 
@@ -182,30 +179,25 @@ Abre la aplicación en **http://localhost:4200**
   <tr>
     <td align="center" width="200">
       <a href="https://github.com/soforee">
-        <img src="https://github.com/soforee.png?size=100" width="100" alt="Russell Diaz Nuñez" /><br />
+        <img src="https://github.com/soforee.png?size=100" width="90" alt="Russell Diaz Nuñez" /><br />
         <sub><b>Russell Diaz Nuñez</b></sub>
       </a><br />
-      <code>@soforee</code>
+      <sub>@soforee</sub>
     </td>
     <td align="center" width="200">
       <a href="https://github.com/stardolllar">
-        <img src="https://github.com/stardolllar.png?size=100" width="100" alt="Doriann Gonzales Navarro" /><br />
+        <img src="https://github.com/stardolllar.png?size=100" width="90" alt="Doriann Gonzales Navarro" /><br />
         <sub><b>Doriann Gonzales Navarro</b></sub>
       </a><br />
-      <code>@stardolllar</code>
+      <sub>@stardolllar</sub>
     </td>
     <td align="center" width="200">
       <a href="https://github.com/ssh4123">
-        <img src="https://github.com/ssh4123.png?size=100" width="100" alt="Rodrigo Usuriaga Salas" /><br />
+        <img src="https://github.com/ssh4123.png?size=100" width="90" alt="Rodrigo Usuriaga Salas" /><br />
         <sub><b>Rodrigo Usuriaga Salas</b></sub>
       </a><br />
-      <code>@ssh4123</code>
+      <sub>@ssh4123</sub>
     </td>
   </tr>
 </table>
 </div>
-
-<p align="center">
-  <br />
-  <a href="#"><b>Volver arriba</b></a>
-</p>
