@@ -1,69 +1,77 @@
 <div align="center">
+  <br />
+  <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="320" />
+  <br /><br />
 
-  <img src="assets/logo-kampu.png" alt="Logo Kampu" width="180" />
+  **Plataforma integral de gestión operativa y comercial para agencias de turismo y operadores de viajes.**
 
-  # 🌎 KAMPU — Tour Manager
-  **Sistema integral de gestión operativa y comercial para agencias de turismo.**
+  <br />
 
   ![Angular](https://shields.io)
   ![Spring Boot](https://shields.io)
   ![Java](https://shields.io)
   ![TypeScript](https://shields.io)
-
+  <br /><br />
 </div>
 
 ---
 
-## ✨ Acerca del proyecto
+## Descripción general
 
-**Kampu** es una aplicación *Full Stack* diseñada para centralizar y automatizar las operaciones diarias de una agencia de viajes u operador turístico. Permite administrar desde el catálogo de paquetes y programación de salidas hasta el control de pasajeros, logística de transporte y seguimiento de pagos.
-
----
-
-## 🚀 Módulos y funcionalidades
-
-* 📊 **Dashboard Ejecutivo:** Vista general del estado operativo y métricas clave de la agencia.
-* 🎒 **Paquetes Turísticos:** Creación y administración de tours, itinerarios, precios e imágenes.
-* 📅 **Salidas Programadas:** Control de fechas de salida, cupos disponibles y asignación de recursos.
-* 🎫 **Gestión de Reservas y Pasajeros:** Flujo completo para registrar nuevas reservas, detalle de pasajeros y anulaciones.
-* 👥 **Clientes:** Directorio y historial de clientes.
-* 🚐 **Recursos Operativos:** Administración de **Guías turísticos** y unidades de **Transporte**.
-* 💳 **Pagos y Multimonedas:** Registro de abonos, resolución de pagos y conversión de moneda integrada.
-* 🔐 **Seguridad y Autenticación:** Control de acceso mediante interceptores, roles de usuario y validación de sesiones.
+**Kampu** es una solución *Full Stack* diseñada para centralizar, estandarizar y automatizar los flujos de trabajo de una agencia de viajes. El sistema cubre todo el ciclo operativo: desde la estructuración de paquetes turísticos y programación de salidas, hasta la gestión de reservas, asignación de recursos logísticos y control financiero multimoneda.
 
 ---
 
-## 🏗️ Arquitectura del repositorio
+## Módulos principales
 
-El proyecto está organizado como un monorepo dividido en dos aplicaciones principales:
+* **Panel de control (Dashboard):** Resumen ejecutivo de métricas operativas, ocupación y estado general de la agencia.
+* **Catálogo de paquetes turísticos:** Administración de tours, itinerarios, tarifas base y material multimedia.
+* **Programación de salidas:** Control de fechas, disponibilidad de cupos y asignación de recursos por salida.
+* **Gestión de reservas y pasajeros:** Flujo completo de registro, seguimiento detallado de pasajeros y procesamiento de anulaciones.
+* **Directorio de clientes:** Registro centralizado e historial comercial de clientes.
+* **Recursos operativos:** Administración de guías turísticos y flota de transporte asignada.
+* **Gestión de pagos y multimoneda:** Registro de abonos, liquidación de pagos y conversión de divisas integrada.
+* **Autenticación y seguridad:** Control de sesiones mediante interceptores, validación de acceso y gestión de roles de usuario.
+
+---
+
+## Arquitectura del sistema
+
+El repositorio sigue una estructura de monorepo desacoplada en dos aplicaciones principales:
 
 ```text
 kampu-tour-manager/
-├── assets/                # Recursos visuales y logotipo del proyecto
-├── kampu-frontend/        # Aplicación web SPA desarrollada en Angular
+├── assets/                    # Identidad visual y recursos estáticos del repositorio
+├── kampu-frontend/            # Single Page Application (Angular)
 │   └── src/app/
-│       ├── core/          # Modelos, servicios, interceptores y utilidades (moneda, fechas, filtros)
-│       ├── features/      # Módulos: dashboard, paquetes, salidas, reservas, clientes, recursos, pagos, login
-│       ├── layout/        # Estructura principal (Shell)
-│       └── shared/        # Componentes reutilizables (modales, badges, iconos, logo)
+│       ├── core/              # Modelos de dominio, servicios HTTP, autenticación y utilidades
+│       ├── features/          # Módulos funcionales (dashboard, paquetes, salidas, reservas, pagos, etc.)
+│       ├── layout/            # Contenedor principal y navegación de la interfaz
+│       └── shared/            # Biblioteca de componentes reutilizables
 │
-└── kampu-backend/         # API REST desarrollada en Spring Boot (Java)
+└── kampu-backend/             # API RESTful (Java / Spring Boot)
     └── src/main/
         ├── java/.../lp2_gp2/
-        │   ├── config/    # Configuración de seguridad, CORS, OpenAPI/Swagger e interceptores
-        │   ├── controller/# Endpoints REST para cada entidad
-        │   ├── dto/       # Objetos de transferencia de datos y validaciones
-        │   ├── entity/    # Entidades JPA (Reserva, PaqueteTour, SalidaProgramada, Pago, etc.)
-        │   ├── exception/ # Manejo global de excepciones de negocio
-        │   ├── repository/# Repositorios Spring Data JPA
+        │   ├── config/        # Seguridad, CORS, interceptores y documentación OpenAPI
+        │   ├── controller/    # Controladores REST y exposición de endpoints
+        │   ├── dto/           # Objetos de transferencia de datos y reglas de validación
+        │   ├── entity/        # Modelo relacional y entidades JPA
+        │   ├── exception/     # Manejador global de excepciones de negocio
+        │   ├── repository/    # Capa de persistencia (Spring Data JPA)
         │   └── services/  # Lógica de negocio, almacenamiento de archivos y conversión de moneda
         └── resources/
-            └── db/        # Scripts SQL de esquema (01_schema.sql) y datos iniciales (02_data.sql)
+            └── db/            # Scripts SQL de definición de esquema (01_schema.sql) y carga inicial (02_data.sql)
 ```
 
 ---
 
-## ⚙️ Instalación y ejecución local
+## Guía de instalación y despliegue local
+
+### Requisitos previos
+* **Java JDK 17** o superior
+* **Node.js 18+** y **npm**
+* **Angular CLI**
+* Motor de base de datos relacional configurado según `application.yaml`
 
 ### 1. Clonar el repositorio
 ```bash
@@ -71,39 +79,31 @@ git clone https://github.com
 cd kampu-tour-manager
 ```
 
-### 2. Levantar el Backend (Spring Boot)
-1. Configura tus credenciales de base de datos en `kampu-backend/src/main/resources/application.yaml`.
-2. Ejecuta los scripts de `src/main/resources/db/` si es necesario (`01_schema.sql` y `02_data.sql`).
-3. Inicia el servidor usando Maven Wrapper:
+### 2. Configuración y ejecución del Backend
+1. Edita el archivo `kampu-backend/src/main/resources/application.yaml` con las credenciales de tu base de datos local.
+2. Ejecuta los scripts ubicados en `kampu-backend/src/main/resources/db/` (`01_schema.sql` y `02_data.sql`) si deseas cargar la estructura y datos de prueba.
+3. Inicia el servidor mediante Maven Wrapper:
 ```bash
 cd kampu-backend
 ./mvnw spring-boot:run
 ```
-*(La documentación interactiva de la API estará disponible en Swagger/OpenAPI)*.
+La especificación interactiva de los endpoints estará disponible a través de Swagger / OpenAPI una vez iniciado el servicio.
 
-### 3. Levantar el Frontend (Angular)
-En otra terminal, instala las dependencias y arranca el servidor de desarrollo:
+### 3. Configuración y ejecución del Frontend
+En una nueva terminal, instala las dependencias y levanta el entorno de desarrollo:
 ```bash
 cd kampu-frontend
 npm install
 npm start
 ```
-Abre tu navegador en `http://localhost:4200`.
+Accede a la aplicación desde el navegador en `http://localhost:4200`.
 
 ---
 
-## 👨‍💻 Equipo de desarrollo
+## Autores
 
-Proyecto desarrollado por los estudiantes:
-
-| Estudiante | GitHub |
+| Integrante | Perfil de GitHub |
 | :--- | :--- |
-| **Russell Diaz Nuñez** | [@soforee](https://github.com) |
-| **Doriann Gonzales Navarro** | [@stardolllar](https://github.com) |
-| **Rodrigo Usuriaga Salas** | [@ssh4123](https://github.com) |
-
----
-
-<div align="center">
-  Desarrollado con ☕ y código — <strong>Kampu Tour Manager</strong>
-</div>
+| **Russell Diaz Nuñez** | [://github.com](https://://github.com) |
+| **Doriann Gonzales Navarro** | [://github.com](https://://github.com) |
+| **Rodrigo Usuriaga Salas** | [://github.com](https://://github.com) |
