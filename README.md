@@ -97,7 +97,7 @@ Proyecto desarrollado por los estudiantes:
 | :--- | :--- |
 | **Russell Diaz Nuñez** | [@soforee](https://github.com) |
 | **Doriann Gonzales Navarro** | [@stardolllar](https://github.com) |
-| **Rodrigo** | [@ssh4123](https://github.com) |
+| **Rodrigo Usuriaga Salas** | [@ssh4123](https://github.com) |
 
 ---
 
