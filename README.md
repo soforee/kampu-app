@@ -1,16 +1,16 @@
 <div align="center">
   <br />
-  <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="320" />
+  <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="340" />
   <br /><br />
 
   **Plataforma integral de gestión operativa y comercial para agencias de turismo y operadores de viajes.**
 
   <br />
 
-  ![Angular](https://shields.io)
-  ![Spring Boot](https://shields.io)
-  ![Java](https://shields.io)
-  ![TypeScript](https://shields.io)
+  <a href="https://skillicons.dev">
+    <img src="https://skillicons.dev" alt="Stack Tecnológico" />
+  </a>
+
   <br /><br />
 </div>
 
@@ -58,7 +58,7 @@ kampu-tour-manager/
         │   ├── entity/        # Modelo relacional y entidades JPA
         │   ├── exception/     # Manejador global de excepciones de negocio
         │   ├── repository/    # Capa de persistencia (Spring Data JPA)
-        │   └── services/  # Lógica de negocio, almacenamiento de archivos y conversión de moneda
+        │   └── services/      # Lógica de negocio, almacenamiento de archivos y conversión de moneda
         └── resources/
             └── db/            # Scripts SQL de definición de esquema (01_schema.sql) y carga inicial (02_data.sql)
 ```
@@ -100,10 +100,30 @@ Accede a la aplicación desde el navegador en `http://localhost:4200`.
 
 ---
 
-## Autores
+## Equipo de desarrollo
 
-| Integrante | Perfil de GitHub |
-| :--- | :--- |
-| **Russell Diaz Nuñez** | [://github.com](https://://github.com) |
-| **Doriann Gonzales Navarro** | [://github.com](https://://github.com) |
-| **Rodrigo Usuriaga Salas** | [://github.com](https://://github.com) |
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com">
+        <img src="https://github.com.png?size=100" width="100px;" alt="Russell Diaz Nuñez"/><br />
+        <sub><b>Russell Diaz Nuñez</b></sub>
+      </a><br />
+      <code>@soforee</code>
+    </td>
+    <td align="center">
+      <a href="https://github.com">
+        <img src="https://github.com.png?size=100" width="100px;" alt="Doriann Gonzales Navarro"/><br />
+        <sub><b>Doriann Gonzales Navarro</b></sub>
+      </a><br />
+      <code>@stardolllar</code>
+    </td>
+    <td align="center">
+      <a href="https://github.com">
+        <img src="https://github.com.png?size=100" width="100px;" alt="Rodrigo Usuriaga Salas"/><br />
+        <sub><b>Rodrigo Usuriaga Salas</b></sub>
+      </a><br />
+      <code>@ssh4123</code>
+    </td>
+  </tr>
+</table>
