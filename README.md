@@ -1,129 +1,211 @@
-<div align="center">
-  <br />
+<p align="center">
   <img src="assets/logo-kampu.png" alt="Kampu Tour Manager" width="340" />
-  <br /><br />
+</p>
 
-  **Plataforma integral de gestión operativa y comercial para agencias de turismo y operadores de viajes.**
+<h3 align="center">Plataforma integral de gestión operativa y comercial<br />para agencias de turismo y operadores de viajes</h3>
 
-  <br />
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=angular,java,spring,oracle&theme=dark" alt="Stack: Angular, Java, Spring Boot, Oracle" />
+</p>
 
-  <a href="https://skillicons.dev">
-    <img src="https://skillicons.dev" alt="Stack Tecnológico" />
-  </a>
+<p align="center">
+  <a href="https://github.com/soforee/kampu-app/stargazers"><img src="https://img.shields.io/github/stars/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Stars" /></a>
+  <a href="https://github.com/soforee/kampu-app/network/members"><img src="https://img.shields.io/github/forks/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Forks" /></a>
+  <a href="https://github.com/soforee/kampu-app/commits/main"><img src="https://img.shields.io/github/last-commit/soforee/kampu-app?style=flat-square&color=2f3640&labelColor=2f3640" alt="Último commit" /></a>
+  <img src="https://img.shields.io/badge/estado-en%20desarrollo-2f3640?style=flat-square" alt="Estado" />
+</p>
 
-  <br /><br />
-</div>
+<p align="center">
+  <a href="#descripción-general"><b>Descripción</b></a> &nbsp;|&nbsp;
+  <a href="#módulos-principales"><b>Módulos</b></a> &nbsp;|&nbsp;
+  <a href="#arquitectura"><b>Arquitectura</b></a> &nbsp;|&nbsp;
+  <a href="#instalación"><b>Instalación</b></a> &nbsp;|&nbsp;
+  <a href="#equipo"><b>Equipo</b></a>
+</p>
 
 ---
 
 ## Descripción general
 
-**Kampu** es una solución *Full Stack* diseñada para centralizar, estandarizar y automatizar los flujos de trabajo de una agencia de viajes. El sistema cubre todo el ciclo operativo: desde la estructuración de paquetes turísticos y programación de salidas, hasta la gestión de reservas, asignación de recursos logísticos y control financiero multimoneda.
+**Kampu** es una solución *Full Stack* que centraliza, estandariza y automatiza los flujos de trabajo de una agencia de viajes. Cubre todo el ciclo operativo: desde la estructuración de paquetes turísticos y la programación de salidas, hasta la gestión de reservas, la asignación de recursos logísticos y el control financiero multimoneda.
 
 ---
 
 ## Módulos principales
 
-* **Panel de control (Dashboard):** Resumen ejecutivo de métricas operativas, ocupación y estado general de la agencia.
-* **Catálogo de paquetes turísticos:** Administración de tours, itinerarios, tarifas base y material multimedia.
-* **Programación de salidas:** Control de fechas, disponibilidad de cupos y asignación de recursos por salida.
-* **Gestión de reservas y pasajeros:** Flujo completo de registro, seguimiento detallado de pasajeros y procesamiento de anulaciones.
-* **Directorio de clientes:** Registro centralizado e historial comercial de clientes.
-* **Recursos operativos:** Administración de guías turísticos y flota de transporte asignada.
-* **Gestión de pagos y multimoneda:** Registro de abonos, liquidación de pagos y conversión de divisas integrada.
-* **Autenticación y seguridad:** Control de sesiones mediante interceptores, validación de acceso y gestión de roles de usuario.
+<details>
+<summary><b>Panel de control (Dashboard)</b></summary>
+<br />
+Resumen ejecutivo de métricas operativas, ocupación y estado general de la agencia.
+</details>
+
+<details>
+<summary><b>Catálogo de paquetes turísticos</b></summary>
+<br />
+Administración de tours, itinerarios, tarifas base y material multimedia.
+</details>
+
+<details>
+<summary><b>Programación de salidas</b></summary>
+<br />
+Control de fechas, disponibilidad de cupos y asignación de recursos por salida.
+</details>
+
+<details>
+<summary><b>Gestión de reservas y pasajeros</b></summary>
+<br />
+Flujo completo de registro, seguimiento detallado de pasajeros y procesamiento de anulaciones.
+</details>
+
+<details>
+<summary><b>Directorio de clientes</b></summary>
+<br />
+Registro centralizado e historial comercial de clientes.
+</details>
+
+<details>
+<summary><b>Recursos operativos</b></summary>
+<br />
+Administración de guías turísticos y flota de transporte asignada.
+</details>
+
+<details>
+<summary><b>Pagos y multimoneda</b></summary>
+<br />
+Registro de abonos, liquidación de pagos y conversión de divisas integrada.
+</details>
+
+<details>
+<summary><b>Autenticación y seguridad</b></summary>
+<br />
+Control de sesiones mediante interceptores, validación de acceso y gestión de roles de usuario.
+</details>
 
 ---
 
-## Arquitectura del sistema
+## Arquitectura
 
-El repositorio sigue una estructura de monorepo desacoplada en dos aplicaciones principales:
+Monorepo desacoplado en dos aplicaciones principales:
+
+<details open>
+<summary><b>Estructura del proyecto</b></summary>
 
 ```text
-kampu-tour-manager/
-├── assets/                    # Identidad visual y recursos estáticos del repositorio
+kampu-app/
+├── assets/                    # Identidad visual y recursos estáticos
 ├── kampu-frontend/            # Single Page Application (Angular)
 │   └── src/app/
-│       ├── core/              # Modelos de dominio, servicios HTTP, autenticación y utilidades
-│       ├── features/          # Módulos funcionales (dashboard, paquetes, salidas, reservas, pagos, etc.)
-│       ├── layout/            # Contenedor principal y navegación de la interfaz
-│       └── shared/            # Biblioteca de componentes reutilizables
+│       ├── core/              # Modelos, servicios HTTP, autenticación y utilidades
+│       ├── features/          # Módulos funcionales (dashboard, paquetes, salidas, reservas, pagos...)
+│       ├── layout/            # Contenedor principal y navegación
+│       └── shared/            # Componentes reutilizables
 │
 └── kampu-backend/             # API RESTful (Java / Spring Boot)
     └── src/main/
         ├── java/.../lp2_gp2/
-        │   ├── config/        # Seguridad, CORS, interceptores y documentación OpenAPI
-        │   ├── controller/    # Controladores REST y exposición de endpoints
-        │   ├── dto/           # Objetos de transferencia de datos y reglas de validación
-        │   ├── entity/        # Modelo relacional y entidades JPA
-        │   ├── exception/     # Manejador global de excepciones de negocio
-        │   ├── repository/    # Capa de persistencia (Spring Data JPA)
-        │   └── services/      # Lógica de negocio, almacenamiento de archivos y conversión de moneda
+        │   ├── config/        # Seguridad, CORS, interceptores y OpenAPI
+        │   ├── controller/    # Controladores REST
+        │   ├── dto/           # Objetos de transferencia y validaciones
+        │   ├── entity/        # Entidades JPA
+        │   ├── exception/     # Manejador global de excepciones
+        │   ├── repository/    # Persistencia (Spring Data JPA)
+        │   └── services/      # Lógica de negocio, archivos y conversión de moneda
         └── resources/
-            └── db/            # Scripts SQL de definición de esquema (01_schema.sql) y carga inicial (02_data.sql)
+            └── db/            # 01_schema.sql (esquema) y 02_data.sql (datos iniciales)
 ```
+
+</details>
 
 ---
 
-## Guía de instalación y despliegue local
+## Instalación
 
 ### Requisitos previos
-* **Java JDK 17** o superior
-* **Node.js 18+** y **npm**
-* **Angular CLI**
-* Motor de base de datos relacional configurado según `application.yaml`
+
+<p>
+  <img src="https://img.shields.io/badge/Java-17+-2f3640?style=flat-square&logo=openjdk&logoColor=white" alt="Java 17+" />
+  <img src="https://img.shields.io/badge/Node.js-18+-2f3640?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js 18+" />
+  <img src="https://img.shields.io/badge/Angular%20CLI-2f3640?style=flat-square&logo=angular&logoColor=white" alt="Angular CLI" />
+  <img src="https://img.shields.io/badge/Oracle-2f3640?style=flat-square&logo=oracle&logoColor=white" alt="Oracle" />
+</p>
 
 ### 1. Clonar el repositorio
+
 ```bash
-git clone https://github.com
-cd kampu-tour-manager
+git clone https://github.com/soforee/kampu-app.git
+cd kampu-app
 ```
 
-### 2. Configuración y ejecución del Backend
-1. Edita el archivo `kampu-backend/src/main/resources/application.yaml` con las credenciales de tu base de datos local.
-2. Ejecuta los scripts ubicados en `kampu-backend/src/main/resources/db/` (`01_schema.sql` y `02_data.sql`) si deseas cargar la estructura y datos de prueba.
-3. Inicia el servidor mediante Maven Wrapper:
+### 2. Backend
+
+<details>
+<summary><b>Ver pasos del backend</b></summary>
+<br />
+
+1. Edita `kampu-backend/src/main/resources/application.yaml` con las credenciales de tu base de datos local.
+2. Ejecuta los scripts de `kampu-backend/src/main/resources/db/` (`01_schema.sql` y luego `02_data.sql`) para cargar la estructura y los datos de prueba.
+3. Inicia el servidor:
+
 ```bash
 cd kampu-backend
 ./mvnw spring-boot:run
 ```
-La especificación interactiva de los endpoints estará disponible a través de Swagger / OpenAPI una vez iniciado el servicio.
 
-### 3. Configuración y ejecución del Frontend
-En una nueva terminal, instala las dependencias y levanta el entorno de desarrollo:
+La documentación interactiva de los endpoints queda disponible en Swagger / OpenAPI una vez iniciado el servicio.
+
+</details>
+
+### 3. Frontend
+
+<details>
+<summary><b>Ver pasos del frontend</b></summary>
+<br />
+
+En una nueva terminal:
+
 ```bash
 cd kampu-frontend
 npm install
 npm start
 ```
-Accede a la aplicación desde el navegador en `http://localhost:4200`.
+
+Abre la aplicación en **http://localhost:4200**
+
+</details>
 
 ---
 
-## Equipo de desarrollo
+## Equipo
 
+<div align="center">
 <table>
   <tr>
-    <td align="center">
-      <a href="https://github.com">
-        <img src="https://github.com.png?size=100" width="100px;" alt="Russell Diaz Nuñez"/><br />
+    <td align="center" width="200">
+      <a href="https://github.com/soforee">
+        <img src="https://github.com/soforee.png?size=100" width="100" alt="Russell Diaz Nuñez" /><br />
         <sub><b>Russell Diaz Nuñez</b></sub>
       </a><br />
       <code>@soforee</code>
     </td>
-    <td align="center">
-      <a href="https://github.com">
-        <img src="https://github.com.png?size=100" width="100px;" alt="Doriann Gonzales Navarro"/><br />
+    <td align="center" width="200">
+      <a href="https://github.com/stardolllar">
+        <img src="https://github.com/stardolllar.png?size=100" width="100" alt="Doriann Gonzales Navarro" /><br />
         <sub><b>Doriann Gonzales Navarro</b></sub>
       </a><br />
       <code>@stardolllar</code>
     </td>
-    <td align="center">
-      <a href="https://github.com">
-        <img src="https://github.com.png?size=100" width="100px;" alt="Rodrigo Usuriaga Salas"/><br />
+    <td align="center" width="200">
+      <a href="https://github.com/ssh4123">
+        <img src="https://github.com/ssh4123.png?size=100" width="100" alt="Rodrigo Usuriaga Salas" /><br />
         <sub><b>Rodrigo Usuriaga Salas</b></sub>
       </a><br />
       <code>@ssh4123</code>
     </td>
   </tr>
 </table>
+</div>
+
+<p align="center">
+  <br />
+  <a href="#"><b>Volver arriba</b></a>
+</p>
