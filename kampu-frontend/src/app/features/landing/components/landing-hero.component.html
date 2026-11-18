@@ -8,41 +8,37 @@
   </div>
   <div class="hero-velo"></div>
 
-  <div class="relative mx-auto flex h-full w-full max-w-6xl flex-col justify-end px-5 pb-36 pt-28 sm:px-8 sm:pb-52">
-    <p class="hero-anim inline-flex w-fit items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 ring-1 ring-white/20 backdrop-blur">
-      <span class="h-1.5 w-1.5 rounded-full bg-leaf-400"></span> Agencia de viajes · Perú
-    </p>
-
-    <h1 class="hero-anim mt-5 max-w-3xl text-[40px] font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl lg:text-7xl" style="animation-delay: 100ms">
-      Viaja por el Perú<br class="hidden sm:block"> con quienes lo conocen.
+  <div class="relative mx-auto flex h-full w-full max-w-6xl flex-col justify-center px-5 pt-20 sm:px-8">
+    <h1 class="hero-anim max-w-2xl text-[40px] font-semibold leading-[1.06] tracking-tight text-white sm:text-6xl">
+      Viaja por el Perú con quienes lo conocen.
     </h1>
 
-    <p class="hero-anim mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg" style="animation-delay: 200ms">
-      Tours con salidas programadas, guías locales y traslados coordinados de principio a fin.
+    <p class="hero-anim mt-6 max-w-md text-base leading-relaxed text-white/80 sm:text-lg" style="animation-delay: 150ms">
+      Salidas programadas, guías locales y traslados coordinados.
     </p>
 
-    <div class="hero-anim mt-8 flex flex-wrap items-center gap-3" style="animation-delay: 300ms">
+    <div class="hero-anim mt-9 flex flex-wrap items-center gap-x-7 gap-y-4" style="animation-delay: 300ms">
       <a href="#tours" class="cta">{{ textoCta }} <app-icon name="arrow-right" size="w-4 h-4" /></a>
-      <a href="#como-funciona" class="cta-secundario">Cómo funciona</a>
+      <a href="#como-funciona" class="enlace-claro">Cómo funciona</a>
     </div>
   </div>
 
-  <!-- Indicadores: destino de la foto actual -->
-  <div class="absolute inset-x-0 bottom-20 z-10 sm:bottom-28">
+  <!-- Pie de la portada: barras de las fotos (izquierda) y crédito de la foto actual (derecha) -->
+  <div class="absolute inset-x-0 bottom-8 z-10">
     <div class="mx-auto flex max-w-6xl items-end justify-between gap-6 px-5 sm:px-8">
-      <ol class="flex gap-2" aria-label="Destinos de la portada">
+      <ol class="flex gap-1.5" aria-label="Fotos de la portada">
         @for (f of fotos; track f.clave; let i = $index) {
           <li>
             <button type="button" class="indicador" [class.indicador-activo]="i === indice()" (click)="ir(i)"
                     [attr.aria-label]="'Ver ' + f.lugar" [attr.aria-current]="i === indice() ? 'true' : null">
               <span class="indicador-barra"></span>
-              <span class="hidden text-left sm:block">{{ f.lugar }}</span>
             </button>
           </li>
         }
       </ol>
-      <span class="hidden text-right text-xs text-white/60 md:block">{{ fotos[indice()].lugar }} · {{ fotos[indice()].region }}<br>
-        Foto: {{ fotos[indice()].autor }} · {{ fotos[indice()].licencia }}</span>
+      <a [href]="fotos[indice()].fuente" target="_blank" rel="noopener" class="credito">
+        {{ fotos[indice()].lugar }} · Foto: {{ fotos[indice()].autor }} · {{ fotos[indice()].licencia }}
+      </a>
     </div>
   </div>
 
