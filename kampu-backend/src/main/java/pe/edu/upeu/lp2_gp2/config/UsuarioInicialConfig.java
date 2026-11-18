@@ -36,22 +36,25 @@ public class UsuarioInicialConfig {
         return u;
     }
 
-    // Antes de usar las tablas: si el esquema al que se conectó la aplicación no tiene los scripts
-    // instalados, se detiene con un mensaje claro (usuario, contenedor y servicio) en lugar de un ORA-00942.
+    // Antes de usar las tablas: si el esquema de trabajo (CURRENT_SCHEMA, p. ej. KAMPU_BD cuando la app entra
+    // como KAMPU_APP) no tiene el script instalado, se detiene con un mensaje claro en lugar de un ORA-00942.
     private void verificarEsquema() {
-        var datos = jdbc.queryForMap("SELECT USER AS usuario, SYS_CONTEXT('USERENV', 'CON_NAME') AS contenedor, "
-                + "SYS_CONTEXT('USERENV', 'SERVICE_NAME') AS servicio, "
-                + "(SELECT COUNT(*) FROM USER_TABLES WHERE TABLE_NAME = 'USUARIOS_SISTEMA') AS tablas, "
-                + "(SELECT COUNT(*) FROM USER_OBJECTS WHERE OBJECT_NAME = 'PKG_SEGURIDAD_ROLES' AND OBJECT_TYPE = 'PACKAGE BODY' AND STATUS = 'VALID') AS paquete "
+        var datos = jdbc.queryForMap("SELECT USER AS usuario, SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AS esquema, "
+                + "SYS_CONTEXT('USERENV', 'CON_NAME') AS contenedor, SYS_CONTEXT('USERENV', 'SERVICE_NAME') AS servicio, "
+                + "(SELECT COUNT(*) FROM ALL_TABLES WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') "
+                + "   AND TABLE_NAME = 'USUARIOS_SISTEMA') AS tablas, "
+                + "(SELECT COUNT(*) FROM ALL_OBJECTS WHERE OWNER = SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') "
+                + "   AND OBJECT_NAME = 'PKG_SEGURIDAD_ROLES' AND OBJECT_TYPE = 'PACKAGE' AND STATUS = 'VALID') AS paquete "
                 + "FROM dual");
         boolean tablas = ((Number) datos.get("TABLAS")).intValue() > 0;
         boolean paquete = ((Number) datos.get("PAQUETE")).intValue() > 0;
         if (tablas && paquete) return;
-        String donde = "usuario " + datos.get("USUARIO") + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
+        String donde = "usuario " + datos.get("USUARIO") + ", esquema " + datos.get("ESQUEMA")
+                + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
         String mensaje = "La base de datos a la que se conectó la aplicación (" + donde + ") no tiene "
                 + (tablas ? "el paquete PKG_SEGURIDAD_ROLES válido" : "las tablas del sistema") + ". "
-                + "Ejecuta 01_schema.sql, 02_data.sql y 03_particionamiento_roles.sql conectado como ese mismo usuario y servicio, "
-                + "o cambia DB_URL para apuntar a donde ya los ejecutaste "
+                + "Ejecuta db/kampu_tours_v11.sql como SYSTEM en la PDB (crea KAMPU_BD y KAMPU_APP), "
+                + "o revisa DB_URL, DB_USERNAME y DB_SCHEMA "
                 + "(Oracle XE 21c: jdbc:oracle:thin:@localhost:1521/XEPDB1 · Oracle 23 Free: .../FREEPDB1)."
                 + ("CDB$ROOT".equals(datos.get("CONTENEDOR")) ? " Ojo: estás en el contenedor raíz (CDB$ROOT); los scripts van en la PDB." : "");
         System.err.println("\n*** " + mensaje + "\n");
