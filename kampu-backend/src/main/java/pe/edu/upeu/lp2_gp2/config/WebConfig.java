@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import pe.edu.upeu.lp2_gp2.seguridad.SeguridadInterceptor;
+import pe.edu.upeu.lp2_gp2.seguridad.UsuarioActualInterceptor;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -15,16 +15,16 @@ public class WebConfig implements WebMvcConfigurer {
     @Value("${storage.location}")
     private String storageLocation;
 
-    private final SeguridadInterceptor seguridad;
+    private final UsuarioActualInterceptor usuarioActual;
 
-    public WebConfig(SeguridadInterceptor seguridad) {
-        this.seguridad = seguridad;
+    public WebConfig(UsuarioActualInterceptor usuarioActual) {
+        this.usuarioActual = usuarioActual;
     }
 
-    // Seguridad por rol de la API (PKG_SEGURIDAD_ROLES)
+    // Identifica al usuario de cada petición (bitácora, portal del cliente y sesión de Oracle)
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(seguridad).addPathPatterns("/api/**");
+        registry.addInterceptor(usuarioActual).addPathPatterns("/api/**");
     }
 
     @Override

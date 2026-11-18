@@ -51,13 +51,7 @@ server:
 storage:
   location: "images"
 
-# Duración de las rutas con datos reales: OSRM (red vial de OpenStreetMap).
-# Sin internet se estima con las coordenadas de los lugares. Para tu propio
-# servidor OSRM cambia la URL; para no consultarlo, pon OSRM_HABILITADO=false.
 kampu:
-  rutas:
-    osrm-url: ${OSRM_URL:https://router.project-osrm.org}
-    osrm-habilitado: ${OSRM_HABILITADO:true}
   # Datos de contacto de la agencia que muestra la página principal (GET /api/v1/contacto).
   # Las redes son opcionales: si se dejan vacías, no aparece su botón.
   contacto:

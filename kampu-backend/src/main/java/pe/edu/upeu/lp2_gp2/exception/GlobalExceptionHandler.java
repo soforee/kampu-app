@@ -37,11 +37,6 @@ public class GlobalExceptionHandler {
         return responder(HttpStatus.NOT_FOUND, e.getMessage());
     }
 
-    @ExceptionHandler(NoAutenticadoException.class)
-    public ResponseEntity<ErrorDTO> noAutenticado(NoAutenticadoException e) {
-        return responder(HttpStatus.UNAUTHORIZED, e.getMessage());
-    }
-
     @ExceptionHandler(AccesoDenegadoException.class)
     public ResponseEntity<ErrorDTO> accesoDenegado(AccesoDenegadoException e) {
         return responder(HttpStatus.FORBIDDEN, e.getMessage());

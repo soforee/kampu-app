@@ -419,7 +419,7 @@ export interface PasajeroDraft {
   fechaNacimiento: string;
 }
 
-// Personal interno (usuarioId) o cliente del portal (clienteId). token: "Authorization: Bearer"
+// Personal interno (usuarioId) o cliente del portal (clienteId), con el rol y sus permisos
 export interface Sesion {
   usuarioId: number | null;
   clienteId: number | null;
@@ -427,7 +427,6 @@ export interface Sesion {
   nombre: string;
   rol: Rol;
   estado: string;
-  token: string;
   // Acciones permitidas por PKG_SEGURIDAD_ROLES (VER_LOGISTICA, GESTIONAR_RESERVAS, ...)
   permisos: Permiso[];
 }

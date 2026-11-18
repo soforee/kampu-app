@@ -203,7 +203,7 @@ public class ReservaServiceImpl implements IReservaService {
         if (!"PENDIENTE".equals(r.getEstadoReserva()) && !"CONFIRMADA".equals(r.getEstadoReserva())) {
             throw new BusinessException("Solo se anulan reservas pendientes o confirmadas.");
         }
-        // Quien anula es el usuario de la sesión (el id que manda el navegador no se usa: podría falsearse)
+        // Quien anula es el usuario que inició sesión (cabecera X-Usuario-Id)
         var sesion = pe.edu.upeu.lp2_gp2.seguridad.SesionActual.get();
         if (sesion != null && sesion.usuarioId() != null) usuarioId = sesion.usuarioId();
         if (usuarioId == null) throw new BusinessException("Indica el usuario que anula la reserva (inicia sesión de nuevo).");

@@ -31,7 +31,7 @@ public class OperacionTransporteController {
         return ResponseEntity.ok(operacionService.estados());
     }
 
-    // Duración real del trayecto: OSRM (OpenStreetMap) o coordenadas de los lugares
+    // Duración estimada del trayecto con las coordenadas de los lugares
     @GetMapping("/estimar-duracion")
     public ResponseEntity<EstimacionDuracionDTO> estimarDuracion(@RequestParam Long origenId, @RequestParam Long destinoId) {
         return ResponseEntity.ok(operacionService.estimarDuracion(origenId, destinoId));

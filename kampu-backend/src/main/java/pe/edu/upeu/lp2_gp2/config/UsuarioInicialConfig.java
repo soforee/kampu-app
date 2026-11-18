@@ -2,7 +2,6 @@ package pe.edu.upeu.lp2_gp2.config;
 
 import jakarta.annotation.PostConstruct;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 import pe.edu.upeu.lp2_gp2.entity.UsuarioSistema;
 import pe.edu.upeu.lp2_gp2.repository.UsuarioSistemaRepository;
@@ -31,7 +30,7 @@ public class UsuarioInicialConfig {
     private UsuarioSistema nuevo(String username, String password, String rol) {
         UsuarioSistema u = new UsuarioSistema();
         u.setUsername(username);
-        u.setPasswordHash(new BCryptPasswordEncoder().encode(password));
+        u.setPasswordHash(password);
         u.setRol(rol);
         u.setEstado("ACTIVO");
         return u;

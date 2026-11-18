@@ -23,7 +23,7 @@ public record OperacionRequestDTO(
         Integer paxProgramados,
         @NotNull(message = "La hora de salida es obligatoria.")
         LocalDateTime horaProgramadaSalida,
-        // Vacía: el backend la calcula (OSRM / coordenadas de los lugares)
+        // Vacía: el backend la calcula con las coordenadas de los lugares
         LocalDateTime horaEstimadaLlegada,
         @Size(max = 200, message = "Las observaciones admiten máximo 200 caracteres.")
         String observaciones
