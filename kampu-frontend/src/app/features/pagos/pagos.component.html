@@ -44,8 +44,8 @@
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 @if (f.pago.estadoTransaccion === 'PENDIENTE') {
                   <div class="inline-flex gap-1.5">
-                    <button type="button" class="btn-light btn-sm" (click)="resolver(f.pago.pagoId, 'APROBADO')">Aprobar</button>
-                    <button type="button" class="btn-danger btn-sm" (click)="resolver(f.pago.pagoId, 'RECHAZADO')">Rechazar</button>
+                    <button type="button" class="btn-light btn-sm" (click)="resolver(f.pago.pagoId, 'APROBADO')"><app-icon name="check" size="w-3.5 h-3.5" /> Aprobar</button>
+                    <button type="button" class="btn-danger btn-sm" (click)="resolver(f.pago.pagoId, 'RECHAZADO')"><app-icon name="x" size="w-3.5 h-3.5" /> Rechazar</button>
                   </div>
                 }
               </td>

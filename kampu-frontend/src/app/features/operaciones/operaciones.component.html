@@ -81,7 +81,7 @@
             <td data-label="" class="td col-acciones text-right whitespace-nowrap">
               <div class="actions">
                 @if (gestiona && f.op.estadoActual === 'PROGRAMADO') {
-                  <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(f.op)">Asignar</button>
+                  <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(f.op)"><app-icon name="truck" size="w-3.5 h-3.5" /> Asignar</button>
                 }
                 @if (gestiona && !esFinal(f.op)) {
                   <button type="button" class="icon-btn" title="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
@@ -139,7 +139,7 @@
             <label class="label">Llegada <span class="opt">Se estima con las coordenadas</span></label>
             <div class="flex gap-2">
               <input type="datetime-local" class="field" [(ngModel)]="form.horaEstimadaLlegada" (blur)="v.tocar('llegada')" [class.field-invalid]="v.error('llegada')">
-              <button type="button" class="btn-light shrink-0" (click)="calcularLlegada()">Calcular</button>
+              <button type="button" class="btn-light shrink-0" (click)="calcularLlegada()"><app-icon name="clock" size="w-4 h-4" /> Calcular</button>
             </div>
             @if (v.error('llegada'); as e) { <p class="field-error">{{ e }}</p> }
             @else {
@@ -177,7 +177,7 @@
         <div><label class="label">Observaciones <span class="opt">Opcional</span></label><input class="field" maxlength="200" [(ngModel)]="form.observaciones" (blur)="v.tocar('observaciones')" [class.field-invalid]="v.error('observaciones')">@if (v.error('observaciones'); as e) { <p class="field-error">{{ e }}</p> }</div>
         <div class="form-actions">
           <button type="button" class="btn-light" (click)="ventana.set(null)">Cancelar</button>
-          <button type="button" class="btn-brand" (click)="guardar()">Guardar</button>
+          <button type="button" class="btn-brand" (click)="guardar()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>
         </div>
       </div>
     </app-modal>
@@ -191,7 +191,7 @@
             <div class="font-medium text-zinc-900">{{ o.origen }} → {{ o.destino }}</div>
             <div class="text-xs text-zinc-500 mt-0.5">{{ o.horaProgramadaSalida | date:'dd/MM/yyyy HH:mm' }} – {{ o.horaEstimadaLlegada | date:'HH:mm' }} · {{ o.paxProgramados }} pasajeros</div>
           </div>
-          <button type="button" class="btn-dark w-full justify-center" (click)="asignarAutomatico()">Asignación automática</button>
+          <button type="button" class="btn-dark w-full justify-center" (click)="asignarAutomatico()"><app-icon name="sparkles" size="w-4 h-4" /> Asignación automática</button>
           <p class="hint -mt-3 text-center">Prefiere la flota propia; luego el vehículo con menos asientos vacíos y el conductor con menos horas en el día, del mismo proveedor.</p>
 
           <div class="flex items-center gap-3 text-xs text-zinc-400"><span class="h-px flex-1 bg-zinc-200"></span>o elige manualmente<span class="h-px flex-1 bg-zinc-200"></span></div>
@@ -230,7 +230,7 @@
           }
           <div class="form-actions">
             <button type="button" class="btn-light" (click)="ventana.set(null)">Cancelar</button>
-            <button type="button" class="btn-dark" [disabled]="!vehiculoSel || !conductorSel" (click)="asignarManual()">Asignar selección</button>
+            <button type="button" class="btn-dark" [disabled]="!vehiculoSel || !conductorSel" (click)="asignarManual()"><app-icon name="check" size="w-4 h-4" /> Asignar selección</button>
           </div>
         </div>
       </app-modal>
@@ -261,7 +261,7 @@
           }
           <div class="form-actions">
             <button type="button" class="btn-light" (click)="ventana.set(null)">Cancelar</button>
-            <button type="button" class="btn-brand" [disabled]="!nuevoEstado" (click)="cambiarEstado()">Guardar</button>
+            <button type="button" class="btn-brand" [disabled]="!nuevoEstado" (click)="cambiarEstado()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>
           </div>
         </div>
       </app-modal>

@@ -34,7 +34,7 @@
           <div><span class="text-lg font-semibold tabular-nums text-zinc-900">{{ f.paquete.precioBase | currency:'S/':'symbol':'1.0-0' }}</span><span class="text-xs text-zinc-500"> por persona</span></div>
           <div class="flex items-center gap-1">
             @if (f.paquete.estado === 'ACTIVO' && f.proximas > 0) {
-              <a [routerLink]="['/reservas/nueva']" [queryParams]="{ paquete: f.paquete.paqueteId }" class="btn-light btn-sm mr-1">Reservar</a>
+              <a [routerLink]="['/reservas/nueva']" [queryParams]="{ paquete: f.paquete.paqueteId }" class="btn-light btn-sm mr-1"><app-icon name="ticket" size="w-3.5 h-3.5" /> Reservar</a>
             }
             <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.paquete.paqueteId)"><app-icon name="edit" size="w-4 h-4" /></button>
             <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(f.paquete.paqueteId)"><app-icon name="trash" size="w-4 h-4" /></button>
@@ -103,7 +103,7 @@
       </div>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="abierto.set(false)">Cancelar</button>
-        <button type="button" class="btn-brand" (click)="guardar()">Guardar</button>
+        <button type="button" class="btn-brand" (click)="guardar()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>
       </div>
     </div>
   </app-modal>
