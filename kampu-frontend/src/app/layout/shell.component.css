@@ -1,5 +1,5 @@
-/* Ítem activo del menú: fondo gris claro, texto oscuro y una línea de la marca a la izquierda */
-.nav-item.nav-active { background: #F4F4F5; color: #18181B; font-weight: 500; }
+/* Ítem activo del menú: fondo oliva muy claro, texto oliva (#4B5B1D del logo) y la línea lima de la hoja */
+.nav-item.nav-active { background: #F4F6E4; color: #3F4C18; font-weight: 500; }
 .nav-item.nav-active::before {
   content: '';
   position: absolute;
@@ -8,7 +8,7 @@
   bottom: 10px;
   width: 3px;
   border-radius: 0 3px 3px 0;
-  background: #76804B;
+  background: #C4BD45;
 }
 
 /* Escritorio: los textos del menú solo se ven cuando se despliega (cursor o foco) */

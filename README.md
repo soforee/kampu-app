@@ -20,7 +20,9 @@ Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.m
   queda abierta). Se quitaron BCrypt, los tokens y el límite de intentos.
 - **Sin servicios externos**: la duración de los traslados se estima con las coordenadas de los lugares (se quitó OSRM).
 - **Tailwind por npm** (`tailwind.config.js`) en lugar del CDN, y **solo tema claro** (se quitó el modo oscuro).
-- **Interfaz minimalista**: blancos y grises neutros con un único acento oliva, menú lateral compacto que se despliega al
+- **Identidad del logotipo**: oliva `#4B5B1D` (principal), lima `#C4BD45` (acento) y neutros cálidos derivados del crema `#FDF8E6`,
+  en todos los módulos (`tailwind.config.js`).
+- **Interfaz minimalista**: menú lateral compacto que se despliega al
   pasar el cursor, panel con una franja de indicadores (sin gráficos), tablas sin colores fuertes, estados con un punto
   de color, un solo estilo de botón principal y formularios uniformes. Se quitaron avatares de colores, esqueletos de
   carga, fechas relativas y animaciones de aparición.

@@ -21,10 +21,11 @@ Para generar la versión de producción: `npm run build` (queda en `dist/fronten
 
 - **Tailwind CSS** se compila junto con Angular: la configuración está en `tailwind.config.js` (colores de la marca, sombras
   y tipografía Inter) y las clases propias del sistema en `src/styles.css`.
-- **Solo tema claro**: fondo gris muy claro, tarjetas blancas, texto en grises neutros y un único color de acento,
-  el verde oliva de Kampu (`brand`).
+- **Solo tema claro**, con los colores del logotipo: oliva `#4B5B1D` (`brand-600`, principal), lima `#C4BD45` (`leaf-400`, acento)
+  y neutros cálidos derivados del crema `#FDF8E6`. Los nombres `zinc`, `emerald`, `amber`, `rose`, `sky` y `violet` están
+  redefinidos con esa paleta, así ningún módulo usa colores ajenos a la marca.
 - Clases reutilizables de `styles.css`:
-  - botones: `btn-dark` (acción principal), `btn-light` (secundaria), `btn-danger` (eliminar o anular), `btn-sm`, `icon-btn`;
+  - botones: `btn-dark` (acción principal, en oliva), `btn-light` (secundaria), `btn-danger` (eliminar o anular), `btn-sm`, `icon-btn`;
   - formularios: `field`, `label` (`label req` = obligatorio), `hint`, `field-error`, `form-section`, `form-actions`;
   - contenedores: `card`, `card-header`, `card-title`, `page-header`, `toolbar`;
   - tablas: `tbl`, `th`, `td`, `tbl-tarjetas` (en celular cada fila se muestra como tarjeta);

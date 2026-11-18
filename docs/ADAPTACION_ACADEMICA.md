@@ -74,7 +74,7 @@
 
 | Elemento | Cambio |
 |---|---|
-| Paleta | Fondo `#F7F7F5`, tarjetas blancas y grises neutros. Un único acento: el verde oliva de Kampu, más sobrio (`brand-500` `#76804B`), en el ítem activo del menú, el foco y las barras de progreso. |
+| Paleta | Colores del logotipo: oliva `#4B5B1D` como principal, lima `#C4BD45` como acento y neutros cálidos (ver la sección de paleta más abajo). |
 | Tipografía | Inter, con títulos en `font-semibold` (sin pesos extra gruesos) y números alineados (`tabular-nums`). Se quitaron las mayúsculas espaciadas y la fuente monoespaciada. |
 | Menú lateral | Compacto, solo con íconos, y se despliega con los nombres al pasar el cursor o con el teclado. La sección activa se marca con fondo gris y una línea oliva. Abajo quedan el usuario y el botón de cerrar sesión. Se quitaron el tema oscuro, el botón para fijar el menú y los "Volver al inicio" duplicados: el logotipo lleva a la página principal. |
 | Panel | Una franja con 4 indicadores separados por líneas finas. Debajo: "Requiere atención" (con un punto rojo o ámbar), "Hoy", salidas y últimas reservas. Se quitaron los dos gráficos, la comparación porcentual con el mes anterior y los íconos de colores. |
@@ -87,6 +87,25 @@
 | Página principal | Misma estructura, con la paleta neutra y sin la animación al hacer scroll. |
 
 Capturas (antes y después) en `docs/capturas/`.
+
+### Paleta de colores (identidad del logotipo)
+
+Los colores salen del logotipo, sin reinterpretarlos. En `logo-kampu.png` hay dos colores:
+`#4B5B1D` (verde oliva, en el isotipo y el nombre) y `#C4BD45` (lima, en la hoja). La versión sobre fondo oscuro usa
+además el crema `#FDF8E6`. Todo lo demás son mezclas de esos colores con blanco o negro, definidas en `tailwind.config.js`.
+
+| Uso | Color | Dónde se ve |
+|---|---|---|
+| Principal | `brand-600` = `#4B5B1D` (oliva del logo) | Botones principales, ítem activo del menú, enlaces, pestañas activas, barras de progreso, paso actual del asistente, foco de los campos, confirmaciones, boleta |
+| Acento | `leaf-400` = `#C4BD45` (lima de la hoja) | Línea del ítem activo del menú, punto de reservas pendientes, paso actual del portal, palabra destacada de la portada |
+| Fondos | `#FAF9F4` (neutro cálido) y blanco | Fondo de la aplicación y tarjetas; crema `#FDFCF6` en la página principal |
+| Texto y bordes | Neutros cálidos (`#22231B` texto, `#7A7668` secundario, `#E6E4DA` bordes) | En lugar de grises fríos, para que combinen con el oliva y el crema |
+| Estados | Correcto: oliva del logo · En curso: oliva medio · Intermedio: oliva claro · Pendiente o aviso: lima de la hoja · Error o anulado: terracota apagado (`#B4533F`) | Puntos de estado, avisos del panel, alertas y validaciones |
+
+- Los nombres estándar de Tailwind (`zinc`, `emerald`, `amber`, `rose`, `sky`, `violet`) se redefinieron con esta paleta, así
+  ningún módulo usa colores ajenos a la marca.
+- El logotipo volvió a su color exacto (`#4B5B1D`); en la v5 inicial se había cambiado por `#4A5230`.
+- El botón de WhatsApp de la página principal usa el oliva de la marca en lugar del verde de WhatsApp.
 
 ## 5. Errores corregidos durante la adaptación
 

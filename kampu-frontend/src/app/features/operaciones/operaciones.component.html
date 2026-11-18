@@ -206,7 +206,7 @@
               <div class="space-y-1.5">
                 @for (c of vehiculosCand(); track c.recursoId) {
                   <button type="button" class="w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors"
-                          [class]="vehiculoSel === c.recursoId ? 'border-zinc-900 bg-zinc-50' : c.motivo ? 'cursor-not-allowed border-zinc-100 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'"
+                          [class]="vehiculoSel === c.recursoId ? 'border-brand-600 bg-brand-50' : c.motivo ? 'cursor-not-allowed border-zinc-100 bg-zinc-50' : 'border-zinc-200 hover:border-brand-300'"
                           [disabled]="!!c.motivo" (click)="elegirVehiculo(c)">
                     <div class="flex items-center justify-between gap-2"><span class="font-medium" [class.text-zinc-400]="c.motivo">{{ c.descripcion }}</span><span class="text-xs text-zinc-500">{{ c.capacidadPax }} pax</span></div>
                     <div class="text-xs" [class]="c.motivo ? 'text-rose-600' : 'text-zinc-500'">{{ c.proveedor }}{{ c.proveedorPropio ? ' (propio)' : '' }}@if (c.motivo) { · {{ c.motivo }} }</div>
@@ -219,7 +219,7 @@
               <div class="space-y-1.5">
                 @for (c of conductoresCand(); track c.recursoId) {
                   <button type="button" class="w-full rounded-lg border px-3 py-2 text-left text-sm transition-colors"
-                          [class]="conductorSel === c.recursoId ? 'border-zinc-900 bg-zinc-50' : c.motivo ? 'cursor-not-allowed border-zinc-100 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-400'"
+                          [class]="conductorSel === c.recursoId ? 'border-brand-600 bg-brand-50' : c.motivo ? 'cursor-not-allowed border-zinc-100 bg-zinc-50' : 'border-zinc-200 hover:border-brand-300'"
                           [disabled]="!!c.motivo" (click)="elegirConductor(c)">
                     <div class="flex items-center justify-between gap-2"><span class="font-medium" [class.text-zinc-400]="c.motivo">{{ c.descripcion }}</span><span class="text-xs text-zinc-500">{{ c.horasDia ?? 0 }} h hoy</span></div>
                     <div class="text-xs" [class]="c.motivo ? 'text-rose-600' : 'text-zinc-500'">{{ c.proveedor }}{{ c.proveedorPropio ? ' (propio)' : '' }}@if (c.motivo) { · {{ c.motivo }} }</div>
@@ -250,7 +250,7 @@
               <div class="grid grid-cols-2 gap-2">
                 @for (s of siguientes(o); track s) {
                   <button type="button" class="rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors"
-                          [class]="nuevoEstado === s ? 'border-zinc-900 bg-zinc-50 text-zinc-900' : 'border-zinc-200 text-zinc-700 hover:border-zinc-400'"
+                          [class]="nuevoEstado === s ? 'border-brand-600 bg-brand-50 text-brand-800' : 'border-zinc-200 text-zinc-700 hover:border-brand-300'"
                           (click)="nuevoEstado = s">{{ store.getEstadoOperacion(s)?.nombre ?? etiqueta(s) }}</button>
                 }
               </div>

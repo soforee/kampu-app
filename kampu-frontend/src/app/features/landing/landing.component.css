@@ -1,17 +1,17 @@
 /* Paleta de la página principal (tema claro) */
 :host {
-  --kp-primary: #18181B;       /* botones primarios */
-  --kp-primary-hover: #3F3F46;
-  --kp-primary-soft: #F5F6EF;
+  --kp-primary: #4B5B1D;       /* verde oliva del logo: botones primarios */
+  --kp-primary-hover: #3F4C18;
+  --kp-primary-soft: #F4F6E4;
   --kp-on-primary: #FFFFFF;
-  --kp-secondary: #5D673A;     /* acento oliva de la marca */
-  --kp-accent: #CBBF57;        /* amarillo pastel, detalles */
+  --kp-secondary: #4B5B1D;     /* oliva de la marca: íconos y enlaces */
+  --kp-accent: #C4BD45;        /* lima de la hoja del logo: detalles */
   --kp-bg: #FFFFFF;
-  --kp-bg-alt: #F7F7F5;
-  --kp-text: #18181B;
-  --kp-muted: #71717A;
-  --kp-border: #E4E4E7;
-  --kp-dark: #18181B;          /* pie de página */
+  --kp-bg-alt: #FDFCF6;        /* crema muy claro (derivado de #FDF8E6) */
+  --kp-text: #22231B;
+  --kp-muted: #7A7668;
+  --kp-border: #E6E4DA;
+  --kp-dark: #262E0F;          /* oliva muy oscuro: pie de página */
   --kp-ease: cubic-bezier(.4, 0, .2, 1);
 
   display: block;

@@ -9,16 +9,20 @@ import { etiqueta } from '../core/utils/etiquetas';
 export class BadgeComponent {
   @Input({ required: true }) estado = '';
 
-  // Tono del punto de color según el estado; el resto (completado, inactivo, sesiones...) queda en gris
+  // Punto de color según el estado, con la paleta del logotipo:
+  //   correcto -> oliva del logo (#4B5B1D) · en curso -> oliva medio · intermedio -> oliva claro
+  //   aviso -> lima de la hoja (#C4BD45) · error -> terracota · el resto (completado, inactivo...) -> neutro
   private tonos: { [estado: string]: string } = {
-    CONFIRMADA: 'verde', APROBADO: 'verde', PAGADO: 'verde', ACTIVO: 'verde', DISPONIBLE: 'verde', OPERATIVO: 'verde', FINALIZADO: 'verde', PAGADO_COMPLETO: 'verde', CREAR: 'verde',
-    PENDIENTE: 'ambar', OCUPADO: 'ambar', MANTENIMIENTO: 'ambar', FALTA_PAGAR: 'ambar', LOGIN_FALLIDO: 'ambar',
-    ANULADA: 'rojo', CANCELADA: 'rojo', RECHAZADO: 'rojo', SUSPENDIDO: 'rojo', CANCELADO: 'rojo', PENDIENTE_PAGO: 'rojo', ELIMINAR: 'rojo',
-    PARCIAL: 'azul', PROGRAMADA: 'azul', ASIGNADO: 'azul', POR_EMPEZAR: 'azul', ACTUALIZAR: 'azul', EMBARQUE: 'azul',
-    EN_RUTA: 'marca', EN_CURSO: 'marca', REGISTRO: 'marca', REEMBOLSADO: 'marca'
+    CONFIRMADA: 'correcto', APROBADO: 'correcto', PAGADO: 'correcto', ACTIVO: 'correcto', DISPONIBLE: 'correcto', OPERATIVO: 'correcto',
+    FINALIZADO: 'correcto', PAGADO_COMPLETO: 'correcto', CREAR: 'correcto',
+    EN_RUTA: 'curso', EN_CURSO: 'curso', EMBARQUE: 'curso', REGISTRO: 'curso',
+    PARCIAL: 'intermedio', PROGRAMADA: 'intermedio', ASIGNADO: 'intermedio', POR_EMPEZAR: 'intermedio', ACTUALIZAR: 'intermedio',
+    PENDIENTE: 'aviso', OCUPADO: 'aviso', MANTENIMIENTO: 'aviso', FALTA_PAGAR: 'aviso', LOGIN_FALLIDO: 'aviso',
+    ANULADA: 'error', CANCELADA: 'error', RECHAZADO: 'error', SUSPENDIDO: 'error', CANCELADO: 'error', PENDIENTE_PAGO: 'error', ELIMINAR: 'error'
   };
   private puntos: { [tono: string]: string } = {
-    verde: 'bg-emerald-500', ambar: 'bg-amber-400', rojo: 'bg-rose-500', azul: 'bg-sky-500', marca: 'bg-brand-500'
+    correcto: 'bg-brand-600', curso: 'bg-brand-400', intermedio: 'bg-brand-200 ring-1 ring-brand-400',
+    aviso: 'bg-leaf-400', error: 'bg-rose-500'
   };
 
   // Textos legibles de los estados del portal

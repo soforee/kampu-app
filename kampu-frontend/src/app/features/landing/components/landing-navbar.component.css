@@ -13,7 +13,7 @@
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
   border-bottom-color: var(--kp-border);
-  box-shadow: 0 8px 30px -18px rgba(16, 24, 40, .35);
+  box-shadow: 0 8px 30px -18px rgba(38, 46, 15, .35);
 }
 
 .nav-link {
@@ -68,7 +68,7 @@
   border-radius: 12px;
   transition: all .3s ease-in-out;
 }
-.nav-toggle:hover { background: rgba(127, 127, 100, .12); }
+.nav-toggle:hover { background: rgba(75, 91, 29, .12); }
 @media (max-width: 767px) { .nav-toggle { display: grid; } }
 
 .menu-movil {
