@@ -1,12 +1,8 @@
-<div class="page-header">
-  <div>
-    <h1 class="h1">Auditoría</h1>
-    <p class="page-sub">Cambios, pagos e inicios de sesión: quién, qué y cuándo.</p>
-  </div>
+<app-page-header titulo="Auditoría" subtitulo="Cambios, pagos e inicios de sesión: quién, qué y cuándo.">
   <button type="button" class="btn-light" (click)="exportar()" [disabled]="exportando() || total() === 0">
     <app-icon name="download" size="w-4 h-4" /> {{ exportando() ? 'Exportando…' : 'Exportar CSV' }}
   </button>
-</div>
+</app-page-header>
 
 <!-- Filtros -->
 <section class="card mb-6 p-5" aria-label="Filtros de auditoría">
@@ -146,13 +142,5 @@
       </tbody>
     </table>
   </div>
-  @if (paginas() > 1) {
-    <div class="flex items-center justify-between gap-3 border-t border-zinc-100 px-5 py-3 text-sm">
-      <button type="button" class="btn-light btn-sm" [disabled]="pagina() === 0 || cargando()" (click)="buscar(pagina() - 1)">
-        <app-icon name="arrow-left" size="w-3.5 h-3.5" /> Anterior</button>
-      <span class="text-zinc-500">Página {{ pagina() + 1 }} de {{ paginas() }}</span>
-      <button type="button" class="btn-light btn-sm" [disabled]="pagina() + 1 >= paginas() || cargando()" (click)="buscar(pagina() + 1)">
-        Siguiente <app-icon name="arrow-right" size="w-3.5 h-3.5" /></button>
-    </div>
-  }
+  <app-paginacion [pagina]="pagina()" (paginaChange)="buscar($event)" [total]="total()" [tamanio]="tamanio" />
 </section>

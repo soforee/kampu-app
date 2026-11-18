@@ -1,19 +1,15 @@
-<div class="page-header">
-  <div>
-    <h1 class="h1">Tráfico</h1>
-    <p class="page-sub">Cada traslado de una salida (aeropuerto → hotel, hotel → atractivo…) con su vehículo, conductor y estado.</p>
-  </div>
+<app-page-header titulo="Tráfico" subtitulo="Cada traslado de una salida (aeropuerto → hotel, hotel → atractivo…) con su vehículo, conductor y estado.">
   @if (gestiona) {
   <button type="button" class="btn-dark" (click)="nueva()"><app-icon name="plus" size="w-4 h-4" /> Nuevo traslado</button>
   }
-</div>
+</app-page-header>
 
-<section class="card mb-6 grid grid-cols-2 lg:grid-cols-4 lg:divide-x divide-zinc-100 [&>div]:px-5 [&>div]:py-4 max-lg:[&>div:nth-child(n+3)]:border-t max-lg:[&>div:nth-child(even)]:border-l">
-  <div><div class="text-[13px] text-zinc-500">Por asignar</div><div class="mt-1 text-xl font-semibold tabular-nums text-zinc-900">{{ resumen().porAsignar }}</div></div>
-  <div><div class="text-[13px] text-zinc-500">En curso</div><div class="mt-1 text-xl font-semibold tabular-nums text-zinc-900">{{ resumen().enCurso }}</div></div>
-  <div><div class="text-[13px] text-zinc-500">Retrasados</div><div class="mt-1 text-xl font-semibold tabular-nums" [class]="resumen().retrasadas ? 'text-amber-700' : 'text-zinc-900'">{{ resumen().retrasadas }}</div></div>
-  <div><div class="text-[13px] text-zinc-500">Salen hoy</div><div class="mt-1 text-xl font-semibold tabular-nums text-zinc-900">{{ resumen().hoy }}</div></div>
-</section>
+<div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+  <app-tarjeta-dato etiqueta="Por asignar" icono="alert" [valor]="resumen().porAsignar" detalle="Sin vehículo ni conductor" />
+  <app-tarjeta-dato etiqueta="En curso" icono="truck" [valor]="resumen().enCurso" detalle="Embarque o en ruta" />
+  <app-tarjeta-dato etiqueta="Retrasados" icono="clock" [valor]="resumen().retrasadas" detalle="Salieron más de 15 min tarde" />
+  <app-tarjeta-dato etiqueta="Salen hoy" icono="calendar" [valor]="resumen().hoy" detalle="Traslados del día" />
+</div>
 
 <div class="toolbar">
   <div class="seg">
@@ -46,7 +42,7 @@
         <th class="th min-w-[180px]">Vehículo y conductor</th><th class="th text-center">Pax</th><th class="th">Estado</th><th class="th col-acciones"></th>
       </tr></thead>
       <tbody>
-        @for (f of filas(); track f.op.operacionId) {
+        @for (f of visibles(); track f.op.operacionId) {
           <tr [class.fila-nueva]="store.resaltado() === 'operacion-' + f.op.operacionId" class="border-t border-zinc-100 first:border-t-0" [class.opacity-60]="f.op.estadoActual === 'CANCELADO'">
             <td data-label="Traslado" class="td">
               <div class="whitespace-nowrap font-medium text-zinc-900">{{ f.op.codigoOperacion }}</div>
@@ -97,6 +93,7 @@
       </tbody>
     </table>
   </div>
+  <app-paginacion [(pagina)]="pagina" [total]="filas().length" />
 </div>
 <p class="hint mt-4">
   Cada cambio se valida: transiciones permitidas, cruces de horario (30 min de margen), máximo 10 h de conducción por día,

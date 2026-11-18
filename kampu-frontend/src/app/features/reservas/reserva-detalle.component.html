@@ -1,16 +1,12 @@
 @if (reserva(); as r) {
   <app-migas [items]="[{ texto: 'Reservas', ruta: '/reservas' }, { texto: codReserva() }]" />
 
-  <div class="page-header">
-    <div>
-      <div class="flex flex-wrap items-center gap-3">
-        <h1 class="h1">Reserva {{ codReserva() }}</h1>
-        <app-badge [estado]="r.estadoReserva" />
-        <app-badge [estado]="r.estadoPago" />
-      </div>
-      <p class="page-sub">Creada el {{ r.fechaReserva | date:'dd/MM/yyyy HH:mm' }}</p>
+  <app-page-header [titulo]="'Reserva ' + codReserva()">
+    <div detalle class="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
+      <app-badge [estado]="r.estadoReserva" />
+      <app-badge [estado]="r.estadoPago" />
+      <span>Creada el {{ r.fechaReserva | date:'dd/MM/yyyy HH:mm' }}</span>
     </div>
-    <div class="flex flex-wrap gap-2">
       @if (gestiona) {
       @if (r.estadoReserva === 'PENDIENTE') { <button type="button" class="btn-brand" (click)="confirmar()"><app-icon name="check" size="w-4 h-4" /> Confirmar</button> }
       @if (r.estadoReserva === 'CONFIRMADA') { <button type="button" class="btn-dark" (click)="completar()"><app-icon name="flag" size="w-4 h-4" /> Marcar completada</button> }
@@ -18,8 +14,7 @@
         <button type="button" class="btn-danger" (click)="anular()"><app-icon name="x" size="w-4 h-4" /> Anular</button>
       }
       }
-    </div>
-  </div>
+  </app-page-header>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
     <div class="lg:col-span-2 space-y-6 min-w-0">

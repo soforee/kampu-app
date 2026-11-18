@@ -13,10 +13,12 @@ import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filt
 import { FormValidacion, V } from '../../core/utils/validacion';
 import { ModalComponent } from '../../shared/modal.component';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { BuscadorComponent } from '../../shared/buscador.component';
 @Component({
   selector: 'app-paquetes',
   standalone: true,
-  imports: [FormsModule, RouterLink, CurrencyPipe, BadgeComponent, IconComponent, ModalComponent],
+  imports: [BuscadorComponent, PageHeaderComponent, FormsModule, RouterLink, CurrencyPipe, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './paquetes.component.html'
 })
 export class PaquetesComponent {

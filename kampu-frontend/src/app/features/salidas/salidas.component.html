@@ -1,10 +1,6 @@
-<div class="page-header">
-  <div>
-    <h1 class="h1">Salidas</h1>
-    <p class="page-sub">Las próximas primero. Abre una salida para ver sus pasajeros y lo que le falta.</p>
-  </div>
+<app-page-header titulo="Salidas" subtitulo="Las próximas primero. Abre una salida para ver sus pasajeros y lo que le falta.">
   @if (editable) { <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> Nueva salida</button> }
-</div>
+</app-page-header>
 
 <div class="toolbar">
   <div class="seg">
@@ -19,7 +15,7 @@
     <table class="tbl tbl-tarjetas">
       <thead><tr><th class="th">Paquete</th><th class="th">Fechas</th><th class="th min-w-[150px]">Ocupación</th><th class="th">Guía</th><th class="th">Transporte</th><th class="th">Estado</th>@if (editable) { <th class="th col-acciones"></th> }</tr></thead>
       <tbody>
-        @for (f of filas(); track f.salida.salidaId) {
+        @for (f of visibles(); track f.salida.salidaId) {
           <tr [class.fila-nueva]="store.resaltado() === 'salida-' + f.salida.salidaId" [class.opacity-60]="!f.abierta">
             <td data-label="Paquete" class="td">
               <a [routerLink]="['/salidas', f.salida.salidaId]" class="font-medium text-zinc-900 hover:underline">{{ f.paquete?.nombre }}</a>
@@ -58,6 +54,7 @@
       </tbody>
     </table>
   </div>
+  <app-paginacion [(pagina)]="pagina" [total]="filas().length" />
 </div>
 
 @if (abierto()) {

@@ -14,10 +14,11 @@ import { MigasComponent } from '../../shared/migas.component';
 import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filtro';
 import { FormValidacion, V } from '../../core/utils/validacion';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-reserva-detalle',
   standalone: true,
-  imports: [FormsModule, RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent, MigasComponent],
+  imports: [PageHeaderComponent, FormsModule, RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent, MigasComponent],
   templateUrl: './reserva-detalle.component.html'
 })
 export class ReservaDetalleComponent {
