@@ -107,6 +107,18 @@ además el crema `#FDF8E6`. Todo lo demás son mezclas de esos colores con blanc
 - El logotipo volvió a su color exacto (`#4B5B1D`); en la v5 inicial se había cambiado por `#4A5230`.
 - El botón de WhatsApp de la página principal usa el oliva de la marca en lugar del verde de WhatsApp.
 
+### Logo, íconos y botones según las plantillas de referencia
+
+- **Menú lateral:**
+  - el logotipo va arriba en un cuadro propio, separado por una línea fina;
+  - cada sección es un ícono en un cuadro redondeado, y la activa tiene fondo oliva muy claro;
+  - abajo están el botón "+" (nueva reserva, solo para quien puede crearla) y el avatar del usuario.
+- **Íconos:** de línea fina (trazo 1.6). En las listas del panel van dentro de un cuadro gris redondeado: requiere atención, hoy y reservas recientes.
+- **Botones:**
+  - 40 px de alto, esquinas redondeadas e ícono a la izquierda en las acciones (guardar, confirmar, anular, imprimir, enviar, asignar, exportar…);
+  - el principal es oliva con sombra suave y el secundario es blanco con borde;
+  - la asignación automática usa el ícono de destellos, como el botón "1-click setup" de la plantilla.
+
 ## 5. Errores corregidos durante la adaptación
 
 - **Credencial del logotipo:** usaba variables CSS de la paleta anterior, que ya no existían.

@@ -12,10 +12,10 @@
     </div>
     <div class="flex flex-wrap gap-2">
       @if (gestiona) {
-      @if (r.estadoReserva === 'PENDIENTE') { <button type="button" class="btn-brand" (click)="confirmar()">Confirmar</button> }
-      @if (r.estadoReserva === 'CONFIRMADA') { <button type="button" class="btn-dark" (click)="completar()">Marcar completada</button> }
+      @if (r.estadoReserva === 'PENDIENTE') { <button type="button" class="btn-brand" (click)="confirmar()"><app-icon name="check" size="w-4 h-4" /> Confirmar</button> }
+      @if (r.estadoReserva === 'CONFIRMADA') { <button type="button" class="btn-dark" (click)="completar()"><app-icon name="flag" size="w-4 h-4" /> Marcar completada</button> }
       @if (r.estadoReserva === 'PENDIENTE' || r.estadoReserva === 'CONFIRMADA') {
-        <button type="button" class="btn-danger" (click)="anular()">Anular</button>
+        <button type="button" class="btn-danger" (click)="anular()"><app-icon name="x" size="w-4 h-4" /> Anular</button>
       }
       }
     </div>
@@ -62,11 +62,11 @@
           </div>
         </div>
         <div class="flex flex-wrap gap-2">
-          <button type="button" class="btn-light btn-sm" (click)="verBoleta()">Ver boleta</button>
+          <button type="button" class="btn-light btn-sm" (click)="verBoleta()"><app-icon name="eye" size="w-3.5 h-3.5" /> Ver boleta</button>
           @if (gestiona) {
           <button type="button" class="btn-light btn-sm" [disabled]="enviandoBoleta || !emailCliente()" (click)="enviarBoleta()" [title]="emailCliente() ? '' : 'El cliente no tiene correo'">
             @if (enviandoBoleta) { Enviando… }
-            @else { {{ r.boletaEnviadaEn ? 'Reenviar' : 'Enviar' }} por correo }
+            @else { <app-icon name="mail" size="w-3.5 h-3.5" /> {{ r.boletaEnviadaEn ? 'Reenviar' : 'Enviar' }} por correo }
           </button>
           }
         </div>
@@ -107,8 +107,8 @@
                   <td class="td text-right whitespace-nowrap">
                     @if (cobra && p.estadoTransaccion === 'PENDIENTE') {
                       <div class="inline-flex gap-1.5">
-                        <button type="button" class="btn-light btn-sm" (click)="resolver(p.pagoId, 'APROBADO')">Aprobar</button>
-                        <button type="button" class="btn-danger btn-sm" (click)="resolver(p.pagoId, 'RECHAZADO')">Rechazar</button>
+                        <button type="button" class="btn-light btn-sm" (click)="resolver(p.pagoId, 'APROBADO')"><app-icon name="check" size="w-3.5 h-3.5" /> Aprobar</button>
+                        <button type="button" class="btn-danger btn-sm" (click)="resolver(p.pagoId, 'RECHAZADO')"><app-icon name="x" size="w-3.5 h-3.5" /> Rechazar</button>
                       </div>
                     }
                   </td>
@@ -159,7 +159,7 @@
               </div>
               <div class="flex gap-2">
                 <button type="button" class="btn-light" (click)="usarSaldo()">Usar saldo</button>
-                <button type="button" class="btn-dark" [disabled]="store.ocupado()" (click)="registrarPago()">Registrar pago</button>
+                <button type="button" class="btn-dark" [disabled]="store.ocupado()" (click)="registrarPago()"><app-icon name="wallet" size="w-4 h-4" /> Registrar pago</button>
               </div>
             </div>
           </div>

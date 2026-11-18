@@ -18,7 +18,7 @@
 
 @layer components {
   /* ---------- Formularios ---------- */
-  .field { @apply h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors
+  .field { @apply h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors
            placeholder:text-zinc-400 hover:border-zinc-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15
            disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400; }
   textarea.field { @apply h-auto min-h-[5rem] py-2 leading-relaxed; resize: vertical; }
@@ -38,32 +38,41 @@
   .search > .field { @apply pl-9; }
 
   /* ---------- Botones: principal oscuro, secundario blanco, peligro en rojo suave ---------- */
-  .btn { @apply inline-flex h-9 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium
-         outline-none transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-offset-1
+  .btn { @apply inline-flex h-10 select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium
+         outline-none transition-[background-color,box-shadow,border-color] duration-150 focus-visible:ring-2 focus-visible:ring-offset-1
          disabled:pointer-events-none disabled:opacity-50; }
-  .btn-dark { @apply btn bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-600/30; }   /* verde oliva del logo */
+  /* Principal: oliva del logo con sombra suave (como el botón oscuro de la plantilla) */
+  .btn-dark { @apply btn bg-brand-600 text-white shadow-[0_1px_2px_rgba(38,46,15,.25),0_6px_14px_-6px_rgba(38,46,15,.55)] hover:bg-brand-700 focus-visible:ring-brand-600/30; }
   .btn-brand { @apply btn-dark; }   /* misma acción principal en todo el sistema */
-  .btn-light { @apply btn border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-zinc-400/30; }
-  .btn-danger { @apply btn border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 focus-visible:ring-rose-500/25; }
-  .btn-sm { @apply h-8 px-3 text-[13px]; }
+  /* Secundario: blanco con borde fino y sombra mínima */
+  .btn-light { @apply btn border border-zinc-200 bg-white text-zinc-800 shadow-soft hover:border-zinc-300 hover:bg-zinc-50 focus-visible:ring-zinc-400/30; }
+  .btn-danger { @apply btn border border-rose-200 bg-white text-rose-600 shadow-soft hover:bg-rose-50 focus-visible:ring-rose-500/25; }
+  .btn-sm { @apply h-8 gap-1.5 rounded-lg px-3 text-[13px]; }
+  /* Botón cuadrado solo con ícono (con borde, como campana y filtros de la plantilla) */
+  .icon-btn-box { @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-soft outline-none
+                  transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30; }
+  /* Ícono de acción dentro de tablas (sin borde) */
   .icon-btn { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 outline-none transition-colors
               hover:bg-zinc-100 hover:text-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400/30; }
   .icon-btn-danger { @apply icon-btn hover:bg-rose-50 hover:text-rose-600; }
   .icon-btn-success { @apply icon-btn text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700; }
+  /* Ícono en cuadro gris redondeado (listas y títulos, como "Home views" de la plantilla) */
+  .ico-tile { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-zinc-200/70 bg-zinc-100 text-zinc-600; }
+  .ico-tile-lg { @apply ico-tile h-11 w-11; }
   .actions { @apply inline-flex items-center gap-0.5; }
   .link { @apply inline-flex items-center gap-1 font-medium text-brand-700 underline decoration-brand-200 underline-offset-4 transition-colors hover:decoration-brand-600; }
 
   /* Pestañas segmentadas */
-  .seg { @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg bg-zinc-100 p-0.5 text-[13px]; }
-  .seg-btn { @apply whitespace-nowrap rounded-md px-3 py-1.5 font-medium text-zinc-500 outline-none transition-colors hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/30; }
+  .seg { @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-xl bg-zinc-100 p-1 text-[13px]; }
+  .seg-btn { @apply whitespace-nowrap rounded-lg px-3 py-1.5 font-medium text-zinc-500 outline-none transition-colors hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/30; }
   .seg-btn.on { @apply bg-white text-brand-700 shadow-soft; }
 
   /* ---------- Tarjetas y tablas ---------- */
   .card { @apply rounded-xl border border-zinc-200/80 bg-white shadow-card; }
   .card-hover { @apply transition-colors hover:border-zinc-300; }
   .card-header { @apply flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-3.5; }
-  .card-title { @apply flex items-center gap-2 text-[15px] font-semibold text-zinc-900; }
-  .card-title > .ico { @apply text-zinc-400; }
+  .card-title { @apply flex items-center gap-2.5 text-[15px] font-semibold text-zinc-900; }
+  .card-title > .ico { @apply ico-tile h-8 w-8 rounded-lg; }
   .tbl { @apply w-full text-sm; }
   .tbl td { @apply max-md:whitespace-nowrap; }
   .tbl tbody tr { @apply border-t border-zinc-100 transition-colors; }

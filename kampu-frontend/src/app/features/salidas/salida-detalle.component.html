@@ -15,19 +15,19 @@
       </div>
       <div class="flex flex-wrap gap-2">
         @if (puedeVender()) {
-          <a class="btn-light" routerLink="/reservas/nueva" [queryParams]="{ salida: s.salidaId }"><app-icon name="plus" size="w-4 h-4" /> Vender cupo</a>
+          <a class="btn-light" routerLink="/reservas/nueva" [queryParams]="{ salida: s.salidaId }"><app-icon name="ticket" size="w-4 h-4" /> Vender cupo</a>
         }
         @if (puedeConfirmar()) {
-          <button type="button" class="btn-brand" [disabled]="procesando()" (click)="ejecucion('CONFIRMADA')">Confirmar salida</button>
+          <button type="button" class="btn-brand" [disabled]="procesando()" (click)="ejecucion('CONFIRMADA')"><app-icon name="check" size="w-4 h-4" /> Confirmar salida</button>
         }
         @if (puedeTerminar()) {
-          <button type="button" class="btn-dark" [disabled]="procesando()" (click)="ejecucion('COMPLETADA')">Marcar terminada</button>
+          <button type="button" class="btn-dark" [disabled]="procesando()" (click)="ejecucion('COMPLETADA')"><app-icon name="flag" size="w-4 h-4" /> Marcar terminada</button>
         }
         @if (puedeReabrir()) {
-          <button type="button" class="btn-light" [disabled]="procesando()" (click)="cambiar('PROGRAMADA')">Reabrir</button>
+          <button type="button" class="btn-light" [disabled]="procesando()" (click)="cambiar('PROGRAMADA')"><app-icon name="refresh" size="w-4 h-4" /> Reabrir</button>
         }
         @if (puedeCancelar()) {
-          <button type="button" class="btn-danger" [disabled]="procesando()" (click)="cambiar('CANCELADA')">Cancelar salida</button>
+          <button type="button" class="btn-danger" [disabled]="procesando()" (click)="cambiar('CANCELADA')"><app-icon name="x" size="w-4 h-4" /> Cancelar salida</button>
         }
       </div>
     </div>
@@ -55,9 +55,7 @@
         <div class="card-header no-print">
           <h2 class="card-title">Lista de pasajeros
             <span class="chip">{{ manifiesto()?.pasajeros?.length ?? 0 }}</span></h2>
-          <button type="button" class="btn-light btn-sm" [disabled]="!manifiesto()?.pasajeros?.length" (click)="imprimir()">
-            Imprimir manifiesto
-          </button>
+          <button type="button" class="btn-light btn-sm" [disabled]="!manifiesto()?.pasajeros?.length" (click)="imprimir()"><app-icon name="printer" size="w-3.5 h-3.5" /> Imprimir manifiesto</button>
         </div>
 
         @if (cargando()) {
