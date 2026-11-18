@@ -6,8 +6,8 @@
   gap: .75rem;
   padding: .65rem .75rem;
   border-radius: 8px;
-  border: 1px solid #E4E4E7;
-  background: #FAFAFA;
+  border: 1px solid #E6E4DA;
+  background: #FAF9F4;
 }
 
 .spinner {
@@ -18,8 +18,8 @@
   width: 16px;
   margin-top: -8px;
   border-radius: 999px;
-  border: 2px solid #E4E4E7;
-  border-top-color: #52525B;
+  border: 2px solid #E6E4DA;
+  border-top-color: #5D5A4E;
   animation: girar .7s linear infinite;
 }
 @keyframes girar { to { transform: rotate(360deg); } }
@@ -34,9 +34,9 @@
   overflow-y: auto;
   padding: .35rem;
   border-radius: 10px;
-  border: 1px solid #E4E4E7;
+  border: 1px solid #E6E4DA;
   background: #fff;
-  box-shadow: 0 8px 24px -8px rgba(16, 24, 40, .14);
+  box-shadow: 0 8px 24px -8px rgba(38, 46, 15, .14);
 }
 
 .opcion {
@@ -48,10 +48,10 @@
   cursor: pointer;
   transition: background-color .15s ease;
 }
-.opcion-activa { background: #F4F4F5; }
+.opcion-activa { background: #F3F2EC; }
 
 span.marca {
-  background: #ECEBD5;
+  background: #F3F0C2;
   color: inherit;
   border-radius: 3px;
   padding: 0 1px;
@@ -64,10 +64,10 @@ span.marca {
   gap: .4rem;
   margin-top: .3rem;
   padding: .65rem;
-  border-top: 1px solid #F4F4F5;
+  border-top: 1px solid #F3F2EC;
   font-size: 13px;
-  color: #52525B;
+  color: #5D5A4E;
   border-radius: 0 0 10px 10px;
   transition: all .2s ease;
 }
-.pie:hover { color: #18181B; background: #FAFAFA; }
+.pie:hover { color: #22231B; background: #FAF9F4; }

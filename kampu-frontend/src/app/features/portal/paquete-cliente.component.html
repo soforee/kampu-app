@@ -38,7 +38,7 @@
                 <div class="flex w-full items-center">
                   <span class="h-0.5 flex-1" [class]="$first ? 'bg-transparent' : (paso.estado === 'pendiente' ? 'bg-zinc-200' : 'bg-brand-500')"></span>
                   <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-medium"
-                        [class]="paso.estado === 'hecho' ? 'bg-brand-500 text-white' : paso.estado === 'actual' ? 'bg-zinc-900 text-white' : 'bg-zinc-100 text-zinc-400'">
+                        [class]="paso.estado === 'hecho' ? 'bg-brand-600 text-white' : paso.estado === 'actual' ? 'bg-leaf-400 text-brand-900' : 'bg-zinc-100 text-zinc-400'">
                     @if (paso.estado === 'hecho') { <app-icon name="check" size="w-3.5 h-3.5" /> } @else { {{ $index + 1 }} }
                   </span>
                   <span class="h-0.5 flex-1" [class]="ultimo ? 'bg-transparent' : (linea()[$index + 1].estado === 'pendiente' ? 'bg-zinc-200' : 'bg-brand-500')"></span>
