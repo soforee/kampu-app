@@ -24,10 +24,11 @@ type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'lugares';
  * Logística v4: PROVEEDORES (Kampu Tours propio + terceros), PERSONAL (guías y conductores),
  * VEHICULOS y LUGARES. La flota y el personal propios cuelgan de Kampu Tours.
  */
+import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-recursos',
   standalone: true,
-  imports: [FormsModule, DatePipe, IconComponent, BadgeComponent, ModalComponent],
+  imports: [PageHeaderComponent, FormsModule, DatePipe, IconComponent, BadgeComponent, ModalComponent],
   templateUrl: './recursos.component.html'
 })
 export class RecursosComponent {

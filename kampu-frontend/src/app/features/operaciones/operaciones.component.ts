@@ -25,10 +25,13 @@ const EN_CURSO: EstadoOperacion[] = ['ASIGNADO', 'EMBARQUE', 'EN_RUTA'];
  * transiciones de estado, cruces de horario, horas del conductor, mantenimiento, capacidad
  * de la salida, asignación automática (flota propia primero) e historial.
  */
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
+import { TarjetaDatoComponent } from '../../shared/tarjeta-dato.component';
 @Component({
   selector: 'app-operaciones',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
+  imports: [TarjetaDatoComponent, PaginacionComponent, PageHeaderComponent, FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './operaciones.component.html'
 })
 export class OperacionesComponent {
@@ -96,6 +99,14 @@ export class OperacionesComponent {
         return true;
       })
       .map(o => ({ op: o, salida: this.store.getSalida(o.salidaId), paquete: this.store.getPaquete(this.store.getSalida(o.salidaId)?.paqueteId) }));
+  });
+
+  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  pagina = signal(0);
+  visibles = computed(() => {
+    const filas = this.filas();
+    const pagina = Math.min(this.pagina(), Math.max(0, Math.ceil(filas.length / 10) - 1));
+    return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 
   resumen = computed(() => {

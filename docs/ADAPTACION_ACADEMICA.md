@@ -119,6 +119,27 @@ además el crema `#FDF8E6`. Todo lo demás son mezclas de esos colores con blanc
   - el principal es oliva con sombra suave y el secundario es blanco con borde;
   - la asignación automática usa el ícono de destellos, como el botón "1-click setup" de la plantilla.
 
+### Plantilla maestra única
+
+Todos los módulos comparten la misma estructura:
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| **Barra lateral** | `layout/shell.component` | Logotipo, módulos según los permisos del rol y botón "+" (nueva reserva). |
+| **Barra superior** | `layout/shell.component` | Nombre de la sección actual, búsqueda global, campana de avisos y menú del usuario. La búsqueda filtra en el navegador los datos ya cargados: reservas, clientes y salidas que el rol puede ver. La campana muestra los avisos reales de `AlertasService`. El menú del usuario lleva a la página principal o cierra la sesión. |
+| **Encabezado de página** | `shared/page-header.component.ts` | Título, subtítulo o detalle y las acciones de la página. Lo usan los 12 módulos del panel. |
+| **Buscador** | `shared/buscador.component.ts` | Campo con lupa y enlace de doble vía (`[(valor)]`) en Reservas, Clientes, Pagos y Paquetes. |
+| **Tarjetas informativas** | `shared/tarjeta-dato.component.ts` | Ícono, valor, detalle y variación frente al mes anterior. Se usan en el Panel y en Tráfico. |
+| **Paginación** | `shared/paginacion.component.ts` | 10 filas por página en Reservas, Clientes, Pagos, Salidas y Tráfico. En Auditoría pagina en el servidor. |
+| **Modales, estados y confirmaciones** | `shared/modal.component`, `shared/badge.component`, `core/services/alert.service.ts` | Los mismos en todo el sistema. |
+
+**Panel:**
+- tarjetas con ícono y variación real frente al mes anterior;
+- gráfico de barras de los últimos 6 meses (el mes actual en el oliva del logo);
+- "Acciones rápidas", solo las que el rol puede hacer, con contadores reales;
+- barras de avance: cupos vendidos y cobrado sobre lo vendido (para el Operador, traslados asignados);
+- debajo: avisos, el día, las salidas y las últimas reservas.
+
 ## 5. Errores corregidos durante la adaptación
 
 - **Credencial del logotipo:** usaba variables CSS de la paleta anterior, que ya no existían.

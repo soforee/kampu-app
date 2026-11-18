@@ -1,45 +1,82 @@
-<div class="page-header">
-  <div>
-    <h1 class="h1">{{ saludo() }}, {{ auth.usuario()?.username }}</h1>
-    <p class="page-sub capitalize-first">{{ hoy | date:"EEEE d 'de' MMMM" }}</p>
-  </div>
+<app-page-header [titulo]="saludo() + ', ' + (auth.usuario()?.username ?? '')">
+  <p detalle class="page-sub capitalize-first">{{ hoy | date:"EEEE d 'de' MMMM" }} · esto es lo que pasa hoy en la agencia.</p>
   @if (nuevaReserva()) {
     <a routerLink="/reservas/nueva" class="btn-dark"><app-icon name="plus" size="w-4 h-4" /> Nueva reserva</a>
   }
-</div>
+</app-page-header>
 
-<!-- Indicadores: una sola franja, separados por líneas finas -->
-<section class="card mb-6 grid grid-cols-2 divide-zinc-100 lg:grid-cols-4 lg:divide-x [&>div]:p-5 max-lg:[&>div:nth-child(n+3)]:border-t max-lg:[&>div:nth-child(even)]:border-l" data-testid="indicadores">
-  <div>
-    <div class="text-[13px] text-zinc-500">Salidas por empezar</div>
-    <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ kpis().porEmpezar }}</div>
+<div class="mb-6 grid gap-6 xl:grid-cols-3">
+  <!-- Columna principal: indicadores y gráfico -->
+  <div class="min-w-0 space-y-6 xl:col-span-2">
+    <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4" data-testid="indicadores">
+      <app-tarjeta-dato etiqueta="Por empezar" icono="calendar" [valor]="kpis().porEmpezar" detalle="Salidas abiertas" />
+      <app-tarjeta-dato etiqueta="En curso" icono="compass" [valor]="kpis().enCurso" detalle="Viajes en marcha" />
+      @if (comercial()) {
+        <app-tarjeta-dato etiqueta="Cobrado este mes" icono="wallet" [valor]="(cobros().esteMes | currency:'S/':'symbol':'1.0-0') ?? ''" [tendencia]="cobros().variacion" detalle="Frente al mes anterior" />
+        <app-tarjeta-dato etiqueta="Por cobrar" icono="hourglass" [valor]="(kpis().porCobrar | currency:'S/':'symbol':'1.0-0') ?? ''" [detalle]="reservasConSaldo() + ' reserva(s) con saldo'" />
+      } @else {
+        <app-tarjeta-dato etiqueta="Pasajeros" icono="users" [valor]="kpis().pasajeros" detalle="Por atender" />
+        <app-tarjeta-dato etiqueta="Traslados" icono="truck" [valor]="store.operaciones().length" detalle="Registrados" />
+      }
+    </div>
+
+    <section class="card p-5 sm:p-6" data-testid="grafico">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="card-title">{{ comercial() ? 'Vendido por mes' : 'Pasajeros por mes' }}</h2>
+          <p class="mt-0.5 text-xs text-zinc-500">{{ comercial() ? 'Monto de reservas no anuladas' : 'Pasajeros de las salidas según su mes de inicio' }} · últimos 6 meses</p>
+        </div>
+        @if (comercial()) {
+          <span class="inline-flex items-center gap-1.5 rounded-lg bg-zinc-100 px-2.5 py-1 text-xs text-zinc-600">{{ reservasMes().actual }} reserva(s) este mes
+            @if (reservasMes().variacion !== null) { <span [class]="reservasMes().variacion! >= 0 ? 'text-brand-600' : 'text-rose-600'">({{ reservasMes().variacion! >= 0 ? '+' : '' }}{{ reservasMes().variacion }}%)</span> }
+          </span>
+        }
+      </div>
+      <div class="mt-6 flex h-52 items-end gap-3 sm:gap-4" role="img" [attr.aria-label]="(comercial() ? 'Vendido' : 'Pasajeros') + ' por mes'">
+        @for (m of grafico(); track m.clave) {
+          <div class="group flex h-full flex-1 flex-col items-center justify-end gap-2">
+            <span class="text-xs font-medium tabular-nums" [class]="m.actual ? 'text-brand-700' : 'text-zinc-500 opacity-0 transition-opacity group-hover:opacity-100'">{{ formatoGrafico(m.valor) }}</span>
+            <div class="w-full rounded-xl transition-colors" [style.height.%]="m.alto"
+                 [class]="m.actual ? 'bg-brand-600' : 'bg-brand-100 group-hover:bg-brand-200'" [title]="(m.fecha | date:'MMMM yyyy') + ': ' + formatoGrafico(m.valor)"></div>
+            <span class="text-xs capitalize" [class]="m.actual ? 'font-medium text-zinc-900' : 'text-zinc-500'">{{ m.fecha | date:'MMM' }}</span>
+          </div>
+        }
+      </div>
+    </section>
   </div>
-  <div>
-    <div class="text-[13px] text-zinc-500">Salidas en curso</div>
-    <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ kpis().enCurso }}</div>
-  </div>
-  @if (comercial()) {
-    <div>
-      <div class="text-[13px] text-zinc-500">Cobrado</div>
-      <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ kpis().cobrado | currency:'S/':'symbol':'1.0-0' }}</div>
-      <div class="mt-1 text-xs text-zinc-500">{{ cobradoEsteMes() | currency:'S/':'symbol':'1.0-0' }} este mes</div>
-    </div>
-    <div>
-      <div class="text-[13px] text-zinc-500">Por cobrar</div>
-      <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ kpis().porCobrar | currency:'S/':'symbol':'1.0-0' }}</div>
-      <div class="mt-1 text-xs text-zinc-500">{{ reservasConSaldo() }} reserva(s) con saldo</div>
-    </div>
-  } @else {
-    <div>
-      <div class="text-[13px] text-zinc-500">Pasajeros a atender</div>
-      <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ kpis().pasajeros }}</div>
-    </div>
-    <div>
-      <div class="text-[13px] text-zinc-500">Traslados registrados</div>
-      <div class="mt-2 text-2xl font-semibold tabular-nums text-zinc-900">{{ store.operaciones().length }}</div>
-    </div>
-  }
-</section>
+
+  <!-- Columna lateral: acciones rápidas y avance -->
+  <aside class="min-w-0 space-y-6">
+    @if (acciones().length) {
+      <section class="card overflow-hidden" data-testid="acciones">
+        <div class="card-header"><h2 class="card-title">Acciones rápidas</h2></div>
+        <ul class="divide-y divide-zinc-100">
+          @for (a of acciones(); track a.titulo) {
+            <li class="flex items-center gap-3.5 px-5 py-3.5">
+              <span class="ico-tile-lg"><app-icon [name]="a.icono" size="w-[18px] h-[18px]" /></span>
+              <div class="min-w-0 flex-1">
+                <div class="text-sm font-medium text-zinc-900">{{ a.titulo }}</div>
+                <div class="truncate text-xs text-zinc-500">{{ a.detalle }}</div>
+              </div>
+              <a [routerLink]="a.ruta" class="btn-light btn-sm">{{ a.boton }}</a>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+    <section class="card space-y-5 p-5" data-testid="progreso">
+      @for (b of progreso(); track b.texto) {
+        <div>
+          <div class="flex items-baseline justify-between gap-3 text-sm">
+            <span class="text-zinc-700">{{ b.texto }}</span>
+            <span class="whitespace-nowrap tabular-nums"><span class="font-semibold text-zinc-900">{{ b.valor }}</span><span class="text-zinc-400">/{{ b.total }}</span></span>
+          </div>
+          <div class="progress mt-2"><div [style.width.%]="b.pct"></div></div>
+        </div>
+      }
+    </section>
+  </aside>
+</div>
 
 @if (store.cargado()) {
   <div class="mb-6 grid items-start gap-6 lg:grid-cols-2">

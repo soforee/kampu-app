@@ -17,10 +17,12 @@ import { IconComponent } from '../../shared/icon.component';
  * inicios/cierres de sesión e ingresos fallidos. Filtros combinables, paginación en el
  * servidor, historial de un registro y exportación a CSV.
  */
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
   selector: 'app-auditoria',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe, BadgeComponent, IconComponent],
+  imports: [PaginacionComponent, PageHeaderComponent, FormsModule, RouterLink, DatePipe, BadgeComponent, IconComponent],
   templateUrl: './auditoria.component.html'
 })
 export class AuditoriaComponent {

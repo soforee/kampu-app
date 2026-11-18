@@ -15,10 +15,11 @@ interface Paso { ok: boolean; titulo: string; detalle: string; }
 
 // Ficha de una salida: todo lo que el tour manager revisa antes de que el grupo salga
 // (lista de verificación), el manifiesto de pasajeros para imprimir y los traslados.
+import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-salida-detalle',
   standalone: true,
-  imports: [RouterLink, DatePipe, CurrencyPipe, BadgeComponent, IconComponent, LogoComponent, MigasComponent],
+  imports: [PageHeaderComponent, RouterLink, DatePipe, CurrencyPipe, BadgeComponent, IconComponent, LogoComponent, MigasComponent],
   templateUrl: './salida-detalle.component.html',
   styleUrl: './salida-detalle.component.css'
 })
