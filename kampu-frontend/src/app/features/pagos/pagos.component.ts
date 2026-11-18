@@ -57,8 +57,10 @@ export class PagosComponent {
   totalAprobado = computed(() =>
     this.filas().filter(f => f.pago.estadoTransaccion === 'APROBADO').reduce((a, f) => a + f.pen, 0));
 
-  resolver(id: number, estado: 'APROBADO' | 'RECHAZADO') {
+  async resolver(id: number, estado: 'APROBADO' | 'RECHAZADO') {
     if (this.store.ocupado()) return;
+    // Rechazar es una acción que no se deshace: se pide confirmación antes de enviarla
+    if (estado === 'RECHAZADO' && !(await this.alerts.confirm('El pago quedará rechazado y no se descontará del saldo de la reserva.', 'Rechazar pago', 'Sí, rechazar'))) return;
     this.store.ocupado.set(true);
     this.store.resolverPago(id, estado).subscribe({
       next: () => {

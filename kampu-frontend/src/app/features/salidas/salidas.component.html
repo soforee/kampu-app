@@ -13,7 +13,7 @@
 <div class="card overflow-hidden">
   <div class="relative overflow-x-auto">
     <table class="tbl tbl-tarjetas">
-      <thead><tr><th class="th">Paquete</th><th class="th">Fechas</th><th class="th min-w-[150px]">Ocupación</th><th class="th">Guía</th><th class="th">Transporte</th><th class="th">Estado</th>@if (editable) { <th class="th col-acciones"></th> }</tr></thead>
+      <thead><tr><th class="th">Paquete</th><th class="th">Fechas</th><th class="th min-w-[150px]">Ocupación</th><th class="th">Guía</th><th class="th">Transporte</th><th class="th">Estado</th><th class="th col-acciones"></th></tr></thead>
       <tbody>
         @for (f of visibles(); track f.salida.salidaId) {
           <tr [class.fila-nueva]="store.resaltado() === 'salida-' + f.salida.salidaId" [class.opacity-60]="!f.abierta">
@@ -37,16 +37,17 @@
               }
             </td>
             <td data-label="Estado" class="td"><app-badge [estado]="f.salida.estado" /></td>
-            @if (editable) {
-              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
-                <div class="actions">
+            <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+              <div class="actions">
+                <a [routerLink]="['/salidas', f.salida.salidaId]" class="icon-btn" data-tip="Ver detalle" [attr.aria-label]="'Ver detalle de ' + f.paquete?.nombre"><app-icon name="eye" size="w-4 h-4" /></a>
+                @if (editable) {
                   @if (f.abierta) {
-                    <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.salida.salidaId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                    <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.salida.salidaId)"><app-icon name="edit" size="w-4 h-4" /></button>
                   }
-                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
-                </div>
-              </td>
-            }
+                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                }
+              </div>
+            </td>
           </tr>
         } @empty {
           <tr><td colspan="7"><div class="empty">{{ store.cargado() ? 'No hay salidas para mostrar.' : 'Cargando…' }}</div></td></tr>
