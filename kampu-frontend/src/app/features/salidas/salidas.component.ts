@@ -9,7 +9,6 @@ import { EstadoSalida, SalidaForm } from '../../core/models';
 import { addDays, cuando, diasHasta, hoy } from '../../core/utils/date.util';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
-import { EsqueletoComponent } from '../../shared/esqueleto.component';
 import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filtro';
 import { FormValidacion, V } from '../../core/utils/validacion';
 import { ModalComponent } from '../../shared/modal.component';
@@ -17,7 +16,7 @@ import { ModalComponent } from '../../shared/modal.component';
 @Component({
   selector: 'app-salidas',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent, EsqueletoComponent],
+  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './salidas.component.html'
 })
 export class SalidasComponent {

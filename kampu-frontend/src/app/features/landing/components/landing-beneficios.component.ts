@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
 import { IconComponent } from '../../../shared/icon.component';
-import { RevealDirective } from '../../../shared/reveal.directive';
 
 @Component({
   selector: 'app-landing-beneficios',
   standalone: true,
-  imports: [IconComponent, RevealDirective],
+  imports: [IconComponent],
   templateUrl: './landing-beneficios.component.html',
   styleUrl: './landing-beneficios.component.css'
 })

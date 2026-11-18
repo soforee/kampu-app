@@ -11,7 +11,7 @@
 .beneficio:hover {
   transform: translateY(-4px);
   border-color: var(--kp-border);
-  box-shadow: 0 24px 50px -28px rgba(29, 36, 9, .35);
+  box-shadow: 0 24px 50px -28px rgba(16, 24, 40, .35);
 }
 
 .beneficio-icono {

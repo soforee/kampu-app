@@ -5,8 +5,6 @@ import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { ClienteForm, TipoDocumentoCliente } from '../../core/models';
 import { IconComponent } from '../../shared/icon.component';
-import { AvatarComponent } from '../../shared/avatar.component';
-import { EsqueletoComponent } from '../../shared/esqueleto.component';
 import { filtrarEscritura, filtrarPegado } from '../../core/utils/filtro';
 import { FormValidacion, telefonoRepetido, V } from '../../core/utils/validacion';
 import { ModalComponent } from '../../shared/modal.component';
@@ -16,7 +14,7 @@ import { errorTelefonoPais } from '../../core/utils/paises';
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [FormsModule, IconComponent, ModalComponent, TelefonoInputComponent, EsqueletoComponent, AvatarComponent],
+  imports: [FormsModule, IconComponent, ModalComponent, TelefonoInputComponent],
   templateUrl: './clientes.component.html'
 })
 export class ClientesComponent {
