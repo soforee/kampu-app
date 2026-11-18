@@ -30,6 +30,11 @@ public final class ErroresOracle {
             Map.entry("UQ_PERS_LICENCIA", "Ya existe una persona con ese número de licencia."),
             Map.entry("UQ_DET_RESERVA_SALIDA", "La reserva ya incluye esa salida."),
             Map.entry("UQ_PAS_DETALLE_DOC", "El documento de un pasajero está repetido en la reserva."),
+            Map.entry("UQ_USU_USERNAME", "Ese nombre de usuario ya existe."),
+            Map.entry("UQ_LUG_NOMBRE_CIUDAD", "Ya existe un lugar con ese nombre en esa ciudad."),
+            Map.entry("UQ_VEH_PLACA", "Ya existe un vehículo con esa placa."),
+            Map.entry("UQ_PROV_RUC", "Ya existe un proveedor con ese RUC."),
+            Map.entry("UQ_PERS_DOCUMENTO", "Ya existe una persona del personal con ese documento."),
             // CHECK
             Map.entry("CHK_PROV_RUC", "El RUC tiene 11 dígitos y empieza con 10, 15, 17 o 20."),
             Map.entry("CHK_USU_ROL", "Rol no válido (ADMIN, VENDEDOR u OPERADOR)."),
@@ -46,6 +51,11 @@ public final class ErroresOracle {
             Map.entry("CHK_RES_CONFIRMADA", "Una reserva confirmada necesita un pago aprobado."),
             Map.entry("CHK_RES_ANULADA", "Una reserva anulada no puede conservar pagos aprobados."),
             Map.entry("CHK_PAG_TC", "El tipo de cambio de un pago en soles debe ser 1."),
+            Map.entry("CHK_CLI_FORMATO_DOC", pe.edu.upeu.lp2_gp2.dto.Reglas.MSG_DOCUMENTO),
+            Map.entry("CHK_PAS_FORMATO_DOC", pe.edu.upeu.lp2_gp2.dto.Reglas.MSG_DOCUMENTO),
+            Map.entry("CHK_CLI_EMAIL", "El correo no es válido (ejemplo: nombre@dominio.com)."),
+            Map.entry("CHK_VEH_PLACA", "La placa debe guardarse en mayúsculas."),
+            Map.entry("FK_PERS_CARGO", "El rol del personal no existe en el catálogo de cargos (GUIA, CONDUCTOR o AMBOS)."),
             // FOREIGN KEY
             Map.entry("FK_OP_VEH", "El vehículo indicado no existe."),
             Map.entry("FK_OP_CON", "El conductor indicado no existe."),

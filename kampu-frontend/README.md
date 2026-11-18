@@ -12,7 +12,7 @@ npm install
 npm start
 ```
 
-Abre http://localhost:4200. Usuarios de `02_data.sql`: `admin` / `admin123`, `ventas` / `ventas123`, `operador` / `operador123`;
+Abre http://localhost:4200. Usuarios de los datos demo (`kampu_tours_v11.sql`): `admin` / `admin123`, `ventas` / `ventas123`, `operador` / `operador123`;
 cliente `ana.ramirez@mail.com` / `cliente123`.
 
 Para generar la versión de producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
