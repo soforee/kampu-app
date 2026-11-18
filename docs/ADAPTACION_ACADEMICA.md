@@ -186,11 +186,11 @@ Todos los módulos comparten la misma estructura:
   - M1: qué hacer con los traslados al cambiar la fecha de una salida;
   - H3: si se usan o se eliminan los descuentos.
 - **Gestión de usuarios internos** (alta y cambio de contraseña desde la interfaz): no existe.
-- **Error 500 de tu instalación:** sigue sin diagnóstico. Hace falta la línea "Error no controlado en …" de la consola del backend.
+- **Error 500 de tu instalación:** sigue sin diagnóstico. Hace falta la línea "Error no controlado en …" de la consola del backend. Causa probable, corregida en la v11: `AUDITORIA.entidad` era `VARCHAR2(30)` en bytes y el backend recorta a 30 caracteres; con tildes en UTF-8 daba ORA-12899 (ver `docs/ACOPLAMIENTO_BD_v11.md`).
 
 ## 8. Cómo ejecutar
 
-1. **Oracle:** como dueño del esquema, ejecutar en orden `01_schema.sql`, `02_data.sql` y `03_particionamiento_roles.sql` (en `kampu-backend/src/main/resources/db/`).
+1. **Oracle:** como `SYSTEM` en la PDB `XEPDB1`, ejecutar `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` (F5). Ver `docs/ACOPLAMIENTO_BD_v11.md`.
 2. **Backend:** `cd kampu-backend && ./mvnw spring-boot:run`. Si la base no es la de los valores por defecto, indicar `DB_URL`, `DB_USERNAME` y `DB_PASSWORD`.
 3. **Frontend:** `cd kampu-frontend && npm install && npm start`, y abrir http://localhost:4200.
 4. **Usuarios:**
@@ -198,4 +198,4 @@ Todos los módulos comparten la misma estructura:
    - `ventas` / `ventas123`
    - `operador` / `operador123`
    - cliente: `ana.ramirez@mail.com` / `cliente123`
-5. **Pruebas (opcional, solo sobre una base recién instalada):** `./pruebas/ejecutar.sh`.
+5. **Verificación (opcional):** `SELECT * FROM KAMPU_BD.VW_CUADRE_INTEGRIDAD;` debe devolver 0 filas.
