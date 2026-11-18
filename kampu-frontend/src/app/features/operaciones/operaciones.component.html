@@ -80,10 +80,10 @@
                   <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(f.op)"><app-icon name="truck" size="w-3.5 h-3.5" /> Asignar</button>
                 }
                 @if (gestiona && !esFinal(f.op)) {
-                  <button type="button" class="icon-btn" title="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.op)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.op)"><app-icon name="edit" size="w-4 h-4" /></button>
                 }
-                <button type="button" class="icon-btn" title="Historial de estados" aria-label="Historial" (click)="verHistorial(f.op)"><app-icon name="clock" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="Historial de estados" aria-label="Historial" (click)="verHistorial(f.op)"><app-icon name="clock" size="w-4 h-4" /></button>
               </div>
             </td>
           </tr>

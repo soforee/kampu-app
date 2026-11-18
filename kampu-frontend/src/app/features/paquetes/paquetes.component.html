@@ -29,8 +29,8 @@
             @if (f.paquete.estado === 'ACTIVO' && f.proximas > 0) {
               <a [routerLink]="['/reservas/nueva']" [queryParams]="{ paquete: f.paquete.paqueteId }" class="btn-light btn-sm mr-1"><app-icon name="ticket" size="w-3.5 h-3.5" /> Reservar</a>
             }
-            <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.paquete.paqueteId)"><app-icon name="edit" size="w-4 h-4" /></button>
-            <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(f.paquete.paqueteId)"><app-icon name="trash" size="w-4 h-4" /></button>
+            <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.paquete.paqueteId)"><app-icon name="edit" size="w-4 h-4" /></button>
+            <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(f.paquete.paqueteId)"><app-icon name="trash" size="w-4 h-4" /></button>
           </div>
         </div>
       </div>
