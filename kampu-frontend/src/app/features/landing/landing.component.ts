@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { PaqueteTour, SalidaProgramada } from '../../core/models';
 import { API } from '../../core/utils/api';
 import { hoy } from '../../core/utils/date.util';
@@ -25,8 +25,36 @@ import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
-export class LandingComponent {
+export class LandingComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
+
+  // Navegación por secciones a pantalla completa: puntos a la derecha con la sección visible resaltada
+  secciones = [
+    { id: 'inicio', texto: 'Inicio' }, { id: 'tours', texto: 'Destinos' }, { id: 'nosotros', texto: 'Nosotros' },
+    { id: 'como-funciona', texto: 'Cómo funciona' }, { id: 'galeria', texto: 'Galería' },
+    { id: 'beneficios', texto: 'Por qué elegirnos' }, { id: 'contacto', texto: 'Contacto' }
+  ];
+  seccionActiva = signal('inicio');
+  private observador?: IntersectionObserver;
+
+  ngAfterViewInit() {
+    // El ajuste a cada sección solo se activa en esta página (el panel y el portal se desplazan normal)
+    document.documentElement.classList.add('secciones');
+    if (typeof IntersectionObserver === 'undefined') return;
+    // Una sección está activa cuando cruza la línea media de la ventana
+    this.observador = new IntersectionObserver(entradas => {
+      for (const e of entradas) if (e.isIntersecting) this.seccionActiva.set(e.target.id);
+    }, { rootMargin: '-50% 0px -50% 0px' });
+    for (const s of this.secciones) {
+      const el = document.getElementById(s.id);
+      if (el) this.observador.observe(el);
+    }
+  }
+
+  ngOnDestroy() {
+    document.documentElement.classList.remove('secciones');
+    this.observador?.disconnect();
+  }
 
   private gradientes = [
     'from-zinc-800 to-zinc-900', 'from-brand-500 to-brand-700', 'from-earth-500 to-earth-700',

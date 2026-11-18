@@ -38,6 +38,27 @@
 .categoria-activa { background: #FFFFFF; color: var(--kp-primary); box-shadow: 0 1px 2px rgba(38, 46, 15, .06), 0 6px 16px -10px rgba(38, 46, 15, .25); }
 .categoria-activa::after { transform: scaleX(1); }
 
+/* Carrusel: una fila con desplazamiento horizontal y ajuste a cada tarjeta (scroll-snap nativo) */
+.carrusel {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 84%; gap: 1.25rem;
+  overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  padding: .25rem .25rem 1.25rem; margin: -.25rem -.25rem 0; scrollbar-width: none; overscroll-behavior-x: contain;
+}
+.carrusel::-webkit-scrollbar { display: none; }
+.carrusel > .tour { scroll-snap-align: start; }
+.carrusel:focus-visible { outline: 2px solid var(--kp-accent); outline-offset: 4px; border-radius: 20px; }
+@media (min-width: 640px) { .carrusel { grid-auto-columns: calc((100% - 1.25rem) / 2); } }
+@media (min-width: 1024px) { .carrusel { grid-auto-columns: calc((100% - 3rem) / 3); gap: 1.5rem; } .carrusel .tour-media { aspect-ratio: 16 / 10; } }
+
+.flecha {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 999px;
+  border: 1px solid var(--kp-border); background: #FFFFFF; color: var(--kp-primary);
+  transition: background-color .25s ease, border-color .25s ease, opacity .25s ease, transform .15s ease;
+}
+.flecha:hover:not(:disabled) { background: var(--kp-primary); border-color: var(--kp-primary); color: #FFFFFF; }
+.flecha:active:not(:disabled) { transform: scale(.94); }
+.flecha:disabled { opacity: .35; cursor: default; }
+
 /* Tarjeta de tour: entra con fundido y desplazamiento (escalonado por el animation-delay) */
 .tour {
   display: flex;
@@ -101,4 +122,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .tour { animation: none; }
+  .carrusel { scroll-behavior: auto; }
 }
