@@ -1,4 +1,4 @@
-.footer { background: var(--kp-dark); color: #FFFEF8; }
+.footer { background: var(--kp-dark); color: #FFFFFF; }
 
 .footer-titulo {
   font-size: 11px;
@@ -15,7 +15,7 @@
   color: rgba(255, 254, 248, .6);
   transition: all .3s ease-in-out;
 }
-.footer-link:hover { color: #FFFEF8; transform: translateX(2px); }
+.footer-link:hover { color: #FFFFFF; transform: translateX(2px); }
 
 .red {
   display: grid;

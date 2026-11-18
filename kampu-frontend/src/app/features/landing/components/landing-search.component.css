@@ -6,7 +6,7 @@
   border-radius: 24px;
   background: var(--kp-bg);
   border: 1px solid var(--kp-border);
-  box-shadow: 0 30px 70px -30px rgba(29, 36, 9, .45), 0 2px 8px rgba(29, 36, 9, .06);
+  box-shadow: 0 30px 70px -30px rgba(38, 46, 15, .45), 0 2px 8px rgba(38, 46, 15, .06);
   animation: buscador-in .9s .45s cubic-bezier(.16, 1, .3, 1) both;
 }
 @keyframes buscador-in { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: none; } }
@@ -49,7 +49,7 @@
   color: var(--kp-text);
   appearance: none;
 }
-.campo-input::placeholder { color: #A49D7B; font-weight: 600; }
+.campo-input::placeholder { color: #A5A193; font-weight: 600; }
 
 .buscar-btn {
   display: inline-flex;

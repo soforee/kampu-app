@@ -1,41 +1,55 @@
-# KAMPU · Tour Manager (frontend Angular + Tailwind CDN)
+# KAMPU · Tour Manager (frontend Angular + Tailwind CSS)
 
-Angular 18 (standalone, signals) + Tailwind por CDN + SweetAlert2. Se conecta al backend `kampu-backend` (Spring Boot + Oracle); ver el README de la raíz del proyecto.
+Angular 18 (componentes standalone y signals) + Tailwind CSS 3 + SweetAlert2. Se conecta al backend `kampu-backend`
+(Spring Boot + Oracle); ver el README de la raíz del proyecto.
 
 ## Ejecutar
+
 Primero levanta Oracle y el backend (`kampu-backend`, puerto 8082). Luego:
-```
+
+```bash
 npm install
 npm start
 ```
-http://localhost:4200 → login (usuarios de `02_data.sql`):
-- usuario `admin` / clave `admin123`
-- usuario `ventas` / clave `ventas123`
+
+Abre http://localhost:4200. Usuarios de `02_data.sql`: `admin` / `admin123`, `ventas` / `ventas123`, `operador` / `operador123`;
+cliente `ana.ramirez@mail.com` / `cliente123`.
+
+Para generar la versión de producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
+
+## Estilos
+
+- **Tailwind CSS** se compila junto con Angular: la configuración está en `tailwind.config.js` (colores de la marca, sombras
+  y tipografía Inter) y las clases propias del sistema en `src/styles.css`.
+- **Solo tema claro**, con los colores del logotipo: oliva `#4B5B1D` (`brand-600`, principal), lima `#C4BD45` (`leaf-400`, acento)
+  y neutros cálidos derivados del crema `#FDF8E6`. Los nombres `zinc`, `emerald`, `amber`, `rose`, `sky` y `violet` están
+  redefinidos con esa paleta, así ningún módulo usa colores ajenos a la marca.
+- Clases reutilizables de `styles.css`:
+  - botones: `btn-dark` (acción principal, en oliva), `btn-light` (secundaria), `btn-danger` (eliminar o anular), `btn-sm`, `icon-btn`;
+  - formularios: `field`, `label` (`label req` = obligatorio), `hint`, `field-error`, `form-section`, `form-actions`;
+  - contenedores: `card`, `card-header`, `card-title`, `page-header`, `toolbar`;
+  - tablas: `tbl`, `th`, `td`, `tbl-tarjetas` (en celular cada fila se muestra como tarjeta);
+  - otros: `seg` / `seg-btn` (filtros), `chip`, `progress`, `alert-error`, `alert-warn`, `alert-info`, `empty`.
+- Estados (reserva, pago, salida, traslado…): componente `app-badge`, texto normal con un punto de color.
 
 ## Estructura
-- `core/models.ts`: interfaces 1:1 con el esquema Oracle (USUARIOS_SISTEMA, CLIENTES, GUIAS, TRANSPORTE, PAQUETES_TOUR, SALIDAS_PROGRAMADAS, RESERVAS, PASAJEROS_RESERVA, PAGOS).
-- `core/services/tour-store.service.ts`: datos del backend en signals; cada operación llama a la API (`/api/v1/...`) y recarga las tablas afectadas. Las reglas de negocio (cupos, pagos, anulación/reembolso, choques de guía/transporte) las valida el backend.
-- `core/services/auth.service.ts`: login contra el backend; el usuario logueado se guarda en `localStorage`.
-- `core/utils/api.ts`: rutas base de la API/imágenes y lectura de los mensajes de error del backend.
-- `public/paisaje_inicio.jpg`: foto de fondo del login.
-- Cada componente tiene sus tres archivos separados: `nombre.component.ts` (lógica), `nombre.component.html` (plantilla) y `nombre.component.css` (estilos).
-- `layout/`: shell con sidebar (si no hay sesión, vuelve al login). `features/`: una pantalla por módulo.
 
-## Reglas (las aplica el backend, según la BD)
-- Reservar descuenta `cupos_disponibles`; anular los libera.
-- `monto_pagado` = suma de pagos APROBADOS (convertidos a PEN con tasas demo en `core/utils/moneda.ts`); `estado_pago` se deriva (PENDIENTE/PARCIAL/PAGADO).
-- Anular con dinero pagado exige `forma_reembolso`, marca los pagos como REEMBOLSADO y guarda `usuario_anula_id`.
-- Validaciones: fecha_fin ≥ fecha_inicio, cupos ≤ capacidad del transporte, sin choque de guía/transporte en fechas, documento único por reserva, fecha de nacimiento < hoy, máx. 99 viajeros, observaciones ≤ 200.
+- `core/models.ts`: interfaces con los mismos campos que los DTO del backend.
+- `core/services/tour-store.service.ts`: datos del backend en signals; cada operación llama a la API (`/api/v1/...`) y
+  recarga las listas afectadas. Las reglas de negocio las valida el backend.
+- `core/services/auth.service.ts`: login y registro; la sesión (usuario, rol y permisos) se guarda en `localStorage`.
+- `core/services/usuario.interceptor.ts`: agrega a cada petición quién la hace (`X-Usuario`, `X-Rol`, `X-Usuario-Id`, `X-Cliente-Id`).
+- `core/services/guards.ts`: el panel es solo para el personal, el portal solo para clientes, y cada pantalla exige su permiso.
+- `layout/shell.component.*`: menú lateral (compacto; se despliega al pasar el cursor) y contenido.
+- `features/`: una carpeta por módulo (panel, reservas, salidas, paquetes, pagos, clientes, tráfico, logística, auditoría,
+  portal del cliente, login y página principal). Cada componente tiene su `.ts`, `.html` y, si lo necesita, `.css`.
+- `shared/`: componentes reutilizables (íconos, logotipo, modal, estado, migas de pan, teléfono con código de país).
 
 ## Backend
+
 `proxy.config.json` redirige `/api` → `http://localhost:8082/lp2_gp2/api` y `/lp2_gp2/images` → `http://localhost:8082`.
 
-## Identidad visual KAMPU
-- Paleta en `src/index.html` (config de Tailwind): crema `#F4F1E8`, arena `#E6DFCD`, verde bosque `#16301F` / carpa `#1F3D2B`, oliva `#6B7A3A`, marrón `#6B4A32`.
-- Tipografías: Archivo (extendida para títulos y logotipo) y JetBrains Mono (etiquetas técnicas).
-- Isotipo y logotipo: `src/app/shared/logo.component.ts` (`<app-logo variante="horizontal|vertical|isotipo" [oscuro]="true" [alto]="32">`).
+## Notas
 
-## Notas del esquema
-- `PAQUETES_TOUR.imagen` (máx. 500): las imágenes se **suben desde el equipo** (JPG, PNG o WebP). Se suben con `FormData` (máx. 10 MB) a `POST /api/v1/paquetes/imagen`; en la columna se guarda solo la ruta (`paquetes/<uuid>.jpg`) y el backend la sirve en `/lp2_gp2/images/<ruta>`.
-- Login contra `USUARIOS_SISTEMA`: `username` + `password_hash` (texto plano, verificado en el backend) + `estado` ACTIVO.
-- En localStorage solo queda la sesión (`tm3_session`). Los datos `tm3_*` de la versión sin backend ya no se usan y pueden borrarse.
+- `PAQUETES_TOUR.imagen`: las imágenes se suben desde el equipo (JPG, PNG o WebP, máx. 10 MB) a `POST /api/v1/paquetes/imagen`;
+  en la columna se guarda solo la ruta y el backend la sirve en `/lp2_gp2/images/<ruta>`.

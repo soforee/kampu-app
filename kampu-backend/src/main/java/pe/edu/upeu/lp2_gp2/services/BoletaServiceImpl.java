@@ -230,39 +230,39 @@ public class BoletaServiceImpl implements IBoletaService {
         int i = 1;
         for (PasajeroReserva p : d.pasajeros) {
             filasPasajeros.append("<tr>")
-                    .append(celda(String.valueOf(i++), "color:#A49D7B;width:28px;"))
-                    .append(celda(esc(p.getNombreCompleto()), "font-weight:700;color:#2C3610;"))
-                    .append(celda(esc(p.getTipoDocumento()) + " " + esc(p.getNumeroDocumento()), "color:#5B5741;font-family:Consolas,Menlo,monospace;font-size:12px;"))
-                    .append(celda(esc(p.getNacionalidad()), "color:#78735A;text-align:right;"))
+                    .append(celda(String.valueOf(i++), "color:#A5A193;width:28px;"))
+                    .append(celda(esc(p.getNombreCompleto()), "font-weight:700;color:#22231B;"))
+                    .append(celda(esc(p.getTipoDocumento()) + " " + esc(p.getNumeroDocumento()), "color:#5D5A4E;font-family:Consolas,Menlo,monospace;font-size:12px;"))
+                    .append(celda(esc(p.getNacionalidad()), "color:#7A7668;text-align:right;"))
                     .append("</tr>");
         }
 
         StringBuilder filasPagos = new StringBuilder();
         for (Pago p : d.pagos) {
             filasPagos.append("<tr>")
-                    .append(celda(p.getFechaPago() == null ? "—" : p.getFechaPago().format(FECHA_HORA), "color:#5B5741;"))
-                    .append(celda(esc(p.getMetodoPago()), "color:#2C3610;"))
-                    .append(celda(esc(p.getCodigoTransaccion()), "color:#78735A;font-family:Consolas,Menlo,monospace;font-size:12px;"))
-                    .append(celda(esc(p.getMoneda()) + " " + String.format(Locale.US, "%,.2f", p.getMonto()), "text-align:right;font-weight:700;color:#2C3610;white-space:nowrap;"))
+                    .append(celda(p.getFechaPago() == null ? "—" : p.getFechaPago().format(FECHA_HORA), "color:#5D5A4E;"))
+                    .append(celda(esc(p.getMetodoPago()), "color:#22231B;"))
+                    .append(celda(esc(p.getCodigoTransaccion()), "color:#7A7668;font-family:Consolas,Menlo,monospace;font-size:12px;"))
+                    .append(celda(esc(p.getMoneda()) + " " + String.format(Locale.US, "%,.2f", p.getMonto()), "text-align:right;font-weight:700;color:#22231B;white-space:nowrap;"))
                     .append("</tr>");
         }
 
         boolean confirmada = "CONFIRMADA".equals(r.getEstadoReserva()) || "COMPLETADA".equals(r.getEstadoReserva());
         String pillReserva = pill("Reserva " + estadoTexto(r.getEstadoReserva()).toLowerCase(),
-                confirmada ? "#EEF4E6" : "#FAF9E3", confirmada ? "#36521E" : "#666120");
+                confirmada ? "#F4F6E4" : "#FAF9E3", confirmada ? "#3F4C18" : "#666120");
         String pillPago = pill(pagadoTotal ? "Pagado" : (pagado.signum() > 0 ? "Pago parcial" : "Pago pendiente"),
-                pagadoTotal ? "#EEF4E6" : "#F7F0E8", pagadoTotal ? "#36521E" : "#5A3D28");
+                pagadoTotal ? "#F4F6E4" : "#FBF1EE", pagadoTotal ? "#3F4C18" : "#7D3528");
 
         String barraAvance = avance <= 0
-                ? "<td style=\"background:#E5DEC2;height:8px;border-radius:999px;font-size:0;line-height:0;\">&nbsp;</td>"
+                ? "<td style=\"background:#E6E4DA;height:8px;border-radius:999px;font-size:0;line-height:0;\">&nbsp;</td>"
                 : avance >= 100
                 ? "<td style=\"background:#4B5B1D;height:8px;border-radius:999px;font-size:0;line-height:0;\">&nbsp;</td>"
                 : "<td width=\"" + avance + "%\" style=\"background:#4B5B1D;height:8px;border-radius:999px 0 0 999px;font-size:0;line-height:0;\">&nbsp;</td>"
-                + "<td style=\"background:#E5DEC2;height:8px;border-radius:0 999px 999px 0;font-size:0;line-height:0;\">&nbsp;</td>";
+                + "<td style=\"background:#E6E4DA;height:8px;border-radius:0 999px 999px 0;font-size:0;line-height:0;\">&nbsp;</td>";
 
         String barraNavegador = navegador ? """
                 <div class="no-print" style="max-width:640px;margin:0 auto 16px;text-align:right;">
-                  <button onclick="window.print()" style="font:700 14px 'Segoe UI',Helvetica,Arial,sans-serif;color:#FFFEF8;background:#4B5B1D;border:0;border-radius:999px;padding:10px 20px;cursor:pointer;">Imprimir / Guardar PDF</button>
+                  <button onclick="window.print()" style="font:700 14px 'Segoe UI',Helvetica,Arial,sans-serif;color:#FFFFFF;background:#4B5B1D;border:0;border-radius:999px;padding:10px 20px;cursor:pointer;">Imprimir / Guardar PDF</button>
                 </div>
                 """ : "";
 
@@ -274,12 +274,12 @@ public class BoletaServiceImpl implements IBoletaService {
                   @media print { .no-print { display:none !important; } body { background:#FFFFFF !important; } }
                   @media only screen and (max-width:620px) { .col { display:block !important; width:100%% !important; padding:0 0 12px 0 !important; } .px { padding-left:20px !important; padding-right:20px !important; } }
                 </style></head>
-                <body style="margin:0;padding:0;background:#F2EDD6;font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:#2C3610;">
+                <body style="margin:0;padding:0;background:#F3F2EC;font-family:'Segoe UI',Helvetica,Arial,sans-serif;color:#22231B;">
                 <div style="display:none;max-height:0;overflow:hidden;">Reserva %s · %s · Saldo %s</div>
-                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#F2EDD6;padding:28px 12px;">
+                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#F3F2EC;padding:28px 12px;">
                 <tr><td align="center">
                 %s
-                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#FFFEF8;border:1px solid #E5DEC2;border-radius:22px;overflow:hidden;">
+                <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#FFFFFF;border:1px solid #E6E4DA;border-radius:22px;overflow:hidden;">
                   <tr><td style="height:6px;background:#4B5B1D;font-size:0;line-height:0;">&nbsp;</td></tr>
 
                   <!-- Encabezado: logo y número de boleta -->
@@ -288,18 +288,18 @@ public class BoletaServiceImpl implements IBoletaService {
                       <td class="col" valign="middle"><img src="%s" width="202" height="44" alt="Kampu" style="display:block;border:0;height:44px;width:202px;"></td>
                       <td class="col" valign="middle" align="right" style="text-align:right;">
                         <div style="font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#6B7E2B;">Boleta informativa</div>
-                        <div style="margin-top:4px;font-size:26px;font-weight:800;color:#2C3610;font-family:Consolas,Menlo,monospace;letter-spacing:0.5px;">%s</div>
-                        <div style="margin-top:2px;font-size:12px;color:#A49D7B;">Emitida el %s</div>
+                        <div style="margin-top:4px;font-size:26px;font-weight:800;color:#22231B;font-family:Consolas,Menlo,monospace;letter-spacing:0.5px;">%s</div>
+                        <div style="margin-top:2px;font-size:12px;color:#A5A193;">Emitida el %s</div>
                       </td>
                     </tr></table>
                   </td></tr>
 
-                  <tr><td class="px" style="padding:0 36px;"><div style="border-top:1px solid #E5DEC2;"></div></td></tr>
+                  <tr><td class="px" style="padding:0 36px;"><div style="border-top:1px solid #E6E4DA;"></div></td></tr>
 
                   <!-- Saludo y estados -->
                   <tr><td class="px" style="padding:24px 36px 6px;">
-                    <div style="font-size:20px;font-weight:800;color:#2C3610;">Hola, %s</div>
-                    <p style="margin:8px 0 14px;font-size:14px;line-height:1.6;color:#5B5741;">Gracias por elegirnos. Aquí tienes el detalle de tu reserva; guárdalo para el día del viaje.</p>
+                    <div style="font-size:20px;font-weight:800;color:#22231B;">Hola, %s</div>
+                    <p style="margin:8px 0 14px;font-size:14px;line-height:1.6;color:#5D5A4E;">Gracias por elegirnos. Aquí tienes el detalle de tu reserva; guárdalo para el día del viaje.</p>
                     %s %s
                   </td></tr>
 
@@ -307,7 +307,7 @@ public class BoletaServiceImpl implements IBoletaService {
                   <tr><td class="px" style="padding:18px 36px 6px;">
                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>
                       <td class="col" width="50%%" valign="top" style="padding-right:8px;">
-                        <div style="border:1px solid #E5DEC2;border-radius:14px;padding:16px 18px;">
+                        <div style="border:1px solid #E6E4DA;border-radius:14px;padding:16px 18px;">
                           %s
                           %s
                           %s
@@ -315,7 +315,7 @@ public class BoletaServiceImpl implements IBoletaService {
                         </div>
                       </td>
                       <td class="col" width="50%%" valign="top" style="padding-left:8px;">
-                        <div style="border:1px solid #E5DEC2;border-radius:14px;padding:16px 18px;">
+                        <div style="border:1px solid #E6E4DA;border-radius:14px;padding:16px 18px;">
                           %s
                           %s
                           %s
@@ -330,23 +330,23 @@ public class BoletaServiceImpl implements IBoletaService {
                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="background:#F4F6E4;border-radius:16px;">
                       <tr><td style="padding:20px 22px 6px;">
                         <div style="font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#6B7E2B;">Tu tour</div>
-                        <div style="margin-top:4px;font-size:21px;font-weight:800;color:#2C3610;">%s</div>
-                        <div style="margin-top:2px;font-size:13px;color:#5B5741;">%s días / %s noches · Guía: %s</div>
+                        <div style="margin-top:4px;font-size:21px;font-weight:800;color:#22231B;">%s</div>
+                        <div style="margin-top:2px;font-size:13px;color:#5D5A4E;">%s días / %s noches · Guía: %s</div>
                       </td></tr>
                       <tr><td style="padding:12px 22px 20px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>
                           <td class="col" width="50%%" valign="top" style="padding-right:6px;">
-                            <div style="background:#FFFEF8;border-radius:12px;padding:12px 14px;">
-                              <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#78735A;">Salida</div>
-                              <div style="margin-top:4px;font-size:15px;font-weight:800;color:#2C3610;">%s</div>
-                              <div style="font-size:12px;color:#78735A;">%s</div>
+                            <div style="background:#FFFFFF;border-radius:12px;padding:12px 14px;">
+                              <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7A7668;">Salida</div>
+                              <div style="margin-top:4px;font-size:15px;font-weight:800;color:#22231B;">%s</div>
+                              <div style="font-size:12px;color:#7A7668;">%s</div>
                             </div>
                           </td>
                           <td class="col" width="50%%" valign="top" style="padding-left:6px;">
-                            <div style="background:#FFFEF8;border-radius:12px;padding:12px 14px;">
-                              <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#78735A;">Retorno</div>
-                              <div style="margin-top:4px;font-size:15px;font-weight:800;color:#2C3610;">%s</div>
-                              <div style="font-size:12px;color:#78735A;">%s</div>
+                            <div style="background:#FFFFFF;border-radius:12px;padding:12px 14px;">
+                              <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7A7668;">Retorno</div>
+                              <div style="margin-top:4px;font-size:15px;font-weight:800;color:#22231B;">%s</div>
+                              <div style="font-size:12px;color:#7A7668;">%s</div>
                             </div>
                           </td>
                         </tr></table>
@@ -367,20 +367,20 @@ public class BoletaServiceImpl implements IBoletaService {
 
                   <!-- Resumen de pago -->
                   <tr><td class="px" style="padding:18px 36px 8px;">
-                    <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="border:1px solid #E5DEC2;border-radius:16px;">
+                    <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="border:1px solid #E6E4DA;border-radius:16px;">
                       <tr><td style="padding:18px 20px 6px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-                          <tr><td style="padding:3px 0;color:#78735A;">%d viajero(s) × %s</td><td align="right" style="padding:3px 0;color:#2C3610;">%s</td></tr>
-                          <tr><td style="padding:3px 0;color:#78735A;">Pagado</td><td align="right" style="padding:3px 0;color:#36521E;font-weight:700;">%s</td></tr>
+                          <tr><td style="padding:3px 0;color:#7A7668;">%d viajero(s) × %s</td><td align="right" style="padding:3px 0;color:#22231B;">%s</td></tr>
+                          <tr><td style="padding:3px 0;color:#7A7668;">Pagado</td><td align="right" style="padding:3px 0;color:#3F4C18;font-weight:700;">%s</td></tr>
                         </table>
                       </td></tr>
                       <tr><td style="padding:8px 20px 4px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>%s</tr></table>
-                        <div style="margin-top:6px;font-size:12px;color:#A49D7B;">%d%% pagado</div>
+                        <div style="margin-top:6px;font-size:12px;color:#A5A193;">%d%% pagado</div>
                       </td></tr>
                       <tr><td style="padding:10px 20px 18px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0"><tr>
-                          <td style="font-size:15px;font-weight:800;color:#2C3610;">%s</td>
+                          <td style="font-size:15px;font-weight:800;color:#22231B;">%s</td>
                           <td align="right" style="font-size:26px;font-weight:900;color:%s;white-space:nowrap;">%s</td>
                         </tr></table>
                       </td></tr>
@@ -398,13 +398,13 @@ public class BoletaServiceImpl implements IBoletaService {
 
                   <!-- Pie -->
                   <tr><td class="px" style="padding:22px 36px 28px;">
-                    <div style="border-top:1px solid #E5DEC2;padding-top:16px;font-size:12px;line-height:1.7;color:#78735A;">
-                      <strong style="color:#2C3610;">Kampu Tour Manager</strong> · %s · %s · %s<br>
+                    <div style="border-top:1px solid #E6E4DA;padding-top:16px;font-size:12px;line-height:1.7;color:#7A7668;">
+                      <strong style="color:#22231B;">Kampu Tour Manager</strong> · %s · %s · %s<br>
                       Reserva registrada el %s. Documento informativo, no es un comprobante de pago tributario.
                     </div>
                   </td></tr>
                 </table>
-                <p style="margin:16px 0 0;font-size:11px;color:#A49D7B;">Recibiste este correo porque tienes una reserva con Kampu.</p>
+                <p style="margin:16px 0 0;font-size:11px;color:#A5A193;">Recibiste este correo porque tienes una reserva con Kampu.</p>
                 </td></tr></table>
                 </body></html>
                 """.formatted(
@@ -435,7 +435,7 @@ public class BoletaServiceImpl implements IBoletaService {
                 soles(pagado),
                 barraAvance, avance,
                 pagadoTotal ? "Pagado por completo" : "Saldo pendiente",
-                pagadoTotal ? "#36521E" : "#2C3610",
+                pagadoTotal ? "#3F4C18" : "#22231B",
                 pagadoTotal ? soles(r.getMontoTotal()) : soles(saldo),
                 AGENCIA_EMAIL, AGENCIA_TELEFONO, AGENCIA_CIUDAD,
                 r.getFechaReserva() == null ? "—" : r.getFechaReserva().format(FECHA_HORA));
@@ -456,13 +456,13 @@ public class BoletaServiceImpl implements IBoletaService {
     }
 
     private String titulo(String texto) {
-        return "<div style=\"font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#78735A;padding-bottom:8px;\">"
+        return "<div style=\"font-size:11px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#7A7668;padding-bottom:8px;\">"
                 + texto + "</div>";
     }
 
     private String dato(String etiqueta, String valor) {
-        return "<div style=\"margin-top:6px;\"><div style=\"font-size:11px;color:#A49D7B;\">" + etiqueta + "</div>"
-                + "<div style=\"font-size:13px;font-weight:700;color:#2C3610;line-height:1.5;word-break:break-word;\">" + valor + "</div></div>";
+        return "<div style=\"margin-top:6px;\"><div style=\"font-size:11px;color:#A5A193;\">" + etiqueta + "</div>"
+                + "<div style=\"font-size:13px;font-weight:700;color:#22231B;line-height:1.5;word-break:break-word;\">" + valor + "</div></div>";
     }
 
     private String pill(String texto, String fondo, String color) {
@@ -471,11 +471,11 @@ public class BoletaServiceImpl implements IBoletaService {
     }
 
     private String encabezado(String texto, String estilo) {
-        return "<td style=\"padding:8px 0;border-bottom:2px solid #E5DEC2;font-size:11px;font-weight:800;letter-spacing:0.8px;"
-                + "text-transform:uppercase;color:#A49D7B;" + estilo + "\">" + texto + "</td>";
+        return "<td style=\"padding:8px 0;border-bottom:2px solid #E6E4DA;font-size:11px;font-weight:800;letter-spacing:0.8px;"
+                + "text-transform:uppercase;color:#A5A193;" + estilo + "\">" + texto + "</td>";
     }
 
     private String celda(String contenido, String estilo) {
-        return "<td style=\"padding:9px 8px 9px 0;border-bottom:1px solid #F2EDD6;" + estilo + "\">" + contenido + "</td>";
+        return "<td style=\"padding:9px 8px 9px 0;border-bottom:1px solid #F3F2EC;" + estilo + "\">" + contenido + "</td>";
     }
 }

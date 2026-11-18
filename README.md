@@ -1,4 +1,4 @@
-# KAMPU · Tour Manager v4 — sistema integrado (Angular + Spring Boot + Oracle)
+# KAMPU · Tour Manager v5 — sistema integrado (Angular + Spring Boot + Oracle)
 
 Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos, tráfico/transporte y, desde la v4,
 **portal del cliente** con **seguridad por roles** aplicada en la base de datos.
@@ -6,8 +6,26 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 | Capa | Carpeta | Tecnología |
 |---|---|---|
 | Base de datos | `kampu-backend/src/main/resources/db/` | Oracle 12.2+ (probado en Oracle 23ai Free) |
-| Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) · BCrypt |
-| Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind |
+| Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
+| Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind CSS 3 (compilado con Angular) · SweetAlert2 |
+
+## Versión 5 — adaptación al curso y rediseño visual
+
+Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.md).
+
+- **Seguridad al nivel de la plantilla del curso** (LP2): el login compara la contraseña tal cual y devuelve el usuario con su
+  rol y sus permisos (`PKG_SEGURIDAD_ROLES.permisos`). El frontend guarda esa sesión, filtra el menú y las pantallas por
+  permiso y envía en cada petición quién la hace (`X-Usuario`, `X-Rol`, `X-Usuario-Id`, `X-Cliente-Id`). El backend usa esos
+  datos para la bitácora, el portal del cliente y la sesión de Oracle; **no** valida permisos (como en la plantilla, la API
+  queda abierta). Se quitaron BCrypt, los tokens y el límite de intentos.
+- **Sin servicios externos**: la duración de los traslados se estima con las coordenadas de los lugares (se quitó OSRM).
+- **Tailwind por npm** (`tailwind.config.js`) en lugar del CDN, y **solo tema claro** (se quitó el modo oscuro).
+- **Identidad del logotipo**: oliva `#4B5B1D` (principal), lima `#C4BD45` (acento) y neutros cálidos derivados del crema `#FDF8E6`,
+  en todos los módulos (`tailwind.config.js`).
+- **Interfaz minimalista**: menú lateral compacto que se despliega al
+  pasar el cursor, panel con una franja de indicadores (sin gráficos), tablas sin colores fuertes, estados con un punto
+  de color, un solo estilo de botón principal y formularios uniformes. Se quitaron avatares de colores, esqueletos de
+  carga, fechas relativas y animaciones de aparición.
 
 ## Versión 4 — qué cambió
 
@@ -17,12 +35,12 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
    consulta, con **estado de ejecución** (Por empezar / En curso / Terminado) y **estado de pago**
    (Pagado completo / Falta pagar / Pendiente de pago). Lo único que puede hacer es *informar un pago*, que queda
    PENDIENTE hasta que Ventas lo valide. Todas sus pantallas muestran **Volver al inicio**.
-3. **Seguridad por roles** en tres capas: menú y rutas en Angular (guards) → interceptor del backend (token) →
-   `PKG_SEGURIDAD_ROLES` en Oracle (matriz de permisos + vistas que filtran por la sesión).
+3. **Seguridad por roles**: menú y rutas en Angular (guards) según los permisos de `PKG_SEGURIDAD_ROLES` en Oracle
+   (matriz de permisos + vistas que filtran por la sesión). *En la v5 el backend ya no valida permisos (ver arriba).*
 4. **Modelo v4 de 14 tablas** (+ `AUDITORIA`): `PROVEEDORES`, `PERSONAL` (guías y conductores) y `VEHICULOS` reemplazan a
    empresas/guías/conductores/rutas de la v3. Columnas añadidas a lo que trae el script v4 van marcadas `-- (+v4)`.
 5. **Exactamente dos objetos por categoría** (PL/SQL, triggers, vistas, paquetes) y **script de particionamiento por nivel de usuario**.
-6. Contraseñas con **BCrypt** y sesión con **token Bearer**. Si una base antigua guarda la contraseña de un usuario interno en texto plano, se convierte a hash en su siguiente inicio de sesión. Tras 5 intentos fallidos en 10 minutos la cuenta se bloquea temporalmente.
+6. *(v5)* Contraseñas guardadas tal cual, como en la plantilla del curso; la sesión es el usuario devuelto por el login.
 
 ### Cuentas
 
@@ -38,6 +56,8 @@ Los demás clientes de la demo los creó Ventas y **no tienen cuenta web**: pued
 su **mismo documento y correo** (el procedimiento "reclama" el cliente existente y sus reservas aparecen solas).
 
 ## Versión 4.3 — mejoras visuales
+
+> Reemplazada en lo visual por la v5: ya no hay modo oscuro, gráficos, avatares, esqueletos ni fechas relativas.
 
 Solo frontend; además, los datos de demostración cargan una foto del paquete Machu Picchu.
 
@@ -144,10 +164,9 @@ Todos están en `01_schema.sql`, comentados.
 | Resumen de paquetes | ✔ | ✔ | ✔ (sin montos, sin terminados) | — |
 | Ver paquetes propios · Informar pago | — | — | — | ✔ |
 
-Una acción que no está en el catálogo se niega a todos (también a ADMIN). Cambiar un permiso es editar solo
-`PKG_SEGURIDAD_ROLES.puede`: el backend lo aplica en cada petición (caché de 5 min) y el frontend lo recibe en
-`permisos` al iniciar sesión y al recargar (`GET /auth/sesion`); menú, rutas y botones salen de esa lista, así que
-la interfaz nunca ofrece algo que el backend rechazaría con 403.
+Una acción que no está en el catálogo se niega a todos (también a ADMIN). Cambiar un permiso es editar
+`PKG_SEGURIDAD_ROLES`: el frontend recibe la lista en `permisos` al iniciar sesión y con ella arma el menú, las rutas y
+los botones.
 
 ## Auditoría (solo Administrador)
 
@@ -210,31 +229,30 @@ y muestra en la salida qué no hizo y cómo resolverlo. Se puede volver a ejecut
 
 ## Manual de integración (frontend ↔ backend ↔ Oracle)
 
-**Cómo viaja la sesión.** `POST /auth/login` o `POST /auth/registro` devuelven `{usuarioId, clienteId, username, nombre, rol, token}`.
-Angular lo guarda (`tm4_session`) y `usuario.interceptor.ts` envía `Authorization: Bearer <token>` en cada llamada; ante un 401
-borra la sesión y manda al login. En el backend, `SeguridadInterceptor` resuelve el token, decide la acción y pregunta a
-`PKG_SEGURIDAD_ROLES.puede(rol, acción)` (403 si no). `SesionOracleDataSource` llama a
+**Cómo viaja la sesión.** `POST /auth/login` o `POST /auth/registro` devuelven `{usuarioId, clienteId, username, nombre, rol, permisos}`.
+Angular lo guarda (`tm4_session`) y `usuario.interceptor.ts` envía `X-Usuario`, `X-Rol`, `X-Usuario-Id` y `X-Cliente-Id` en
+cada llamada. En el backend, `UsuarioActualInterceptor` lee esas cabeceras y fija la sesión de la petición (no valida
+permisos). `SesionOracleDataSource` llama a
 `PKG_SEGURIDAD_ROLES.iniciar_sesion(usuario, rol, cliente)` en **cada conexión del pool** antes de usarla, así las vistas y
 los triggers saben quién está operando.
 
 | Pantalla (Angular) | Servicio | Endpoint | Objeto Oracle | Roles |
 |---|---|---|---|---|
 | Registro | `AuthService.registrar` | `POST /auth/registro` | `SP_REGISTRAR_CLIENTE_EXTERNO` | público |
-| Login | `AuthService.login` | `POST /auth/login` | `CLIENTES` / `USUARIOS_SISTEMA` (BCrypt) | público |
+| Login | `AuthService.login` | `POST /auth/login` | `CLIENTES` / `USUARIOS_SISTEMA` + `PKG_SEGURIDAD_ROLES.permisos` | público |
 | Mis paquetes | `PortalService.misPaquetes` | `GET /portal/paquetes` | `VW_PAQUETES_CLIENTE` (+ `FN_ESTADO_PAGO_PAQUETE`) | CLIENTE |
 | Detalle del paquete | `PortalService.detalle` | `GET /portal/paquetes/{reservaId}` | `PKG_GESTION_PAQUETES_CLIENTE.exigir_propietario` + `detalle_paquete` | CLIENTE |
 | Informar pago | `PortalService.informarPago` | `POST /portal/paquetes/{reservaId}/pagos` | `PKG_GESTION_PAQUETES_CLIENTE.iniciar_pago` → `TRG_VALIDAR_PAGO_PAQUETE` | CLIENTE |
 | Panel | `TourStore.resumen` | `GET /resumen-paquetes` | `VW_RESUMEN_PAQUETES_POR_ROL` | ADMIN, VENDEDOR, OPERADOR |
 | Panel (botones) | `TourStore.marcarEjecucion` | `PATCH /salidas/{id}/ejecucion` `{estado: CONFIRMADA\|COMPLETADA}` | `TRG_AUDITORIA_ESTADO_PAQUETE` (reservas → COMPLETADA) | ADMIN, VENDEDOR, OPERADOR |
 | Validar pago | `TourStore` | `PATCH /pagos/{id}/resolver` | `TRG_VALIDAR_PAGO_PAQUETE`, `TRG_AUDITORIA_ESTADO_PAQUETE` | ADMIN, VENDEDOR |
-| Permisos de la sesión | `AuthService.refrescar` | `GET /auth/sesion` | `PKG_SEGURIDAD_ROLES.permisos` | todos con sesión |
 | Auditoría | `AuditoriaService` | `GET /auditoria?desde&hasta&rol&accion&entidad&entidadId&usuario&q&pagina&tamanio` · `GET /auditoria/filtros` · `GET /auditoria/exportar` (CSV) | `AUDITORIA` (particionada) | ADMIN |
 
-Resto de la API (bajo `/lp2_gp2/api/v1`, con token salvo lo indicado):
+Resto de la API (bajo `/lp2_gp2/api/v1`). La columna "Permiso" es el que exige la pantalla en el frontend:
 
-| Recurso | Endpoints | Acción exigida |
+| Recurso | Endpoints | Permiso |
 |---|---|---|
-| Auth | `POST /auth/login` · `POST /auth/registro` (públicos) · `GET /auth/sesion` · `POST /auth/logout` (login y registro devuelven `permisos`) | — |
+| Auth | `POST /auth/login` · `POST /auth/registro` · `POST /auth/logout` (login y registro devuelven `permisos`) · `GET /contacto` | — |
 | Catálogo | `GET /paquetes[/{id}]`, `GET /salidas[/{id}]` (públicos) · `POST/PUT/DELETE /paquetes`, `/salidas` | `GESTIONAR_CATALOGO` |
 | Clientes | `GET /clientes`, `/clientes/buscar?q=`, `/clientes/{id}` · `POST/PUT/DELETE` | `VER_CLIENTES` / `GESTIONAR_CLIENTES` |
 | Reservas | `GET /reservas[/{id}]`, `/{id}/pasajeros`, `/{id}/boleta` · `POST /reservas`, `/{id}/boleta` · `PATCH /{id}/confirmar\|completar\|anular` | `VER_RESERVAS` / `GESTIONAR_RESERVAS` |
@@ -243,10 +261,12 @@ Resto de la API (bajo `/lp2_gp2/api/v1`, con token salvo lo indicado):
 | Tráfico | `GET /operaciones`, `/operaciones/estados`, `/operaciones/estimar-duracion`, `/{id}`, `/{id}/historial`, `/{id}/candidatos` · `POST /operaciones`, `/{id}/asignar-automatico` · `PUT /{id}` · `PATCH /{id}/estado`, `/{id}/asignar` | `VER_OPERACIONES` / `GESTIONAR_OPERACIONES` |
 | Usuarios | `GET /usuarios` | `VER_USUARIOS` |
 
-Errores: `{ "status", "error", "timestamp" }` — 400 validación/regla, 401 sin sesión o sesión vencida, 403 rol sin permiso,
+Errores: `{ "status", "error", "timestamp" }` — 400 validación/regla, 403 portal de otro cliente,
 404 no existe, 409 duplicado. Los `RAISE_APPLICATION_ERROR` de Oracle se traducen a mensajes en español en `ErroresOracle`.
 
 ## Rediseño visual del frontend (UI/UX)
+
+> Sección de la v4. El sistema visual vigente es el de la v5 (`tailwind.config.js` y `src/styles.css`).
 
 Esta versión solo cambia la **apariencia** del frontend (`kampu-frontend`). El backend, la base de datos, la API,
 los servicios, las rutas y la lógica de los componentes son los mismos.
@@ -387,8 +407,8 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 
 ## 5. Limitaciones y decisiones
 
-- El token es opaco y vive en memoria del backend: al reiniciar el backend hay que volver a iniciar sesión.
+- Seguridad al nivel del curso: la API no valida permisos ni contraseñas cifradas; no publicar así en internet.
 - La v4 no tiene tabla de rutas: la asignación automática de transporte no filtra por región del proveedor.
 - Los tipos de cambio son fijos: `TASAS` (frontend) y `ConversorMoneda` (backend) deben coincidir.
-- La duración de los traslados usa OSRM (`OSRM_URL`) y, si no responde, distancia en línea recta con velocidad media.
+- La duración de los traslados se estima con la distancia en línea recta entre las coordenadas de los lugares.
 - Producción: servir `ng build` detrás de un proxy (Nginx/Apache) que envíe `/api/v1` y `/lp2_gp2/images` al backend.

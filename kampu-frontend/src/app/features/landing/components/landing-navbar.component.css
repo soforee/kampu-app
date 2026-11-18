@@ -2,18 +2,18 @@
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 50;
-  color: #FFFEF8;
+  color: #FFFFFF;
   background: transparent;
   border-bottom: 1px solid transparent;
   transition: all .3s ease-in-out;
 }
 .navbar-solida {
   color: var(--kp-text);
-  background: rgb(var(--c-white) / .92);
+  background: rgba(255, 255, 255, .92);
   backdrop-filter: saturate(160%) blur(14px);
   -webkit-backdrop-filter: saturate(160%) blur(14px);
   border-bottom-color: var(--kp-border);
-  box-shadow: 0 8px 30px -18px rgba(29, 36, 9, .35);
+  box-shadow: 0 8px 30px -18px rgba(38, 46, 15, .35);
 }
 
 .nav-link {
@@ -68,7 +68,7 @@
   border-radius: 12px;
   transition: all .3s ease-in-out;
 }
-.nav-toggle:hover { background: rgba(127, 127, 100, .12); }
+.nav-toggle:hover { background: rgba(75, 91, 29, .12); }
 @media (max-width: 767px) { .nav-toggle { display: grid; } }
 
 .menu-movil {

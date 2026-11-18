@@ -3,7 +3,6 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { AuthService } from '../core/services/auth.service';
 import { TourStore } from '../core/services/tour-store.service';
 import { AlertService } from '../core/services/alert.service';
-import { PreferenciasService } from '../core/services/preferencias.service';
 import { IconComponent } from '../shared/icon.component';
 import { LogoComponent } from '../shared/logo.component';
 import { etiqueta } from '../core/utils/etiquetas';
@@ -18,7 +17,6 @@ import { Permiso } from '../core/models';
 })
 export class ShellComponent {
   auth = inject(AuthService);
-  pref = inject(PreferenciasService);
   private store = inject(TourStore);
   private router = inject(Router);
   private alerts = inject(AlertService);
@@ -26,7 +24,7 @@ export class ShellComponent {
   abierto = signal(false);
 
   // Menú según los permisos de la sesión (mismos que exigen app.routes.ts y el backend)
-  private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso; exact?: boolean }[] = [
+  private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso }[] = [
     { ruta: '/dashboard', texto: 'Panel', icono: 'chart' },
     { ruta: '/reservas', texto: 'Reservas', icono: 'ticket', permiso: 'VER_RESERVAS' },
     { ruta: '/salidas', texto: 'Salidas', icono: 'calendar', permiso: 'VER_RESUMEN' },
@@ -48,11 +46,7 @@ export class ShellComponent {
       this.router.navigate(['/login']);
       return;
     }
-    // Primero se actualizan los permisos (pudieron cambiar en PKG_SEGURIDAD_ROLES) y luego se cargan los datos
-    this.auth.refrescar().subscribe({
-      next: () => this.cargarDatos(),
-      error: () => { if (this.auth.autenticado()) this.cargarDatos(); }
-    });
+    this.cargarDatos();
   }
 
   private cargarDatos() {

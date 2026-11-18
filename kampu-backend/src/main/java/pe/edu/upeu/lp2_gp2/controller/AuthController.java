@@ -30,15 +30,10 @@ public class AuthController {
         return new ResponseEntity<>(authService.registrar(dto), HttpStatus.CREATED);
     }
 
-    // Sesión vigente y permisos actualizados (el frontend la pide al recargar)
-    @GetMapping("/sesion")
-    public ResponseEntity<SesionDTO> sesion(@RequestHeader(value = "Authorization", required = false) String cabecera) {
-        return ResponseEntity.ok(authService.sesion(cabecera != null && cabecera.startsWith("Bearer ") ? cabecera.substring(7).trim() : null));
-    }
-
+    // Registra el cierre de sesión en la bitácora
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader(value = "Authorization", required = false) String cabecera) {
-        authService.logout(cabecera != null && cabecera.startsWith("Bearer ") ? cabecera.substring(7).trim() : null);
+    public ResponseEntity<Void> logout() {
+        authService.logout();
         return ResponseEntity.noContent().build();
     }
 }

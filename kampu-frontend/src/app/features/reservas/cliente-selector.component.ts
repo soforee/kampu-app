@@ -119,10 +119,6 @@ export class ClienteSelectorComponent implements OnInit, OnDestroy {
     this.sinRegistro.emit(this.texto().trim());
   }
 
-  iniciales(nombre: string): string {
-    const partes = nombre.trim().split(/\s+/);
-    return ((partes[0]?.[0] ?? '') + (partes[1]?.[0] ?? '')).toUpperCase();
-  }
 
   // Divide el texto para resaltar la parte que coincide con la búsqueda
   resaltar(valor: string): Trozo[] {

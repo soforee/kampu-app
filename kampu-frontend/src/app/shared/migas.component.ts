@@ -15,9 +15,9 @@ export interface Miga { texto: string; ruta?: string; }
         @for (m of items(); track $index; let ultimo = $last) {
           <li class="flex items-center gap-1 min-w-0">
             @if (m.ruta && !ultimo) {
-              <a [routerLink]="m.ruta" class="rounded-md px-1.5 py-0.5 font-medium text-zinc-500 transition-colors hover:bg-white hover:text-zinc-900 hover:shadow-soft">{{ m.texto }}</a>
+              <a [routerLink]="m.ruta" class="px-1 py-0.5 text-zinc-500 transition-colors hover:text-zinc-900">{{ m.texto }}</a>
             } @else {
-              <span class="truncate px-1.5 py-0.5 font-semibold text-zinc-800" [attr.aria-current]="ultimo ? 'page' : null">{{ m.texto }}</span>
+              <span class="truncate px-1 py-0.5 font-medium text-zinc-800" [attr.aria-current]="ultimo ? 'page' : null">{{ m.texto }}</span>
             }
             @if (!ultimo) { <app-icon name="chevron-right" size="w-3.5 h-3.5 text-zinc-300" /> }
           </li>

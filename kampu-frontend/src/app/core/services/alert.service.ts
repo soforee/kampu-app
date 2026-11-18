@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import Swal from 'sweetalert2';
 
-const BRAND = '#4B5B1D';
-const DANGER = '#E11D48';
-const CANCEL = '#FFFEF8';
+const BRAND = '#4B5B1D';   // verde oliva del logo (igual que btn-dark)
+const DANGER = '#B4533F';
+const CANCEL = '#FFFFFF';
 
 @Injectable({ providedIn: 'root' })
 export class AlertService {

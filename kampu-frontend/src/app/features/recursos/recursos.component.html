@@ -1,22 +1,21 @@
 <div class="page-header">
   <div>
-    <div class="eyebrow mb-1.5">Logística</div>
-    <h1 class="h1">Proveedores, personal y flota</h1>
-    <p class="page-sub">Kampu Tours (propio) y proveedores externos, con sus guías, conductores y vehículos.</p>
+    <h1 class="h1">Logística</h1>
+    <p class="page-sub">Kampu Tours (propio) y proveedores externos, con sus guías, conductores, vehículos y lugares.</p>
   </div>
   @if (puedeEditar()) {
     <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> Nuevo {{ actual.singular }}</button>
   }
 </div>
 
-<div class="toolbar flex-wrap gap-3">
-  <div class="seg flex-wrap">
+<div class="toolbar">
+  <div class="seg">
     @for (t of tabs; track t.id) {
-      <button type="button" class="seg-btn inline-flex items-center gap-1.5" [class.on]="tab() === t.id" (click)="tab.set(t.id)"><app-icon [name]="t.icono" size="w-4 h-4" /> {{ t.texto }}</button>
+      <button type="button" class="seg-btn" [class.on]="tab() === t.id" (click)="tab.set(t.id)">{{ t.texto }}</button>
     }
   </div>
   @if (tab() === 'personal' || tab() === 'vehiculos') {
-    <select class="field !w-auto min-w-[220px]" [ngModel]="filtroProveedor()" (ngModelChange)="filtroProveedor.set($event)" aria-label="Filtrar por proveedor">
+    <select class="field w-full sm:!w-auto sm:min-w-[220px]" [ngModel]="filtroProveedor()" (ngModelChange)="filtroProveedor.set($event)" aria-label="Filtrar por proveedor">
       <option [ngValue]="null">Todos los proveedores</option>
       @for (p of store.proveedores(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}{{ p.esPropio ? ' (propio)' : '' }}</option> }
     </select>
@@ -32,156 +31,158 @@
 
 @switch (tab()) {
   @case ('proveedores') {
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (p of store.proveedores(); track p.proveedorId) {
-        <div class="card card-hover p-5 flex flex-col gap-3" [class.ring-2]="p.esPropio" [class.ring-brand-300]="p.esPropio" [class.opacity-60]="p.estado === 'INACTIVO'">
+        <div class="card flex flex-col gap-4 p-5" [class.opacity-60]="p.estado === 'INACTIVO'">
           <div class="flex items-start justify-between gap-3">
-            <div class="flex items-start gap-3.5 min-w-0">
-              <div class="avatar w-11 h-11 ring-1" [class]="p.esPropio ? 'bg-gradient-to-br from-brand-50 to-brand-100 text-brand-700 ring-brand-100' : 'bg-gradient-to-br from-sky-50 to-sky-100 text-sky-700 ring-sky-100'"><app-icon name="flag" size="w-5 h-5" /></div>
-              <div class="min-w-0">
-                <div class="font-semibold text-zinc-900">{{ p.nombreComercial }}</div>
-                <div class="text-xs text-zinc-500 font-mono mt-0.5">RUC {{ p.ruc }}</div>
-              </div>
+            <div class="min-w-0">
+              <div class="font-medium text-zinc-900">{{ p.nombreComercial }}</div>
+              <div class="mt-0.5 text-xs text-zinc-500">RUC {{ p.ruc }}{{ p.telefono ? ' · ' + p.telefono : '' }}</div>
             </div>
             @if (puedeEditar()) {
               <div class="actions shrink-0">
-                <button type="button" class="icon-btn" title="Editar" (click)="editarProveedor(p.proveedorId)"><app-icon name="edit" size="w-[18px] h-[18px]" /></button>
-                <button type="button" class="icon-btn-danger" title="Eliminar" (click)="eliminar(p.proveedorId)"><app-icon name="trash" size="w-[18px] h-[18px]" /></button>
+                <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarProveedor(p.proveedorId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(p.proveedorId)"><app-icon name="trash" size="w-4 h-4" /></button>
               </div>
             }
           </div>
           <div class="flex flex-wrap gap-1.5">
-            @if (p.esPropio) { <span class="chip !font-sans !bg-brand-50 !text-brand-700">Kampu Tours · propio</span> } @else { <span class="chip !font-sans">Tercero</span> }
+            <span class="chip">{{ p.esPropio ? 'Propio' : 'Tercero' }}</span>
             <app-badge [estado]="p.estado" />
           </div>
-          <div class="grid grid-cols-4 gap-2 text-center">
-            <div class="rounded-xl bg-sand-50 border border-zinc-100 py-2"><div class="text-lg font-extrabold text-zinc-900">{{ p.vehiculos }}</div><div class="text-[11px] text-zinc-500">vehículos</div></div>
-            <div class="rounded-xl bg-sand-50 border border-zinc-100 py-2"><div class="text-lg font-extrabold text-zinc-900">{{ p.capacidadOperativa }}</div><div class="text-[11px] text-zinc-500">asientos</div></div>
-            <div class="rounded-xl bg-sand-50 border border-zinc-100 py-2"><div class="text-lg font-extrabold text-zinc-900">{{ p.conductores }}</div><div class="text-[11px] text-zinc-500">conductores</div></div>
-            <div class="rounded-xl bg-sand-50 border border-zinc-100 py-2"><div class="text-lg font-extrabold text-zinc-900">{{ p.guias }}</div><div class="text-[11px] text-zinc-500">guías</div></div>
-          </div>
-          @if (p.telefono) { <div class="text-sm text-zinc-500 flex items-center gap-1.5"><app-icon name="phone" size="w-3.5 h-3.5" />{{ p.telefono }}</div> }
+          <dl class="grid grid-cols-4 divide-x divide-zinc-100 border-t border-zinc-100 pt-4 text-center">
+            <div><dd class="font-semibold tabular-nums text-zinc-900">{{ p.vehiculos }}</dd><dt class="text-xs text-zinc-500">vehículos</dt></div>
+            <div><dd class="font-semibold tabular-nums text-zinc-900">{{ p.capacidadOperativa }}</dd><dt class="text-xs text-zinc-500">asientos</dt></div>
+            <div><dd class="font-semibold tabular-nums text-zinc-900">{{ p.conductores }}</dd><dt class="text-xs text-zinc-500">conductores</dt></div>
+            <div><dd class="font-semibold tabular-nums text-zinc-900">{{ p.guias }}</dd><dt class="text-xs text-zinc-500">guías</dt></div>
+          </dl>
         </div>
       } @empty {
-        <div class="col-span-full card empty"><span class="ico"><app-icon name="flag" size="w-6 h-6" /></span>Registra primero a Kampu Tours como proveedor propio.</div>
+        <div class="card empty col-span-full">Registra primero a Kampu Tours como proveedor propio.</div>
       }
     </div>
   }
 
   @case ('personal') {
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-      @for (x of personalFiltrado(); track x.personalId) {
-        <div class="card card-hover p-5 flex items-start justify-between gap-3" [class.opacity-60]="x.estado === 'INACTIVO'">
-          <div class="flex items-start gap-3.5 min-w-0">
-            <div class="avatar w-11 h-11 bg-gradient-to-br from-leaf-50 to-leaf-100 text-leaf-700 ring-1 ring-leaf-100"><app-icon [name]="x.rol === 'GUIA' ? 'user' : 'id'" size="w-5 h-5" /></div>
-            <div class="min-w-0">
-              <div class="font-semibold text-zinc-900 truncate">{{ x.nombreCompleto }}</div>
-              <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                <span class="chip !font-sans">{{ x.rol === 'AMBOS' ? 'Guía y conductor' : etiqueta(x.rol) }}</span>
-                <app-badge [estado]="x.estado" />
-              </div>
-              <div class="text-xs text-zinc-500 mt-2 flex items-center gap-1.5"><app-icon name="flag" size="w-3.5 h-3.5" />{{ store.nombreProveedor(x.proveedorId) }}</div>
-              @if (x.telefono) { <div class="text-xs text-zinc-500 mt-1 flex items-center gap-1.5"><app-icon name="phone" size="w-3.5 h-3.5" />{{ x.telefono }}</div> }
-              @if (x.numLicencia) {
-                <div class="text-xs mt-1 flex items-center gap-1.5" [class]="(x.vencLicencia ?? '') < hoy ? 'text-rose-600' : (x.vencLicencia ?? '') <= pronto ? 'text-amber-600' : 'text-zinc-500'">
-                  <app-icon name="clock" size="w-3.5 h-3.5" /><span class="font-mono">{{ x.numLicencia }}</span> · {{ x.catLicencia }} · vence {{ x.vencLicencia | date:'dd/MM/yyyy' }}
+    <div class="card overflow-hidden">
+      <div class="relative overflow-x-auto">
+        <table class="tbl tbl-tarjetas">
+          <thead><tr><th class="th">Nombre</th><th class="th">Rol</th><th class="th">Proveedor</th><th class="th">Teléfono</th><th class="th">Licencia</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <tbody>
+            @for (x of personalFiltrado(); track x.personalId) {
+              <tr [class.opacity-60]="x.estado === 'INACTIVO'">
+                <td data-label="Nombre" class="td text-zinc-900">{{ x.nombreCompleto }}</td>
+                <td data-label="Rol" class="td text-zinc-700">{{ x.rol === 'AMBOS' ? 'Guía y conductor' : etiqueta(x.rol) }}</td>
+                <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td>
+                <td data-label="Teléfono" class="td whitespace-nowrap text-zinc-700">{{ x.telefono || '—' }}</td>
+                <td data-label="Licencia" class="td whitespace-nowrap">
+                  @if (x.numLicencia) {
+                    <div class="text-zinc-700">{{ x.numLicencia }} · {{ x.catLicencia }}</div>
+                    <div class="text-xs" [class]="(x.vencLicencia ?? '') < hoy ? 'font-medium text-rose-600' : (x.vencLicencia ?? '') <= pronto ? 'text-amber-700' : 'text-zinc-500'">Vence {{ x.vencLicencia | date:'dd/MM/yyyy' }}</div>
+                  } @else { <span class="text-zinc-300">—</span> }
+                </td>
+                <td data-label="Estado" class="td"><app-badge [estado]="x.estado" /></td>
+                @if (puedeEditar()) {
+              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+                <div class="actions">
+                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
-              }
-            </div>
-          </div>
-          @if (puedeEditar()) {
-            <div class="actions shrink-0">
-              <button type="button" class="icon-btn" title="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-[18px] h-[18px]" /></button>
-              <button type="button" class="icon-btn-danger" title="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-[18px] h-[18px]" /></button>
-            </div>
-          }
-        </div>
-      } @empty {
-        <div class="col-span-full card empty"><span class="ico"><app-icon name="id" size="w-6 h-6" /></span>No hay personal para mostrar.</div>
-      }
+              </td>
+            }
+              </tr>
+            } @empty {
+              <tr><td colspan="7"><div class="empty">No hay personal para mostrar.</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   }
 
   @case ('vehiculos') {
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-      @for (x of vehiculosFiltrados(); track x.vehiculoId) {
-        <div class="card card-hover p-5 flex items-start justify-between gap-3" [class.opacity-60]="x.estado === 'INACTIVO'">
-          <div class="flex items-start gap-3.5 min-w-0">
-            <div class="avatar w-11 h-11 bg-gradient-to-br from-sky-50 to-sky-100 text-sky-700 ring-1 ring-sky-100"><app-icon name="truck" size="w-5 h-5" /></div>
-            <div class="min-w-0">
-              <div class="font-semibold text-zinc-900 truncate">{{ x.marcaModelo || etiqueta(x.tipoVehiculo) }}</div>
-              <div class="mt-1 flex flex-wrap items-center gap-1.5">
-                <span class="inline-flex items-center rounded-md border border-zinc-300 bg-sand-50 px-2 py-0.5 font-mono text-xs font-semibold tracking-wider text-zinc-700">{{ x.placa }}</span>
-                <span class="chip !font-sans">{{ etiqueta(x.tipoVehiculo) }}</span>
-                <app-badge [estado]="x.estado" />
-              </div>
-              <div class="text-xs text-zinc-500 mt-2 flex items-center gap-1.5"><app-icon name="flag" size="w-3.5 h-3.5" />{{ store.nombreProveedor(x.proveedorId) }}</div>
-              <div class="text-xs text-zinc-500 mt-1 flex items-center gap-1.5"><app-icon name="users" size="w-3.5 h-3.5" />{{ x.capacidadPax }} pasajeros</div>
-              @if (x.proxMantenimiento) {
-                <div class="text-xs mt-1 flex items-center gap-1.5" [class]="x.proxMantenimiento <= pronto ? 'text-amber-600' : 'text-zinc-500'">
-                  <app-icon name="clock" size="w-3.5 h-3.5" />Mantenimiento: {{ x.proxMantenimiento | date:'dd/MM/yyyy' }}
+    <div class="card overflow-hidden">
+      <div class="relative overflow-x-auto">
+        <table class="tbl tbl-tarjetas">
+          <thead><tr><th class="th">Placa</th><th class="th">Vehículo</th><th class="th text-center">Asientos</th><th class="th">Proveedor</th><th class="th">Mantenimiento</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <tbody>
+            @for (x of vehiculosFiltrados(); track x.vehiculoId) {
+              <tr [class.opacity-60]="x.estado === 'INACTIVO'">
+                <td data-label="Placa" class="td whitespace-nowrap font-medium text-zinc-900">{{ x.placa }}</td>
+                <td data-label="Vehículo" class="td">
+                  <div class="text-zinc-900">{{ x.marcaModelo || etiqueta(x.tipoVehiculo) }}</div>
+                  <div class="text-xs text-zinc-500">{{ etiqueta(x.tipoVehiculo) }}</div>
+                </td>
+                <td data-label="Asientos" class="td text-center tabular-nums text-zinc-700">{{ x.capacidadPax }}</td>
+                <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td>
+                <td data-label="Mantenimiento" class="td whitespace-nowrap" [class]="x.proxMantenimiento && x.proxMantenimiento <= pronto ? 'text-amber-700' : 'text-zinc-700'">{{ x.proxMantenimiento ? (x.proxMantenimiento | date:'dd/MM/yyyy') : '—' }}</td>
+                <td data-label="Estado" class="td"><app-badge [estado]="x.estado" /></td>
+                @if (puedeEditar()) {
+              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+                <div class="actions">
+                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarVehiculo(x.vehiculoId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(x.vehiculoId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
-              }
-            </div>
-          </div>
-          @if (puedeEditar()) {
-            <div class="actions shrink-0">
-              <button type="button" class="icon-btn" title="Editar" (click)="editarVehiculo(x.vehiculoId)"><app-icon name="edit" size="w-[18px] h-[18px]" /></button>
-              <button type="button" class="icon-btn-danger" title="Eliminar" (click)="eliminar(x.vehiculoId)"><app-icon name="trash" size="w-[18px] h-[18px]" /></button>
-            </div>
-          }
-        </div>
-      } @empty {
-        <div class="col-span-full card empty"><span class="ico"><app-icon name="truck" size="w-6 h-6" /></span>No hay vehículos para mostrar.</div>
-      }
+              </td>
+            }
+              </tr>
+            } @empty {
+              <tr><td colspan="7"><div class="empty">No hay vehículos para mostrar.</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   }
 
   @case ('lugares') {
-    <div class="grid sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-      @for (g of lugaresPorCiudad(); track g.ciudad) {
-        <div class="card p-5">
-          <div class="card-title mb-3"><span class="ico"><app-icon name="map-pin" size="w-4 h-4" /></span>{{ g.ciudad }}</div>
-          <ul class="divide-y divide-zinc-100">
-            @for (l of g.lugares; track l.lugarId) {
-              <li class="py-2 flex items-center justify-between gap-2">
-                <span class="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-sand-100 text-brand-700" [title]="etiqueta(l.tipoLugar)"><app-icon [name]="iconoLugar(l.tipoLugar)" size="w-4 h-4" /></span>
-                <div class="min-w-0 flex-1">
-                  <div class="text-sm font-medium text-zinc-900 truncate">{{ l.nombre }}</div>
-                  <div class="text-xs text-zinc-500">{{ etiqueta(l.tipoLugar) }}
-                    @if (l.latitud !== null) { · <span class="font-mono">{{ l.latitud }}, {{ l.longitud }}</span> }
-                    @else { · <span class="text-amber-600">sin coordenadas</span> }
-                  </div>
+    <div class="card overflow-hidden">
+      <div class="relative overflow-x-auto">
+        <table class="tbl tbl-tarjetas">
+          <thead><tr><th class="th">Lugar</th><th class="th">Tipo</th><th class="th">Ciudad</th><th class="th">Coordenadas</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <tbody>
+            @for (g of lugaresPorCiudad(); track g.ciudad) {
+              @for (l of g.lugares; track l.lugarId) {
+                <tr>
+                  <td data-label="Lugar" class="td text-zinc-900">{{ l.nombre }}</td>
+                  <td data-label="Tipo" class="td text-zinc-700">{{ etiqueta(l.tipoLugar) }}</td>
+                  <td data-label="Ciudad" class="td text-zinc-700">{{ l.ciudad }}</td>
+                  <td data-label="Coordenadas" class="td whitespace-nowrap">
+                    @if (l.latitud !== null) { <span class="tabular-nums text-zinc-500">{{ l.latitud }}, {{ l.longitud }}</span> }
+                    @else { <span class="text-xs text-amber-700">Sin coordenadas</span> }
+                  </td>
+                  @if (puedeEditar()) {
+              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+                <div class="actions">
+                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarLugar(l.lugarId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(l.lugarId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
-                @if (puedeEditar()) {
-                  <div class="actions shrink-0">
-                    <button type="button" class="icon-btn" title="Editar" (click)="editarLugar(l.lugarId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                    <button type="button" class="icon-btn-danger" title="Eliminar" (click)="eliminar(l.lugarId)"><app-icon name="trash" size="w-4 h-4" /></button>
-                  </div>
-                }
-              </li>
+              </td>
             }
-          </ul>
-        </div>
-      } @empty {
-        <div class="col-span-full card empty"><span class="ico"><app-icon name="map-pin" size="w-6 h-6" /></span>Aún no hay lugares (aeropuertos, hoteles, atractivos…).</div>
-      }
+                </tr>
+              }
+            } @empty {
+              <tr><td colspan="5"><div class="empty">Aún no hay lugares (aeropuertos, hoteles, atractivos…).</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
-    <p class="hint mt-4">Con las coordenadas reales el sistema calcula la duración de cada traslado (OpenStreetMap / OSRM).</p>
+    <p class="hint mt-3">Con las coordenadas, el sistema estima la duración de cada traslado.</p>
   }
 }
 
 @if (abierto()) {
   <app-modal [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
     <div class="space-y-5">
-      <p class="text-xs text-zinc-500">Los campos marcados con <span class="font-bold text-rose-500">*</span> son obligatorios.</p>
+      <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
         @switch (tab()) {
           @case ('proveedores') {
-            <div class="form-section-title"><app-icon name="flag" size="w-4 h-4" /> Datos del proveedor</div>
+            <div class="form-section-title">Datos del proveedor</div>
             <div><label class="label req">Nombre comercial</label><input class="field" maxlength="150" [(ngModel)]="proveedor.nombreComercial" (blur)="v.tocar('pNombre')" [class.field-invalid]="v.error('pNombre')">@if (v.error('pNombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label class="label req">RUC</label><input class="field font-mono" maxlength="11" [(ngModel)]="proveedor.ruc" placeholder="20xxxxxxxxx" (blur)="v.tocar('pRuc')" [class.field-invalid]="v.error('pRuc')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" inputmode="numeric">@if (v.error('pRuc'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label req">RUC</label><input class="field tabular-nums" maxlength="11" [(ngModel)]="proveedor.ruc" placeholder="20xxxxxxxxx" (blur)="v.tocar('pRuc')" [class.field-invalid]="v.error('pRuc')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" inputmode="numeric">@if (v.error('pRuc'); as e) { <p class="field-error">{{ e }}</p> }</div>
               <div><label class="label">Teléfono <span class="opt">Opcional</span></label><input class="field" maxlength="20" type="tel" inputmode="tel" [(ngModel)]="proveedor.telefono" placeholder="+51 9xx xxx xxx" (blur)="v.tocar('pTelefono')" [class.field-invalid]="v.error('pTelefono')" (beforeinput)="filtrar($event, 'telefono')" (paste)="pegar($event, 'telefono')">@if (v.error('pTelefono'); as e) { <p class="field-error">{{ e }}</p> }</div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -193,7 +194,7 @@
             </div>
           }
           @case ('personal') {
-            <div class="form-section-title"><app-icon name="id" size="w-4 h-4" /> Datos de la persona</div>
+            <div class="form-section-title">Datos de la persona</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label class="label req">Proveedor</label>
                 <select class="field" [(ngModel)]="persona.proveedorId" (blur)="v.tocar('rProveedor')" [class.field-invalid]="v.error('rProveedor')">
@@ -213,9 +214,9 @@
               <div><label class="label req">Estado</label><select class="field" [(ngModel)]="persona.estado">@for (s of estadosPersonal; track s) { <option [value]="s">{{ etiqueta(s) }}</option> }</select></div>
             </div>
             @if (persona.rol !== 'GUIA') {
-              <div class="form-section-title pt-2"><app-icon name="id" size="w-4 h-4" /> Licencia de conducir</div>
+              <div class="form-section-title pt-2">Licencia de conducir</div>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><label class="label req">N° de licencia</label><input class="field font-mono uppercase" maxlength="20" [(ngModel)]="persona.numLicencia" placeholder="Q45871236" (blur)="v.tocar('rLicencia')" [class.field-invalid]="v.error('rLicencia')" (beforeinput)="filtrar($event, 'alfanumerico')" (paste)="pegar($event, 'alfanumerico')">@if (v.error('rLicencia'); as e) { <p class="field-error">{{ e }}</p> }</div>
+                <div><label class="label req">N° de licencia</label><input class="field tabular-nums uppercase" maxlength="20" [(ngModel)]="persona.numLicencia" placeholder="Q45871236" (blur)="v.tocar('rLicencia')" [class.field-invalid]="v.error('rLicencia')" (beforeinput)="filtrar($event, 'alfanumerico')" (paste)="pegar($event, 'alfanumerico')">@if (v.error('rLicencia'); as e) { <p class="field-error">{{ e }}</p> }</div>
                 <div><label class="label req">Categoría</label>
                   <select class="field" [(ngModel)]="persona.catLicencia" (blur)="v.tocar('rCategoria')" [class.field-invalid]="v.error('rCategoria')">
                     <option value="" disabled>Elige</option>
@@ -227,7 +228,7 @@
             }
           }
           @case ('vehiculos') {
-            <div class="form-section-title"><app-icon name="truck" size="w-4 h-4" /> Datos del vehículo</div>
+            <div class="form-section-title">Datos del vehículo</div>
             <div><label class="label req">Proveedor</label>
               <select class="field" [(ngModel)]="vehiculo.proveedorId" (blur)="v.tocar('vProveedor')" [class.field-invalid]="v.error('vProveedor')">
                 <option [ngValue]="null" disabled>Selecciona</option>
@@ -235,7 +236,7 @@
               </select>@if (v.error('vProveedor'); as e) { <p class="field-error">{{ e }}</p> }
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label class="label req">Placa</label><input class="field font-mono uppercase" maxlength="10" [(ngModel)]="vehiculo.placa" placeholder="ABC-123" (blur)="v.tocar('vPlaca')" [class.field-invalid]="v.error('vPlaca')" (beforeinput)="filtrar($event, 'placa')" (paste)="pegar($event, 'placa')">@if (v.error('vPlaca'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label req">Placa</label><input class="field tabular-nums uppercase" maxlength="10" [(ngModel)]="vehiculo.placa" placeholder="ABC-123" (blur)="v.tocar('vPlaca')" [class.field-invalid]="v.error('vPlaca')" (beforeinput)="filtrar($event, 'placa')" (paste)="pegar($event, 'placa')">@if (v.error('vPlaca'); as e) { <p class="field-error">{{ e }}</p> }</div>
               <div><label class="label req">Tipo</label><select class="field" [(ngModel)]="vehiculo.tipoVehiculo">@for (t of tiposVehiculo; track t) { <option [value]="t">{{ etiqueta(t) }}</option> }</select></div>
             </div>
             <div><label class="label">Marca / modelo <span class="opt">Opcional</span></label><input class="field" maxlength="100" [(ngModel)]="vehiculo.marcaModelo" placeholder="Toyota Hiace…" (blur)="v.tocar('vMarca')" [class.field-invalid]="v.error('vMarca')">@if (v.error('vMarca'); as e) { <p class="field-error">{{ e }}</p> }</div>
@@ -246,15 +247,15 @@
             </div>
           }
           @case ('lugares') {
-            <div class="form-section-title"><app-icon name="map-pin" size="w-4 h-4" /> Datos del lugar</div>
+            <div class="form-section-title">Datos del lugar</div>
             <div><label class="label req">Nombre</label><input class="field" maxlength="150" [(ngModel)]="lugar.nombre" placeholder="Aeropuerto, hotel, atractivo…" (blur)="v.tocar('lNombre')" [class.field-invalid]="v.error('lNombre')">@if (v.error('lNombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label class="label req">Tipo</label><select class="field" [(ngModel)]="lugar.tipoLugar">@for (t of tiposLugar; track t) { <option [value]="t">{{ etiqueta(t) }}</option> }</select></div>
               <div><label class="label req">Ciudad</label><input class="field" maxlength="100" [(ngModel)]="lugar.ciudad" (blur)="v.tocar('lCiudad')" [class.field-invalid]="v.error('lCiudad')">@if (v.error('lCiudad'); as e) { <p class="field-error">{{ e }}</p> }</div>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div><label class="label">Latitud <span class="opt">Opcional</span></label><input type="number" step="0.000001" class="field font-mono" [(ngModel)]="lugar.latitud" placeholder="-13.516600" (blur)="v.tocar('lLatitud')" [class.field-invalid]="v.error('lLatitud')" (wheel)="rueda($event)">@if (v.error('lLatitud'); as e) { <p class="field-error">{{ e }}</p> }</div>
-              <div><label class="label">Longitud <span class="opt">Opcional</span></label><input type="number" step="0.000001" class="field font-mono" [(ngModel)]="lugar.longitud" placeholder="-71.978500" (blur)="v.tocar('lLongitud')" [class.field-invalid]="v.error('lLongitud')" (wheel)="rueda($event)">@if (v.error('lLongitud'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label">Latitud <span class="opt">Opcional</span></label><input type="number" step="0.000001" class="field tabular-nums" [(ngModel)]="lugar.latitud" placeholder="-13.516600" (blur)="v.tocar('lLatitud')" [class.field-invalid]="v.error('lLatitud')" (wheel)="rueda($event)">@if (v.error('lLatitud'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label">Longitud <span class="opt">Opcional</span></label><input type="number" step="0.000001" class="field tabular-nums" [(ngModel)]="lugar.longitud" placeholder="-71.978500" (blur)="v.tocar('lLongitud')" [class.field-invalid]="v.error('lLongitud')" (wheel)="rueda($event)">@if (v.error('lLongitud'); as e) { <p class="field-error">{{ e }}</p> }</div>
             </div>
             <p class="hint">Cópialas de Google Maps (clic derecho sobre el lugar). Con ellas se calcula la duración de los traslados.</p>
           }
@@ -262,7 +263,7 @@
       </div>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="abierto.set(false)">Cancelar</button>
-        <button type="button" class="btn-brand" (click)="guardar()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>
+        <button type="button" class="btn-brand" (click)="guardar()">Guardar</button>
       </div>
     </div>
   </app-modal>
