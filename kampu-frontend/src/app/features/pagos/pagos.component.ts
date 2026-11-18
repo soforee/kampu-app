@@ -8,14 +8,11 @@ import { AlertService } from '../../core/services/alert.service';
 import { aPEN } from '../../core/utils/moneda';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
-import { RelativaPipe } from '../../shared/relativa.pipe';
-import { AvatarComponent } from '../../shared/avatar.component';
-import { EsqueletoComponent } from '../../shared/esqueleto.component';
 
 @Component({
   selector: 'app-pagos',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent, EsqueletoComponent, AvatarComponent, RelativaPipe],
+  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
   templateUrl: './pagos.component.html'
 })
 export class PagosComponent {

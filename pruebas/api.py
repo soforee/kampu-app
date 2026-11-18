@@ -1,4 +1,4 @@
-"""Pruebas funcionales de la API: permisos por rol, CRUD, reservas, pagos, tráfico, portal y auditoría."""
+"""Pruebas funcionales de la API: permisos por rol (login), CRUD, reservas, pagos, tráfico, portal y auditoría."""
 import datetime as dt, sys
 from comun import req
 ok=fail=0
@@ -6,19 +6,25 @@ def chk(nombre,cond,extra=''):
     global ok,fail
     if cond: ok+=1
     else: fail+=1; print('  FALLA:',nombre,str(extra)[:300])
-def login(u,p): return req(None,'POST','/auth/login',{'username':u,'password':p})[1]['token']
+from comun import login
 T={r:login(u,p) for r,u,p in [('ADMIN','admin','admin123'),('VENDEDOR','ventas','ventas123'),('OPERADOR','operador','operador123'),('CLIENTE','ana.ramirez@mail.com','cliente123')]}
 hoy=dt.date.today()
-# 1. Lecturas por rol (matriz de permisos)
-lecturas={'/usuarios':'A','/auditoria':'A','/clientes':'AV','/reservas':'AV','/pasajeros':'AV','/pagos':'AV',
- '/proveedores':'AVO','/personal':'AVO','/vehiculos':'AVO','/lugares':'AVO','/operaciones':'AVO','/operaciones/estados':'AVO',
- '/resumen-paquetes':'AVO','/paquetes':'AVOC','/salidas':'AVOC','/portal/paquetes':'C','/salidas/1/manifiesto':'AVO','/auditoria/filtros':'A'}
+# 1. Permisos por rol (PKG_SEGURIDAD_ROLES.permisos): el frontend arma el menú y las pantallas con ellos.
+#    Cada pantalla exige un permiso; se comprueba quién lo tiene y que las lecturas permitidas respondan.
+lecturas={'/usuarios':('A','VER_USUARIOS'),'/auditoria':('A','VER_AUDITORIA'),'/clientes':('AV','VER_CLIENTES'),'/reservas':('AV','VER_RESERVAS'),
+ '/pasajeros':('AV','VER_RESERVAS'),'/pagos':('AV','VER_MONTOS'),'/proveedores':('AVO','VER_LOGISTICA'),'/personal':('AVO','VER_LOGISTICA'),
+ '/vehiculos':('AVO','VER_LOGISTICA'),'/lugares':('AVO','VER_LOGISTICA'),'/operaciones':('AVO','VER_OPERACIONES'),'/operaciones/estados':('AVO','VER_OPERACIONES'),
+ '/resumen-paquetes':('AVO','VER_RESUMEN'),'/salidas/1/manifiesto':('AVO','VER_RESUMEN'),'/auditoria/filtros':('A','VER_AUDITORIA'),
+ '/portal/paquetes':('C','VER_PAQUETES_PROPIOS')}
 letra={'ADMIN':'A','VENDEDOR':'V','OPERADOR':'O','CLIENTE':'C'}
-for u,quien in lecturas.items():
+for u,(quien,permiso) in lecturas.items():
     for rol,t in T.items():
-        s,b=req(t,'GET',u); esperado=200 if letra[rol] in quien else 403
-        chk(f'GET {u} {rol}',s==esperado,(s,b))
-chk('sin token 401',req(None,'GET','/reservas')[0]==401)
+        tiene=permiso in t['permisos']
+        chk(f'permiso {permiso} {rol}',tiene==(letra[rol] in quien),t['permisos'])
+        if tiene:
+            s_,b_=req(t,'GET',u); chk(f'GET {u} {rol}',s_==200,(s_,b_))
+for publica in ['/paquetes','/salidas','/contacto']:
+    chk(f'GET {publica} público',req(None,'GET',publica)[0]==200)
 A=T['ADMIN']; V=T['VENDEDOR']; O=T['OPERADOR']; C=T['CLIENTE']
 # 2. Proveedor CRUD
 s,p=req(A,'POST','/proveedores',{'nombreComercial':'Prueba Transportes SAC','ruc':'20999888777','telefono':'+51 977000111','esPropio':False,'estado':'ACTIVO'}); chk('crear proveedor',s==201,p)
@@ -26,7 +32,6 @@ pid=p['proveedorId']
 chk('RUC duplicado 409',req(A,'POST','/proveedores',{'nombreComercial':'X','ruc':'20999888777','telefono':'','esPropio':False,'estado':'ACTIVO'})[0]==409)
 chk('segundo propio rechazado',req(A,'POST','/proveedores',{'nombreComercial':'X','ruc':'20999888711','telefono':'','esPropio':True,'estado':'ACTIVO'})[0]==400)
 s,_=req(A,'PUT',f'/proveedores/{pid}',{'nombreComercial':'Prueba Transportes SAC','ruc':'20999888777','telefono':'+51 977000111','esPropio':False,'estado':'SUSPENDIDO'}); chk('editar proveedor',s==200)
-chk('ventas no gestiona logística 403',req(V,'POST','/proveedores',{'nombreComercial':'X','ruc':'20999888712','telefono':'','esPropio':False,'estado':'ACTIVO'})[0]==403)
 # 3. Personal y vehículo del proveedor (proveedor ACTIVO de nuevo)
 req(A,'PUT',f'/proveedores/{pid}',{'nombreComercial':'Prueba Transportes SAC','ruc':'20999888777','telefono':'+51 977000111','esPropio':False,'estado':'ACTIVO'})
 s,c=req(O,'POST','/personal',{'proveedorId':pid,'nombreCompleto':'Mario Prueba Soto','rol':'CONDUCTOR','telefono':'+51 966000222','numLicencia':'P12345678','catLicencia':'A-IIIb','vencLicencia':str(hoy+dt.timedelta(days=400)),'estado':'DISPONIBLE'}); chk('crear conductor',s==201,c)
@@ -43,7 +48,6 @@ s,pq=req(V,'POST','/paquetes',{'nombre':'Paquete de Prueba','descripcion':'Prueb
 chk('noches > días 400',req(V,'POST','/paquetes',{'nombre':'Malo','descripcion':'','precioBase':500,'dias':1,'noches':3,'imagen':None,'estado':'ACTIVO'})[0]==400)
 s,sal=req(V,'POST','/salidas',{'paqueteId':pq['paqueteId'],'fechaInicio':str(hoy+dt.timedelta(days=20)),'cuposMaximos':10,'guiaId':1,'estado':'PROGRAMADA'}); chk('crear salida',s==201,sal)
 chk('fecha_fin calculada',sal.get('fechaFin')==str(hoy+dt.timedelta(days=21)),sal.get('fechaFin'))
-chk('operador no crea salidas 403',req(O,'POST','/salidas',{'paqueteId':pq['paqueteId'],'fechaInicio':str(hoy+dt.timedelta(days=20)),'cuposMaximos':10,'guiaId':None,'estado':'PROGRAMADA'})[0]==403)
 # 6. Cliente CRUD
 s,cl=req(V,'POST','/clientes',{'nombreCompleto':'Cliente Prueba Ruiz','tipoDocumento':'DNI','numeroDocumento':'40001122','email':'cliente.prueba@mail.com','telefono':'+51 955001122'}); chk('crear cliente',s==201,cl)
 chk('correo duplicado 409',req(V,'POST','/clientes',{'nombreCompleto':'Otro','tipoDocumento':'DNI','numeroDocumento':'40001123','email':'cliente.prueba@mail.com','telefono':'+51 955001123'})[0]==409)

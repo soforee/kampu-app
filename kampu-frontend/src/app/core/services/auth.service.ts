@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Observable, tap } from 'rxjs';
+import { Observable } from 'rxjs';
 import { Permiso, RegistroForm, Sesion } from '../models';
 import { API } from '../utils/api';
 
@@ -26,7 +26,7 @@ export class AuthService {
     if (!texto) return null;
     try {
       const s = JSON.parse(texto);
-      return s && s.token && s.rol ? { ...s, permisos: Array.isArray(s.permisos) ? s.permisos : [] } : null;
+      return s && s.username && s.rol ? { ...s, permisos: Array.isArray(s.permisos) ? s.permisos : [] } : null;
     } catch {
       return null;
     }
@@ -47,11 +47,6 @@ export class AuthService {
     localStorage.setItem(KEY, JSON.stringify(s));
   }
 
-  // Vuelve a pedir la sesión al backend (permisos al día; sesiones guardadas por versiones anteriores)
-  refrescar(): Observable<Sesion> {
-    return this.http.get<Sesion>(`${API}/auth/sesion`).pipe(tap(s => this.guardarSesion(s)));
-  }
-
   // Ruta de inicio según el rol
   inicio(): string {
     return this.esCliente() ? '/mi-cuenta' : '/dashboard';
@@ -62,7 +57,7 @@ export class AuthService {
     this.olvidar();
   }
 
-  // Sin llamar al backend (token vencido o rechazado)
+  // Borra la sesión guardada en el navegador
   olvidar() {
     this.sesion.set(null);
     localStorage.removeItem(KEY);

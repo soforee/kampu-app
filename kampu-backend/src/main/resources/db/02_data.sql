@@ -17,21 +17,21 @@
 EXEC PKG_SEGURIDAD_ROLES.iniciar_sesion('admin', 'ADMIN');
 
 -- ---------------------------------------------------------------------
--- Usuarios internos (password_hash = BCrypt de admin123, ventas123, operador123)
+-- Usuarios internos (contraseñas de demostración: admin123, ventas123, operador123)
 -- ---------------------------------------------------------------------
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (1, 'admin', '$2a$10$kc235gNf9QJtsh4dMGO5tOBwUVRFTPg4Vg.lT52B1DyhFQ/xSHyl2', 'ADMIN', 'ACTIVO');
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (2, 'ventas', '$2a$10$a0Fl0GrAYQDbInSsBz59meqdKbq9pduZZk4as0ZQYUb91Io8WmCSy', 'VENDEDOR', 'ACTIVO');
-INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (3, 'operador', '$2a$10$LiuJIulFTf5VZh3NOv./zem59zfIVXM.dHwqJrWGVT253bx.BxS8S', 'OPERADOR', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (1, 'admin', 'admin123', 'ADMIN', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (2, 'ventas', 'ventas123', 'VENDEDOR', 'ACTIVO');
+INSERT INTO USUARIOS_SISTEMA (usuario_id, username, password_hash, rol, estado) VALUES (3, 'operador', 'operador123', 'OPERADOR', 'ACTIVO');
 
 -- ---------------------------------------------------------------------
--- Clientes (password_hash = BCrypt de 'cliente123' para los que tienen cuenta web)
+-- Clientes (contraseña 'cliente123' para los que tienen cuenta web)
 -- ---------------------------------------------------------------------
 INSERT INTO CLIENTES (cliente_id, nombre_completo, tipo_documento, numero_documento, email, telefono, password_hash, estado_cuenta)
-VALUES (1, 'Ana Ramírez Soto', 'DNI', '45871236', 'ana.ramirez@mail.com', '+51 987654321', '$2a$10$pVkHXziWsxkOHAduDWapIu1uuCCBncNyR.OlCRJBzk/CmbH.Tb5Wu', 'ACTIVO');
+VALUES (1, 'Ana Ramírez Soto', 'DNI', '45871236', 'ana.ramirez@mail.com', '+51 987654321', 'cliente123', 'ACTIVO');
 INSERT INTO CLIENTES (cliente_id, nombre_completo, tipo_documento, numero_documento, email, telefono, password_hash, estado_cuenta)
 VALUES (2, 'Lucía Fernández Cruz', 'DNI', '71452368', 'lucia.fernandez@mail.com', '+51 956874123', NULL, 'ACTIVO');
 INSERT INTO CLIENTES (cliente_id, nombre_completo, tipo_documento, numero_documento, email, telefono, password_hash, estado_cuenta)
-VALUES (3, 'John Miller', 'PASAPORTE', 'X4587126', 'john.miller@mail.com', '+1 3055550142', '$2a$10$pVkHXziWsxkOHAduDWapIu1uuCCBncNyR.OlCRJBzk/CmbH.Tb5Wu', 'ACTIVO');
+VALUES (3, 'John Miller', 'PASAPORTE', 'X4587126', 'john.miller@mail.com', '+1 3055550142', 'cliente123', 'ACTIVO');
 INSERT INTO CLIENTES (cliente_id, nombre_completo, tipo_documento, numero_documento, email, telefono, password_hash, estado_cuenta)
 VALUES (4, 'Sofía Castillo Rojas', 'CE', '001245789', 'sofia.castillo@mail.com', '+51 945123789', NULL, 'ACTIVO');
 INSERT INTO CLIENTES (cliente_id, nombre_completo, tipo_documento, numero_documento, email, telefono, password_hash, estado_cuenta)

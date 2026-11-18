@@ -5,14 +5,11 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TourStore } from '../../core/services/tour-store.service';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
-import { RelativaPipe } from '../../shared/relativa.pipe';
-import { AvatarComponent } from '../../shared/avatar.component';
-import { EsqueletoComponent } from '../../shared/esqueleto.component';
 
 @Component({
   selector: 'app-reservas',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent, EsqueletoComponent, AvatarComponent, RelativaPipe],
+  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
   templateUrl: './reservas.component.html'
 })
 export class ReservasComponent {

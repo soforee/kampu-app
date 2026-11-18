@@ -651,9 +651,8 @@ END PKG_GESTION_PAQUETES_CLIENTE;
 -- =====================================================================
 -- 5. PL/SQL SP_REGISTRAR_CLIENTE_EXTERNO (2/2)
 --    Único punto de entrada del autoregistro ("Registrarse"). Valida que el
---    correo, el documento y el teléfono no se repitan, guarda el hash de la
---    contraseña (BCrypt, lo genera el backend: la clave nunca llega en texto
---    plano a la base de datos) y deja auditoría.
+--    correo, el documento y el teléfono no se repitan, guarda la contraseña
+--    (mínimo 8 caracteres, columna password_hash) y deja auditoría.
 --    Si Ventas ya había creado al cliente (sin cuenta web) y coinciden
 --    documento y correo, se activa su cuenta en lugar de duplicarlo.
 -- =====================================================================
@@ -673,8 +672,8 @@ CREATE OR REPLACE PROCEDURE SP_REGISTRAR_CLIENTE_EXTERNO (
     v_correo CLIENTES.email%TYPE;
     v_total  NUMBER;
 BEGIN
-    IF p_password_hash IS NULL OR LENGTH(p_password_hash) < 20 THEN
-        RAISE_APPLICATION_ERROR(-20100, 'La contraseña no es válida');
+    IF p_password_hash IS NULL OR LENGTH(p_password_hash) < 8 THEN
+        RAISE_APPLICATION_ERROR(-20100, 'La contraseña debe tener al menos 8 caracteres');
     END IF;
 
     -- ¿Ya existe un cliente con ese documento?

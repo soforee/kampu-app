@@ -1,8 +1,8 @@
-<div class="min-h-screen bg-sand-50">
+<div class="min-h-screen">
   <app-portal-header />
 
   <main class="mx-auto max-w-xl px-4 py-10 sm:px-6">
-    <h1 class="text-[28px] font-black tracking-tight text-zinc-900">Crea tu cuenta</h1>
+    <h1 class="text-2xl font-semibold tracking-tight text-zinc-900">Crea tu cuenta</h1>
     <p class="mt-2 text-[15px] text-zinc-500">Con tu cuenta verás tus paquetes, su estado y tus pagos. Si ya compraste en la agencia, usa el mismo documento y correo: tus reservas aparecerán solas.</p>
 
     <form class="card mt-8 space-y-5 p-6 sm:p-8" (ngSubmit)="registrar()" novalidate>
@@ -47,7 +47,7 @@
         <div>
           <div class="mb-1.5 flex items-center justify-between">
             <label class="label req !mb-0" for="r-pass">Contraseña</label>
-            <button type="button" class="text-xs font-bold text-brand-600 hover:text-brand-800" (click)="ver.set(!ver())">{{ ver() ? 'Ocultar' : 'Mostrar' }}</button>
+            <button type="button" class="text-xs font-medium text-zinc-500 hover:text-zinc-900" (click)="ver.set(!ver())">{{ ver() ? 'Ocultar' : 'Mostrar' }}</button>
           </div>
           <input id="r-pass" name="pass" class="field" [type]="ver() ? 'text' : 'password'" [(ngModel)]="form.password" maxlength="64" autocomplete="new-password"
                  (blur)="v.tocar('password')" [class.field-invalid]="v.error('password')">
@@ -67,13 +67,13 @@
       </div>
 
       @if (error()) {
-        <p class="flex items-center gap-2 rounded-lg bg-rose-50 p-3 text-sm font-semibold text-rose-700" role="alert"><app-icon name="alert" size="w-4 h-4 shrink-0" />{{ error() }}</p>
+        <p class="alert-error" role="alert">{{ error() }}</p>
       }
 
       <button type="submit" class="btn-brand w-full !h-12" [disabled]="cargando()">
-        @if (cargando()) { Creando cuenta… } @else { Registrarme <app-icon name="arrow-right" size="w-4 h-4" /> }
+        @if (cargando()) { Creando cuenta… } @else { Crear cuenta }
       </button>
-      <p class="text-center text-sm text-zinc-500">¿Ya tienes cuenta? <a routerLink="/login" class="link font-bold">Inicia sesión</a></p>
+      <p class="text-center text-sm text-zinc-500">¿Ya tienes cuenta? <a routerLink="/login" class="link">Inicia sesión</a></p>
     </form>
   </main>
 </div>

@@ -3,13 +3,12 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/utils/api';
 import { AuthService } from '../../core/services/auth.service';
-import { IconComponent } from '../../shared/icon.component';
 import { LogoComponent } from '../../shared/logo.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [FormsModule, RouterLink, IconComponent, LogoComponent],
+  imports: [FormsModule, RouterLink, LogoComponent],
   templateUrl: './login.component.html'
 })
 export class LoginComponent {
