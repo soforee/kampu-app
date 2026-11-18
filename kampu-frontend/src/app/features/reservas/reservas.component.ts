@@ -6,10 +6,13 @@ import { TourStore } from '../../core/services/tour-store.service';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { BuscadorComponent } from '../../shared/buscador.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
   selector: 'app-reservas',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
+  imports: [PaginacionComponent, BuscadorComponent, PageHeaderComponent, RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
   templateUrl: './reservas.component.html'
 })
 export class ReservasComponent {
@@ -49,5 +52,13 @@ export class ReservasComponent {
         || f.cliente.toLowerCase().includes(t)
         || (f.paquete?.nombre.toLowerCase().includes(t) ?? false))
       .sort((a, b) => b.reserva.reservaId - a.reserva.reservaId);
+  });
+
+  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  pagina = signal(0);
+  visibles = computed(() => {
+    const filas = this.filas();
+    const pagina = Math.min(this.pagina(), Math.max(0, Math.ceil(filas.length / 10) - 1));
+    return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 }

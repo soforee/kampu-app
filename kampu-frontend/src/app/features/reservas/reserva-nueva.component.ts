@@ -14,10 +14,11 @@ import { ClienteSelectorComponent } from './cliente-selector.component';
 import { TelefonoInputComponent } from '../../shared/telefono-input.component';
 import { errorTelefonoPais } from '../../core/utils/paises';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-reserva-nueva',
   standalone: true,
-  imports: [FormsModule, RouterLink, CurrencyPipe, DatePipe, IconComponent, ClienteSelectorComponent, TelefonoInputComponent, MigasComponent],
+  imports: [PageHeaderComponent, FormsModule, RouterLink, CurrencyPipe, DatePipe, IconComponent, ClienteSelectorComponent, TelefonoInputComponent, MigasComponent],
   templateUrl: './reserva-nueva.component.html'
 })
 export class ReservaNuevaComponent implements OnInit {

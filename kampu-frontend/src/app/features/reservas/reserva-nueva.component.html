@@ -1,10 +1,7 @@
 <app-migas [items]="[{ texto: 'Reservas', ruta: '/reservas' }, { texto: 'Nueva reserva' }]" />
-<div class="page-header">
-  <div>
-    <h1 class="h1">Nueva reserva</h1>
-    <p class="page-sub">En 4 pasos: cliente, salida, pasajeros y revisión. Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
-  </div>
-</div>
+<app-page-header titulo="Nueva reserva">
+  <p detalle class="page-sub">En 4 pasos: cliente, salida, pasajeros y revisión. Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
+</app-page-header>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
   <div class="lg:col-span-2 space-y-6 min-w-0">

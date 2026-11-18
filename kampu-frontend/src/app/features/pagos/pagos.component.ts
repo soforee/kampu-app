@@ -9,10 +9,13 @@ import { aPEN } from '../../core/utils/moneda';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { BuscadorComponent } from '../../shared/buscador.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
   selector: 'app-pagos',
   standalone: true,
-  imports: [RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
+  imports: [PaginacionComponent, BuscadorComponent, PageHeaderComponent, RouterLink, CurrencyPipe, DatePipe, BadgeComponent, IconComponent],
   templateUrl: './pagos.component.html'
 })
 export class PagosComponent {
@@ -41,6 +44,14 @@ export class PagosComponent {
       .filter(f => !t || f.codigo.toLowerCase().includes(t) || f.cliente.toLowerCase().includes(t)
         || f.pago.codigoTransaccion.toLowerCase().includes(t))
       .sort((a, b) => b.pago.fechaPago.localeCompare(a.pago.fechaPago));
+  });
+
+  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  pagina = signal(0);
+  visibles = computed(() => {
+    const filas = this.filas();
+    const pagina = Math.min(this.pagina(), Math.max(0, Math.ceil(filas.length / 10) - 1));
+    return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 
   totalAprobado = computed(() =>
