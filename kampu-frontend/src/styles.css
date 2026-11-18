@@ -231,11 +231,21 @@ body.swal2-toast-shown .swal2-container,
 /* Página principal a pantalla completa (full-viewport): cada sección ocupa el alto de la ventana y el contenido
    queda centrado; el desplazamiento se detiene al inicio de cada sección (scroll-snap, CSS nativo) */
 .pantalla { position: relative; display: flex; min-height: 100vh; min-height: 100svh; flex-direction: column; justify-content: center;
-            padding-top: 6.5rem; padding-bottom: 4.5rem; scroll-snap-align: start; }
+            padding-top: 6.5rem; padding-bottom: 4rem; scroll-snap-align: start; }
 html.secciones { scroll-snap-type: y proximity; }
 /* Galería: las filas se reparten el alto disponible de la pantalla */
 .galeria-grid { grid-auto-rows: 170px; }
 @media (min-width: 1024px) { .galeria-grid { grid-auto-rows: clamp(150px, calc((100svh - 330px) / 3), 260px); } }
+
+/* Desplazamiento por páginas completas (escritorio): lo controla landing.component.ts */
+html.paginas { scroll-behavior: auto; scrollbar-width: none; }
+html.paginas::-webkit-scrollbar { display: none; }
+/* Transición entre páginas: el contenido que llega entra desde la dirección del movimiento; el que se va se aleja y se desvanece */
+.pagina-entra > .mx-auto { animation: pagina-entra-abajo .95s .2s cubic-bezier(.16, 1, .3, 1) both; }
+.pagina-entra.desde-arriba > .mx-auto { animation-name: pagina-entra-arriba; }
+@keyframes pagina-entra-abajo { from { opacity: 0; transform: translateY(80px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes pagina-entra-arriba { from { opacity: 0; transform: translateY(-80px) scale(.98); } to { opacity: 1; transform: none; } }
+.pagina-sale > .mx-auto { opacity: 0; transform: scale(.94); transition: opacity .55s ease, transform .9s cubic-bezier(.65, 0, .35, 1); }
 
 /* Aparición al entrar en pantalla (directiva appRevelar) */
 .revelar { opacity: 0; transform: translateY(22px); transition: opacity .8s cubic-bezier(.16, 1, .3, 1), transform .8s cubic-bezier(.16, 1, .3, 1); }
@@ -246,6 +256,8 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   html.secciones { scroll-snap-type: none; }
+  .pagina-entra > .mx-auto { animation: none; }
+  .pagina-sale > .mx-auto { opacity: 1; transform: none; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .revelar { opacity: 1; transform: none; }
 }
