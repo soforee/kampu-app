@@ -13,6 +13,10 @@ const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]), sele
 })
 export class ModalComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) titulo = '';
+  @Input() subtitulo = '';
+  @Input() icono = '';
+  // Ancho en escritorio: sm (formularios cortos), md (por defecto) o lg (formularios con varias columnas)
+  @Input() ancho: 'sm' | 'md' | 'lg' = 'md';
   @Output() cerrar = new EventEmitter<void>();
 
   idTitulo = 'modal-titulo-' + (++siguienteId);

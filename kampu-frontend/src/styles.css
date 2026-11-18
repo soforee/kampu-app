@@ -18,27 +18,33 @@
 
 @layer components {
   /* ---------- Formularios ---------- */
-  .field { @apply h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors
+  .field { @apply h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors
            placeholder:text-zinc-400 hover:border-zinc-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15
            disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400; }
-  textarea.field { @apply h-auto min-h-[5rem] py-2 leading-relaxed; resize: vertical; }
-  .label { @apply mb-1.5 flex items-center gap-1 text-[13px] font-medium text-zinc-700; }
+  textarea.field { @apply h-auto min-h-[4rem] py-2 leading-relaxed; resize: vertical; }
+  .label { @apply mb-1 flex items-center gap-1 text-[13px] font-medium text-zinc-700; }
   .label.req::after { content: '*'; @apply text-rose-500; }
   .opt { @apply ml-auto text-xs font-normal text-zinc-400; }
-  .hint { @apply mt-1.5 text-xs leading-relaxed text-zinc-500; }
+  .hint { @apply mt-1 text-xs leading-relaxed text-zinc-500; }
   .field-invalid { @apply !border-rose-400 focus:!ring-rose-500/15; }
   .field-error { @apply mt-1.5 text-xs font-medium leading-snug text-rose-600; }
-  .form-section { @apply space-y-4; }
-  .form-section + .form-section { @apply border-t border-zinc-100 pt-5; }
-  .form-section-title { @apply flex items-center gap-2 text-sm font-semibold text-zinc-900; }
+  .form-section { @apply space-y-3; }
+  .form-section + .form-section { @apply border-t border-zinc-100 pt-4; }
+  .form-section-title { @apply flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-zinc-500; }
   .form-section-title svg { @apply text-zinc-400; }
-  .form-actions { @apply mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-100 pt-5; }
+  .form-actions { @apply mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-100 pt-4; }
+  /* Dentro de un modal los botones quedan fijos abajo, siempre a la vista */
+  app-modal .form-actions { @apply sticky -bottom-5 z-10 -mx-6 -mb-5 mt-5 bg-white/95 px-6 pb-4 backdrop-blur; }
+  /* Campo con ícono a la izquierda (como el buscador) */
+  .con-icono { @apply relative; }
+  .con-icono > .ico-campo { @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400; }
+  .con-icono > .field { @apply pl-9; }
   .search { @apply relative; }
   .search > .search-icon { @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400; }
   .search > .field { @apply pl-9; }
 
   /* ---------- Botones: principal oscuro, secundario blanco, peligro en rojo suave ---------- */
-  .btn { @apply inline-flex h-10 select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl px-4 text-sm font-medium
+  .btn { @apply inline-flex h-9 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium
          outline-none transition-[background-color,box-shadow,border-color] duration-150 focus-visible:ring-2 focus-visible:ring-offset-1
          disabled:pointer-events-none disabled:opacity-50; }
   /* Principal: oliva del logo con sombra suave (como el botón oscuro de la plantilla) */
@@ -49,7 +55,7 @@
   .btn-danger { @apply btn border border-rose-200 bg-white text-rose-600 shadow-soft hover:bg-rose-50 focus-visible:ring-rose-500/25; }
   .btn-sm { @apply h-8 gap-1.5 rounded-lg px-3 text-[13px]; }
   /* Botón cuadrado solo con ícono (con borde, como campana y filtros de la plantilla) */
-  .icon-btn-box { @apply inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 shadow-soft outline-none
+  .icon-btn-box { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 shadow-soft outline-none
                   transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30; }
   /* Ícono de acción dentro de tablas (sin borde) */
   .icon-btn { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 outline-none transition-colors
@@ -124,7 +130,8 @@ input[type='search']::-webkit-search-cancel-button {
 * { scrollbar-width: thin; scrollbar-color: #D3D0C3 transparent; }
 
 /* Transición suave al cambiar de pantalla */
-main router-outlet + * { display: block; animation: fade-in .2s ease-out both; }
+/* Sin 'both': al terminar no deja una capa propia, así los modales quedan sobre la barra superior y el menú */
+main router-outlet + * { display: block; animation: fade-in .2s ease-out; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* ---------- SweetAlert2 (confirmaciones y avisos) ---------- */
