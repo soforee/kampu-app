@@ -163,11 +163,22 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
 
 - **Página principal a pantalla completa (full-viewport / full-page scroll):**
   - cada sección ocupa el alto de la ventana (`100svh`) con el contenido centrado (clase `.pantalla`);
-  - el desplazamiento se ajusta al inicio de cada sección (`scroll-snap`, CSS nativo, solo en esta página);
-  - a la derecha, unos puntos marcan la sección visible y llevan a cualquiera de ellas.
+  - **escritorio (1024 px o más):** cada giro de la rueda, flecha, Av Pág, espacio o deslizamiento cambia a la
+    pantalla siguiente o anterior.
+    - El recorrido es una animación propia de 0,95 s (`requestAnimationFrame` con aceleración suave), sin librerías.
+    - El contenido de la sección que llega entra desde la dirección del movimiento, y el de la que se va se aleja y se desvanece.
+    - Inicio y Fin van a la primera y a la última pantalla.
+    - Los enlaces internos (menú, puntos, botones) usan la misma animación.
+    - En una ventana baja, si una sección no cabe, primero se recorre y luego se pasa a la siguiente.
+    - Las flechas del teclado no cambian de pantalla mientras se escribe en el buscador.
+  - **celular y tablet:** scroll normal con ajuste suave a cada sección (`scroll-snap`, CSS nativo);
+  - con "reducir movimiento" activado, el cambio de pantalla es inmediato y sin animaciones;
+  - a la derecha, unos puntos y el número de sección (01 a 07) marcan la sección visible y llevan a cualquiera de ellas.
 - **Secciones, en orden:**
-  - **Inicio:** 5 fotos de destinos con fundido lento, leve parallax, título, dos botones,
-    indicadores con el crédito de cada foto y una señal para bajar.
+  - **Inicio (simplificado):** 5 fotos de destinos con fundido lento y leve parallax.
+    - El texto se reduce al título, una línea de descripción, un botón principal ("Ver N tours") y un enlace de texto ("Cómo funciona").
+    - Abajo quedan barras discretas para las fotos, el crédito de la foto actual y una señal para bajar.
+    - Se quitaron la etiqueta superior y los nombres de lugar bajo cada indicador.
   - **Destinos:**
     - el buscador (destino, fecha y tipo) se movió aquí, debajo del título y junto a los tours que filtra;
     - pestañas Todos / Full day / Escapadas / Expediciones, que usan el mismo filtro de tipo;
