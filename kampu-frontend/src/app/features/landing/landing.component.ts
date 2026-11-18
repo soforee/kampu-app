@@ -10,13 +10,18 @@ import { LandingToursComponent } from './components/landing-tours.component';
 import { LandingBeneficiosComponent } from './components/landing-beneficios.component';
 import { LandingFooterComponent } from './components/landing-footer.component';
 import { IconComponent } from '../../shared/icon.component';
-import { Contacto, FiltroBusqueda, TourCard } from './landing.models';
+import { LandingPresentacionComponent } from './components/landing-presentacion.component';
+import { LandingPasosComponent } from './components/landing-pasos.component';
+import { LandingGaleriaComponent } from './components/landing-galeria.component';
+import { LandingCtaComponent } from './components/landing-cta.component';
+import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
   imports: [LandingNavbarComponent, LandingHeroComponent, LandingSearchComponent, LandingToursComponent,
-    LandingBeneficiosComponent, LandingFooterComponent, IconComponent],
+    LandingBeneficiosComponent, LandingFooterComponent, IconComponent,
+    LandingPresentacionComponent, LandingPasosComponent, LandingGaleriaComponent, LandingCtaComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -80,6 +85,20 @@ export class LandingComponent {
     this.filtro.set(f);
     document.getElementById('tours')?.scrollIntoView({ behavior: 'smooth' });
   }
+
+  // Pestañas de categorías: cambian solo el tipo de tour y conservan destino y fecha
+  cambiarCategoria(tipo: TipoTour) {
+    this.filtro.set({ ...this.filtro(), tipo });
+  }
+
+  // Cifras reales para la presentación: salidas abiertas con cupos desde hoy y sus cupos libres
+  private salidasAbiertas = computed(() => {
+    const hoyStr = hoy();
+    return this.salidas().filter(x => (x.estado === 'PROGRAMADA' || x.estado === 'CONFIRMADA') && x.fechaInicio >= hoyStr && x.cuposDisponibles > 0);
+  });
+  totalSalidas = computed(() => this.salidasAbiertas().length);
+  totalCupos = computed(() => this.salidasAbiertas().reduce((a, x) => a + x.cuposDisponibles, 0));
+  totalActivos = computed(() => this.paquetes().filter(p => p.estado === 'ACTIVO').length);
 
   limpiar() {
     this.filtro.set({ destino: '', fecha: '', tipo: '' });
