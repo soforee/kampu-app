@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// Cliente / turista. password_hash (BCrypt) solo si tiene cuenta en el portal web.
+// Cliente / turista. password_hash (contraseña) solo si tiene cuenta en el portal web.
 @Entity
 @DynamicUpdate
 @Table(name = "CLIENTES")

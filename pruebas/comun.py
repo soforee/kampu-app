@@ -4,9 +4,18 @@ import json, os, random, sys, threading, urllib.error, urllib.request
 B = os.environ.get('KAMPU_API', 'http://localhost:8082/lp2_gp2/api/v1')
 
 
-def req(tok, m, u, d=None):
+def cabeceras(sesion):
+    """Lo que envía el frontend después del login: quién hace la petición (usuario, rol e id)."""
+    if not sesion: return {}
+    h = {'X-Usuario': sesion['username'], 'X-Rol': sesion['rol']}
+    if sesion.get('usuarioId'): h['X-Usuario-Id'] = str(sesion['usuarioId'])
+    if sesion.get('clienteId'): h['X-Cliente-Id'] = str(sesion['clienteId'])
+    return h
+
+
+def req(sesion, m, u, d=None):
     r = urllib.request.Request(B + u, method=m, data=None if d is None else json.dumps(d).encode(),
-                               headers={'Content-Type': 'application/json', **({'Authorization': 'Bearer ' + tok} if tok else {})})
+                               headers={'Content-Type': 'application/json', **cabeceras(sesion)})
     try:
         with urllib.request.urlopen(r, timeout=60) as x:
             b = x.read(); ct = x.headers.get('Content-Type', '')
@@ -20,7 +29,7 @@ def req(tok, m, u, d=None):
 def login(u, p):
     c, r = req(None, 'POST', '/auth/login', {'username': u, 'password': p})
     if c != 200: sys.exit(f'No se pudo iniciar sesión como {u} ({c}): {r}. ¿Backend arriba y datos de demostración instalados?')
-    return r['token']
+    return r   # sesión: usuario, rol y permisos
 
 
 def a_la_vez(funcs):
