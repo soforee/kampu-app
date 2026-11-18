@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, Output, inject } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, Output, inject, signal } from '@angular/core';
 import { IconComponent } from './icon.component';
 
 let siguienteId = 0;
@@ -20,6 +20,8 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
   @Output() cerrar = new EventEmitter<void>();
 
   idTitulo = 'modal-titulo-' + (++siguienteId);
+  // Al cerrar con Esc, el fondo o la X, la ventana se desvanece (160 ms) antes de avisar al padre
+  saliendo = signal(false);
   private el = inject(ElementRef<HTMLElement>);
   private previo = document.activeElement as HTMLElement | null;
 
@@ -31,13 +33,21 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
     setTimeout(() => (primero ?? panel)?.focus({ preventScroll: true }));
   }
 
+  pedirCierre() {
+    if (this.saliendo()) return;
+    const reducido = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducido) { this.cerrar.emit(); return; }
+    this.saliendo.set(true);
+    setTimeout(() => this.cerrar.emit(), 160);
+  }
+
   ngOnDestroy() {
     this.previo?.focus?.({ preventScroll: true });
   }
 
   @HostListener('keydown', ['$event'])
   teclado(e: KeyboardEvent) {
-    if (e.key === 'Escape') { e.stopPropagation(); this.cerrar.emit(); return; }
+    if (e.key === 'Escape') { e.stopPropagation(); this.pedirCierre(); return; }
     if (e.key !== 'Tab') return;
     const campos = this.enfocables();
     if (!campos.length) return;

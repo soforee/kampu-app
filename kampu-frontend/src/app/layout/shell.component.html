@@ -1,11 +1,11 @@
-<div class="min-h-screen lg:pl-[76px]">
+<div class="raiz min-h-screen" [class.compacto]="compacto()">
   @if (abierto()) {
     <div class="lg:hidden fixed inset-0 z-40 bg-zinc-900/30 animate-fade-in" (click)="abierto.set(false)"></div>
   }
 
-  <!-- Menú lateral (como la plantilla): logo arriba, íconos en cuadros redondeados; al pasar el cursor se ven los nombres -->
-  <aside class="sidebar group/side fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-hidden border-r border-zinc-200/80 bg-white
-                transition-[width,transform] duration-200 ease-out lg:w-[76px] lg:translate-x-0 lg:hover:w-60 lg:hover:shadow-lifted lg:focus-within:w-60"
+  <!-- Menú lateral: desplegado (íconos y nombres) o compacto (solo íconos con su nombre al pasar el cursor); el botón de abajo cambia entre ambos -->
+  <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-hidden border-r border-zinc-200/80 bg-white
+                transition-[width,transform] duration-300 ease-out lg:translate-x-0"
          [class.-translate-x-full]="!abierto()">
 
     <div class="flex h-[76px] shrink-0 items-center border-b border-zinc-100 px-4">
@@ -19,13 +19,13 @@
     <nav class="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-4 py-5" aria-label="Menú principal">
       @for (item of menu(); track item.ruta) {
         <a [routerLink]="item.ruta" (click)="abierto.set(false)" [attr.aria-label]="item.texto"
-           routerLinkActive="nav-active"
+           routerLinkActive="nav-active" ariaCurrentWhenActive="page" [attr.data-tip]="compacto() ? item.texto : null"
            class="nav-item relative flex h-11 items-center gap-3 rounded-xl px-[13px] text-sm text-zinc-500 outline-none transition-colors
                   hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30">
           <span class="relative shrink-0">
             <app-icon [name]="item.icono" size="w-[18px] h-[18px]" />
             @if (item.ruta === '/reservas' && pendientes() > 0) {
-              <span class="absolute -right-1 -top-1 hidden h-2 w-2 rounded-full bg-leaf-400 ring-2 ring-white lg:block lg:group-hover/side:hidden lg:group-focus-within/side:hidden"></span>
+              <span class="punto-pendiente absolute -right-1 -top-1 hidden h-2 w-2 rounded-full bg-leaf-400 ring-2 ring-white"></span>
             }
           </span>
           <span class="lbl flex-1 whitespace-nowrap">{{ item.texto }}</span>
@@ -36,15 +36,22 @@
       }
     </nav>
 
+    <div class="shrink-0 space-y-1.5 border-t border-zinc-100 px-4 py-4">
     @if (auth.puede('GESTIONAR_RESERVAS')) {
-    <div class="shrink-0 border-t border-zinc-100 px-4 py-4">
         <a routerLink="/reservas/nueva" (click)="abierto.set(false)" class="flex h-11 items-center gap-3 rounded-xl border border-zinc-200 bg-white px-[12px] text-sm font-medium text-zinc-700 shadow-soft outline-none transition-colors hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-brand-600/30"
-           aria-label="Nueva reserva" title="Nueva reserva">
+           aria-label="Nueva reserva" [attr.data-tip]="compacto() ? 'Nueva reserva' : null">
           <app-icon name="plus" size="w-[18px] h-[18px] shrink-0" />
           <span class="lbl whitespace-nowrap">Nueva reserva</span>
         </a>
-    </div>
     }
+      <!-- Contraer o desplegar el menú (solo escritorio) -->
+      <button type="button" class="nav-item hidden h-10 w-full items-center gap-3 rounded-xl px-[13px] text-sm text-zinc-500 outline-none transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30 lg:flex"
+              (click)="alternarMenu()" [attr.aria-label]="compacto() ? 'Desplegar menú' : 'Contraer menú'" [attr.aria-expanded]="!compacto()"
+              [attr.data-tip]="compacto() ? 'Desplegar menú' : null">
+        <app-icon [name]="compacto() ? 'panel-right' : 'panel-left'" size="w-[18px] h-[18px] shrink-0" />
+        <span class="lbl whitespace-nowrap">Contraer menú</span>
+      </button>
+    </div>
   </aside>
 
   <!-- Barra superior única: sección actual, búsqueda, avisos y usuario -->

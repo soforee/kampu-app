@@ -19,7 +19,7 @@
     <table class="tbl tbl-tarjetas">
       <thead>
         <tr><th class="th">Código</th><th class="th min-w-[180px]">Cliente</th><th class="th min-w-[190px]">Salida</th><th class="th text-center">Viajeros</th>
-            <th class="th text-right">Total</th><th class="th text-right">Saldo</th><th class="th">Estado</th><th class="th">Pago</th></tr>
+            <th class="th text-right">Total</th><th class="th text-right">Saldo</th><th class="th">Estado</th><th class="th">Pago</th><th class="th col-acciones"></th></tr>
       </thead>
       <tbody>
         @for (f of visibles(); track f.reserva.reservaId) {
@@ -35,9 +35,12 @@
             <td data-label="Saldo" class="td whitespace-nowrap text-right tabular-nums" [class]="f.saldo > 0 ? 'font-medium text-zinc-900' : 'text-zinc-400'">{{ f.saldo | currency:'S/' }}</td>
             <td data-label="Estado" class="td"><app-badge [estado]="f.reserva.estadoReserva" /></td>
             <td data-label="Pago" class="td"><app-badge [estado]="f.reserva.estadoPago" /></td>
+            <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+              <div class="actions"><a [routerLink]="['/reservas', f.reserva.reservaId]" class="icon-btn" data-tip="Ver detalle" [attr.aria-label]="'Ver detalle de ' + f.codigo"><app-icon name="eye" size="w-4 h-4" /></a></div>
+            </td>
           </tr>
         } @empty {
-          <tr><td colspan="8"><div class="empty">{{ store.cargado() ? 'No se encontraron reservas.' : 'Cargando…' }}</div></td></tr>
+          <tr><td colspan="9"><div class="empty">{{ store.cargado() ? 'No se encontraron reservas.' : 'Cargando…' }}</div></td></tr>
         }
       </tbody>
     </table>

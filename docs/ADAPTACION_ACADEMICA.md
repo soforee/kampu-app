@@ -157,6 +157,44 @@ Todos los módulos comparten la misma estructura:
   - "Crear mi cuenta" como botón secundario.
 - **Registro de clientes:** misma estructura que los modales: encabezado con ícono, secciones y botón principal abajo.
 
+### Rediseño integral: página principal, login, navegación e interacciones
+
+Solo cambia la presentación: no se tocaron la lógica de negocio, la base de datos ni la autenticación.
+
+- **Página principal (orden de secciones):**
+  - **Portada a pantalla completa:** 5 fotos de destinos que se alternan con un fundido lento y un leve parallax;
+    título, subtítulo, dos botones ("Ver N tours" y "Cómo funciona") e indicadores con el crédito de cada foto.
+  - **Buscador** (destino, fecha y tipo), igual que antes.
+  - **Destinos:** pestañas Todos / Full day / Escapadas / Expediciones, con un subrayado lima en la activa. Usan el mismo
+    filtro de tipo del buscador. Las tarjetas entran escalonadas y muestran el precio sobre la foto.
+    Si un paquete no tiene foto propia, se toma la del destino que nombra (por palabras completas).
+  - **Nosotros:** cifras reales calculadas de los datos (paquetes activos, salidas abiertas y cupos libres) y dos fotos.
+  - **Cómo funciona:** los 4 pasos que ya hace el sistema (elegir, reservar, pagar en soles/dólares/euros, seguir el viaje en el portal).
+  - **Galería** de 7 destinos, **Por qué elegirnos**, una llamada final (crear cuenta o ir al panel, y WhatsApp) y el pie.
+  - Las secciones aparecen al hacer scroll (directiva `appRevelar`, con `IntersectionObserver` del navegador; sin librerías).
+  - Fotos: Wikimedia Commons, con autor y licencia en `docs/ATRIBUCIONES_FOTOS.md`.
+- **Login:**
+  - las fotos de destinos se alternan en el panel izquierdo, y el formulario entra con un leve escalonado;
+  - mensaje bajo cada campo vacío (`aria-invalid`) y aviso de Bloq Mayús;
+  - el error del servidor se oculta al volver a escribir;
+  - el botón muestra un indicador de carga.
+- **Menú lateral:**
+  - el botón "Contraer menú" (abajo) cambia entre desplegado (240 px, con nombres) y compacto (76 px, solo íconos).
+    La preferencia se recuerda en el navegador;
+  - en modo compacto, cada ícono muestra su nombre en un tooltip al pasar el cursor o con el teclado;
+  - la opción activa lleva una barra lima en el borde y `aria-current="page"`.
+- **Acciones con ícono:**
+  - editar (lápiz), eliminar (papelera), ver detalle (ojo) e historial (reloj) son botones solo con ícono,
+    con tooltip (`data-tip`) y `aria-label`;
+  - Reservas y Salidas suman el ojo "Ver detalle", que lleva a la misma pantalla que el enlace del código;
+  - las acciones principales (Guardar, Crear, Confirmar, Aprobar, Asignar) conservan su texto;
+  - "Rechazar pago" ahora pide confirmación, como eliminar y anular.
+- **Microinteracciones:**
+  - los botones se hunden levemente al presionarlos;
+  - las ventanas modales se desvanecen al cerrarse con Esc, con el fondo o con la X;
+  - el desplazamiento a cada sección es suave;
+  - con "reducir movimiento" activado en el sistema, todo aparece sin animación.
+
 ## 5. Errores corregidos durante la adaptación
 
 - **Credencial del logotipo:** usaba variables CSS de la paleta anterior, que ya no existían.
@@ -189,6 +227,19 @@ Todos los módulos comparten la misma estructura:
   - el registro de un cliente nuevo entra al portal;
   - en celular, el menú se abre y navega.
 - **Ancho en celular:** las 14 rutas (Admin y portal) y la página principal miden 390 px de ancho, sin desborde.
+  En 768, 1024 y 1280 px, la página principal, el login y 7 módulos tampoco desbordan.
+- **Rediseño (base v11 reinstalada):**
+  - recorrido completo: 22 de 22;
+  - login: campos vacíos, clave incorrecta, ingreso del personal y del cliente;
+  - menú y modales: 18 de 18. Incluye:
+    - contraer, desplegar y recordar el menú;
+    - tooltip e indicador de la opción activa;
+    - el ojo abre el detalle;
+    - cierre animado de los modales con Esc y con la X;
+    - con movimiento reducido no queda nada oculto;
+  - pestañas de categorías: filtran 3 y 2 tours, y "Full day" queda vacío porque no hay tours de un día;
+  - "Rechazar pago": cancelar la confirmación deja el pago pendiente;
+  - formularios: ninguno queda tapado por la barra superior.
 - **`ng build`:** correcto. Quedan avisos de tamaño:
   - el paquete inicial pesa 545 kB frente a un límite de 512 kB, porque el CSS ahora se compila dentro del paquete en lugar de generarse en el navegador;
   - el CSS del campo de teléfono supera el límite por componente.

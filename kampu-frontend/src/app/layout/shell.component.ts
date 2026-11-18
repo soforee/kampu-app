@@ -26,6 +26,8 @@ export class ShellComponent {
   private avisos = inject(AlertasService);
 
   abierto = signal(false);
+  // Escritorio: menú compacto (solo íconos, con nombre al pasar el cursor) o desplegado; se recuerda en este navegador
+  compacto = signal(this.leerPreferencia());
   // Desplegables de la barra superior: 'busqueda' | 'avisos' | 'usuario' | null
   desplegado = signal<string | null>(null);
   consulta = signal('');
@@ -107,6 +109,15 @@ export class ShellComponent {
     this.store.cargar(true, error => {
       if (error && this.auth.autenticado()) this.alerts.error(error, 'No se pudieron cargar los datos');
     });
+  }
+
+  alternarMenu() {
+    this.compacto.set(!this.compacto());
+    try { localStorage.setItem('kampu.menuCompacto', this.compacto() ? '1' : '0'); } catch { /* sin almacenamiento: solo dura la sesión */ }
+  }
+
+  private leerPreferencia() {
+    try { return localStorage.getItem('kampu.menuCompacto') === '1'; } catch { return false; }
   }
 
   async salir() {
