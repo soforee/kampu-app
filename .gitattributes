@@ -1,0 +1,5 @@
+# El wrapper de Maven es necesario para ejecutar el backend (./mvnw o mvnw.cmd),
+# pero no es codigo del proyecto: no se cuenta en las estadisticas de lenguajes de GitHub.
+kampu-backend/mvnw linguist-vendored
+kampu-backend/mvnw.cmd linguist-vendored
+kampu-backend/.mvn/** linguist-vendored

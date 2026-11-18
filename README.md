@@ -127,12 +127,12 @@ Solo frontend; además, los datos de demostración cargan una foto del paquete M
 (`PKG_ASIGNACION`, `PKG_RUTAS`, `trg_*`, `DOMINIO_ESTADOS`) y dependencias de prueba comentadas en `pom.xml`.
 Los estados `SUSPENDIDO`, `MANTENIMIENTO` y `OCUPADO` ahora tienen color y texto propios.
 
-**Datos de demostración (`02_data.sql`):** la salida *Paracas e Ica* pasa a `PROGRAMADA` (no tenía transporte
+**Datos de demostración (`kampu_tours_v11.sql`, sección 12):** la salida *Paracas e Ica* pasa a `PROGRAMADA` (no tenía transporte
 completo) y la reserva R-0008 tiene un adelanto aprobado (estaba confirmada sin pagos).
 
 ## Objetos críticos de backend (2 por categoría) y su justificación
 
-Todos están en `01_schema.sql`, comentados.
+Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`, comentados (la v11 suma triggers de trazabilidad y vistas de panel: ver `docs/ACOPLAMIENTO_BD_v11.md`).
 
 | Categoría | Objeto | Qué hace | Por qué este y no otro |
 |---|---|---|---|
@@ -189,7 +189,7 @@ La pantalla permite filtrar por texto, rango de fechas (atajos Hoy / 7 días / 3
 ver el **historial completo de un registro**; paginar en el servidor (50 por página) y **exportar a CSV** con los mismos filtros.
 Filtrar por rol aprovecha la partición de `AUDITORIA` por `rol_usuario`.
 
-## Particionamiento y roles por nivel de usuario (`03_particionamiento_roles.sql`)
+## Particionamiento y roles por nivel de usuario (incluidos en `kampu_tours_v11.sql`)
 
 | Tabla | Particionada por (LIST) | Particiones | Para qué nivel |
 |---|---|---|---|
@@ -203,11 +203,7 @@ Además crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE` con los m
 del portal) para cuentas que entren directo a Oracle (reportes, SQL Developer). La aplicación usa un único usuario
 de conexión y su nivel lo controla `PKG_SEGURIDAD_ROLES`.
 
-Requisitos: opción *Partitioning* (XE 18c/21c, 23ai Free o Enterprise), conexión a la **PDB** (`XEPDB1` en XE,
-`FREEPDB1` en 23ai Free; no al contenedor raíz `XE`/`FREE`) y el privilegio `CREATE ROLE`
-(`GRANT CREATE ROLE TO LP2;` como DBA). Si falta algo, el script no se detiene con errores: particiona lo que puede
-y muestra en la salida qué no hizo y cómo resolverlo. Se puede volver a ejecutar las veces que haga falta
-(las tablas ya particionadas y los roles existentes se respetan).
+Requisitos: opción *Partitioning* (XE 18c/21c, 23ai Free o Enterprise) y ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz. Las tablas se crean ya particionadas y los roles se respetan si ya existían.
 
 ## Especificación de cambios de interfaz
 
@@ -303,24 +299,25 @@ Las mismas reglas se aplican en ambos lados: `kampu-frontend/src/app/core/utils/
   (por ejemplo letras o la "e" en campos numéricos) y los mensajes aparecen debajo de cada campo.
 - En el backend, Bean Validation rechaza los datos con estado 400 y un mensaje claro; si llega un tipo incorrecto
   (letras o decimales en un campo entero, fechas mal escritas) se indica qué campo falló.
-- Los tipos y longitudes coinciden con `01_schema.sql`; las reglas que dependen de otros datos (cupos, cruces de
+- Los tipos y longitudes coinciden con `kampu_tours_v11.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
   horario, transiciones, capacidad) las valida la base de datos con sus triggers.
 
-## 1. Base de datos (Oracle 12.2 o superiorr)
+## 1. Base de datos (Oracle Database 21c XE, PDB `XEPDB1`)
 
-1. Usuario dueño del esquema (por defecto `LP2` / `admin123`) con permisos para crear tablas, vistas, secuencias,
-   procedimientos y triggers. Para el paso 3 también `CREATE ROLE` (`GRANT CREATE ROLE TO LP2;` como DBA).
-2. Conectado como ese usuario, ejecuta **en orden** los tres scripts de `kampu-backend/src/main/resources/db/`
-   (SQL Developer: "Ejecutar script" F5; SQL*Plus: `@archivo`):
-   1. `01_schema.sql` — **primero borra lo que haya de una instalación anterior** (cualquier versión, con sus datos)
-      y luego crea las 14 tablas + `AUDITORIA`, índices únicos (documento, correo, teléfono), secuencia y los
-      8 objetos PL/SQL. Al final todos deben salir `VALID`.
-   2. `02_data.sql` — datos demo con **fechas relativas a hoy** (hay paquetes terminados, en curso y por empezar).
-   3. `03_particionamiento_roles.sql` — particiones y roles por nivel de usuario.
-3. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
+Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`.
 
-> Para reinstalar (o actualizar desde una versión anterior) se ejecutan los mismos tres scripts en el mismo orden.
-> Como `01_schema.sql` borra los datos, si necesitas conservar datos reales expórtalos antes.
+1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`).
+2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
+   - `KAMPU_BD`: dueño de tablas, vistas y PL/SQL (clave `Kampu_Bd_2026`).
+   - `KAMPU_APP`: usuario con el que se conecta el backend, solo con los permisos que usa (clave `Kampu_App_2026`).
+   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` para cuentas que entren directo a Oracle.
+3. **Borra y recrea** los objetos de `KAMPU_BD` (tablas particionadas, PL/SQL, triggers, 9 vistas y datos demo con
+   **fechas relativas a hoy**). Al final verifica que todo quede `VALID` y que `VW_CUADRE_INTEGRIDAD` esté vacía;
+   si no, se detiene con el motivo.
+4. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
+
+> Se puede ejecutar las veces que haga falta. Como borra los datos de `KAMPU_BD`, exporta antes los datos reales.
+> Diagnóstico de acoplamiento BD ↔ backend y guía de ajuste: `docs/ACOPLAMIENTO_BD_v11.md`.
 
 ### Correo (boleta informativa)
 
@@ -341,11 +338,12 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 
 | Variable      | Valor por defecto                        |
 |---------------|------------------------------------------|
-| `DB_URL`      | `jdbc:oracle:thin:@localhost:1522/XE`    |
-| `DB_USERNAME` | `LP2`                                    |
-| `DB_PASSWORD` | `admin123`                               |
+| `DB_URL`      | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
+| `DB_USERNAME` | `KAMPU_APP`                                |
+| `DB_PASSWORD` | `Kampu_App_2026`                           |
+| `DB_SCHEMA`   | `KAMPU_BD` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
 
-Ejemplos de URL: Oracle XE 21c → `jdbc:oracle:thin:@localhost:1521/XEPDB1`; Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
+Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
 
 Contacto de la agencia que muestra la página principal (correo, teléfono y WhatsApp, ciudad y redes):
 `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO` (con código de país), `KAMPU_CONTACTO_CIUDAD`,
@@ -361,14 +359,14 @@ cd kampu-backend
 
 - Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
 - Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
-- `spring.jpa.hibernate.ddl-auto` está en **`none`**: Hibernate no crea ni altera tablas; manda el script.
+- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU_BD` (si falta una columna, no arranca y dice cuál).
 
 ### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201
 
-El backend se conectó a un esquema donde **no están instalados los scripts**. Al arrancar muestra a qué usuario,
-contenedor y servicio se conectó. Opciones:
+El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
+esquema, contenedor y servicio se conectó. Opciones:
 
-1. Ejecuta `01_schema.sql`, `02_data.sql` y `03_particionamiento_roles.sql` **conectado con ese mismo usuario y servicio**.
+1. Ejecuta `kampu_tours_v11.sql` como `SYSTEM` en esa misma PDB (crea `KAMPU_BD` y `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
 2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
    las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
 
@@ -387,7 +385,7 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 
 ## 4. Pruebas realizadas
 
-**Pruebas automatizadas:** `./pruebas/ejecutar.sh` (API, casos rechazados y concurrencia). Ver `pruebas/README.md`; solo sobre una base recién instalada con los datos de demostración.
+**Verificación de integridad:** `SELECT * FROM KAMPU_BD.VW_CUADRE_INTEGRIDAD;` debe devolver 0 filas (anuladas sin dinero, confirmadas con pago, cupos y montos cuadrados). El script de instalación lo comprueba al terminar.
 
 - Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
   validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,
