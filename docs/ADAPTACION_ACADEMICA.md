@@ -161,20 +161,30 @@ Todos los módulos comparten la misma estructura:
 
 Solo cambia la presentación: no se tocaron la lógica de negocio, la base de datos ni la autenticación.
 
-- **Página principal (orden de secciones):**
-  - **Portada a pantalla completa:** 5 fotos de destinos que se alternan con un fundido lento y un leve parallax;
-    título, subtítulo, dos botones ("Ver N tours" y "Cómo funciona") e indicadores con el crédito de cada foto.
-  - **Buscador** (destino, fecha y tipo), igual que antes.
-  - **Destinos:** pestañas Todos / Full day / Escapadas / Expediciones, con un subrayado lima en la activa. Usan el mismo
-    filtro de tipo del buscador. Las tarjetas entran escalonadas y muestran el precio sobre la foto.
-    Si un paquete no tiene foto propia, se toma la del destino que nombra (por palabras completas).
-  - **Nosotros:** cifras reales calculadas de los datos (paquetes activos, salidas abiertas y cupos libres) y dos fotos.
-  - **Cómo funciona:** los 4 pasos que ya hace el sistema (elegir, reservar, pagar en soles/dólares/euros, seguir el viaje en el portal).
-  - **Galería** de 7 destinos, **Por qué elegirnos**, una llamada final (crear cuenta o ir al panel, y WhatsApp) y el pie.
+- **Página principal a pantalla completa (full-viewport / full-page scroll):**
+  - cada sección ocupa el alto de la ventana (`100svh`) con el contenido centrado (clase `.pantalla`);
+  - el desplazamiento se ajusta al inicio de cada sección (`scroll-snap`, CSS nativo, solo en esta página);
+  - a la derecha, unos puntos marcan la sección visible y llevan a cualquiera de ellas.
+- **Secciones, en orden:**
+  - **Inicio:** 5 fotos de destinos con fundido lento, leve parallax, título, dos botones,
+    indicadores con el crédito de cada foto y una señal para bajar.
+  - **Destinos:**
+    - el buscador (destino, fecha y tipo) se movió aquí, debajo del título y junto a los tours que filtra;
+    - pestañas Todos / Full day / Escapadas / Expediciones, que usan el mismo filtro de tipo;
+    - los tours van en un carrusel de una fila (`scroll-snap` horizontal) con flechas, para que la sección quepa en una pantalla;
+    - si un paquete no tiene foto propia, se toma la del destino que nombra (por palabras completas).
+  - **Nosotros:** cifras reales calculadas de los datos (paquetes activos, salidas abiertas y cupos libres).
+  - **Cómo funciona:** los 4 pasos que ya hace el sistema.
+  - **Galería** de 7 destinos.
+  - **Por qué elegirnos.**
+  - **Contacto:** foto a pantalla completa con "Crear mi cuenta" o "Ir al panel", y WhatsApp.
+  - **Pie de página.**
   - Las secciones aparecen al hacer scroll (directiva `appRevelar`, con `IntersectionObserver` del navegador; sin librerías).
   - Fotos: Wikimedia Commons, con autor y licencia en `docs/ATRIBUCIONES_FOTOS.md`.
-- **Login:**
-  - las fotos de destinos se alternan en el panel izquierdo, y el formulario entra con un leve escalonado;
+- **Login a pantalla completa:**
+  - las fotos de destinos cubren toda la ventana y se alternan;
+  - a la izquierda va el mensaje de la marca; el formulario flota a la derecha en una tarjeta blanca (en celular, centrado);
+  - el formulario entra con un leve escalonado;
   - mensaje bajo cada campo vacío (`aria-invalid`) y aviso de Bloq Mayús;
   - el error del servidor se oculta al volver a escribir;
   - el botón muestra un indicador de carga.
@@ -242,7 +252,8 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
   - formularios: ninguno queda tapado por la barra superior.
 - **`ng build`:** correcto. Quedan avisos de tamaño:
   - el paquete inicial pesa 545 kB frente a un límite de 512 kB, porque el CSS ahora se compila dentro del paquete en lugar de generarse en el navegador;
-  - el CSS del campo de teléfono supera el límite por componente.
+  - el CSS del campo de teléfono supera el límite por componente;
+  - el límite de CSS por componente se subió de 4 kB a 6 kB, porque el carrusel de tours lo superaba por 0,2 kB.
 
 ## 7. Pendiente o a decidir
 

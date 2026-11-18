@@ -1,13 +1,20 @@
 /* Entrada: el panel de la foto aparece suave y el formulario sube con un ligero escalonado */
-.entra-panel { animation: aparecer .9s cubic-bezier(.16, 1, .3, 1) both; }
 .entra { animation: subir .7s cubic-bezier(.16, 1, .3, 1) both; }
 .entra-1 { animation-delay: .05s; } .entra-2 { animation-delay: .12s; } .entra-3 { animation-delay: .19s; }
 .entra-4 { animation-delay: .26s; } .entra-5 { animation-delay: .33s; }
 
-@keyframes aparecer { from { opacity: 0; transform: scale(1.015); } to { opacity: 1; transform: none; } }
 @keyframes subir { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
-/* Fotos del panel: fundido cruzado */
+/* Velo sobre las fotos: más oscuro a la izquierda (texto) y abajo (créditos); en celular cubre parejo */
+.velo { position: absolute; inset: 0; background:
+  linear-gradient(90deg, rgba(26, 32, 10, .82) 0%, rgba(26, 32, 10, .45) 45%, rgba(26, 32, 10, .25) 100%),
+  linear-gradient(180deg, rgba(26, 32, 10, .35) 0%, transparent 25%, transparent 70%, rgba(26, 32, 10, .6) 100%); }
+@media (max-width: 1023px) { .velo { background: linear-gradient(180deg, rgba(26, 32, 10, .55), rgba(26, 32, 10, .7)); } }
+
+/* Tarjeta del formulario: sombra profunda para separarla de la foto */
+.tarjeta { box-shadow: 0 40px 90px -30px rgba(10, 13, 4, .65), 0 2px 6px rgba(10, 13, 4, .12); }
+
+/* Fotos de fondo: fundido cruzado */
 .foto { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease, transform 8s ease-out; transform: scale(1.06); }
 .foto.activa { opacity: 1; transform: scale(1); }
 
@@ -23,6 +30,6 @@
 @keyframes girar { to { transform: rotate(360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .entra-panel, .entra, .aviso, .sacudir { animation: none; }
+  .entra, .aviso, .sacudir { animation: none; }
   .foto { transition: none; transform: none; }
 }
