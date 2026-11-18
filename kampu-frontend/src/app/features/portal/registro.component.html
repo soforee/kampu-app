@@ -1,11 +1,19 @@
 <div class="min-h-screen">
   <app-portal-header />
 
-  <main class="mx-auto max-w-xl px-4 py-10 sm:px-6">
-    <h1 class="text-2xl font-semibold tracking-tight text-zinc-900">Crea tu cuenta</h1>
-    <p class="mt-2 text-[15px] text-zinc-500">Con tu cuenta verás tus paquetes, su estado y tus pagos. Si ya compraste en la agencia, usa el mismo documento y correo: tus reservas aparecerán solas.</p>
-
-    <form class="card mt-8 space-y-5 p-6 sm:p-8" (ngSubmit)="registrar()" novalidate>
+  <main class="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-10">
+    <form class="card overflow-hidden" (ngSubmit)="registrar()" novalidate>
+      <div class="flex items-center gap-3 border-b border-zinc-100 px-6 py-5">
+        <span class="ico-tile-lg"><app-icon name="users" size="w-5 h-5" /></span>
+        <div>
+          <h1 class="text-lg font-semibold tracking-tight text-zinc-900">Crea tu cuenta</h1>
+          <p class="text-xs text-zinc-500">Verás tus paquetes, su estado y tus pagos.</p>
+        </div>
+      </div>
+      <div class="space-y-4 px-6 py-5">
+      <p class="alert-info !py-2.5 !text-xs"><app-icon name="info" size="w-4 h-4" /><span>Si ya compraste en la agencia, usa el mismo documento y correo: tus reservas aparecerán solas.</span></p>
+      <div class="form-section">
+      <div class="form-section-title">Tus datos</div>
       <div>
         <label class="label req" for="r-nombre">Nombre completo</label>
         <input id="r-nombre" name="nombre" class="field" [(ngModel)]="form.nombreCompleto" maxlength="150" autocomplete="name"
@@ -13,7 +21,7 @@
         @if (v.error('nombre'); as e) { <p class="field-error">{{ e }}</p> }
       </div>
 
-      <div class="grid gap-5 sm:grid-cols-[150px_1fr]">
+      <div class="grid gap-4 sm:grid-cols-[150px_1fr]">
         <div>
           <label class="label req" for="r-tipo">Documento</label>
           <select id="r-tipo" name="tipo" class="field" [(ngModel)]="form.tipoDocumento" (ngModelChange)="v.tocar('documento')">
@@ -34,7 +42,7 @@
         <input id="r-email" name="email" type="email" class="field" [(ngModel)]="form.email" maxlength="100" autocomplete="email"
                placeholder="nombre@correo.com" (blur)="v.tocar('email')" [class.field-invalid]="v.error('email')">
         @if (v.error('email'); as e) { <p class="field-error">{{ e }}</p> }
-        <p class="mt-1.5 text-xs text-zinc-500">Será tu usuario para iniciar sesión. No puede estar usado por otra cuenta.</p>
+        <p class="hint">Será tu usuario para iniciar sesión. No puede estar usado por otra cuenta.</p>
       </div>
 
       <div>
@@ -43,9 +51,12 @@
         @if (v.error('telefono'); as e) { <p class="field-error">{{ e }}</p> }
       </div>
 
-      <div class="grid gap-5 sm:grid-cols-2">
+      </div>
+      <div class="form-section">
+      <div class="form-section-title">Contraseña</div>
+      <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <div class="mb-1.5 flex items-center justify-between">
+          <div class="mb-1 flex items-center justify-between">
             <label class="label req !mb-0" for="r-pass">Contraseña</label>
             <button type="button" class="text-xs font-medium text-zinc-500 hover:text-zinc-900" (click)="ver.set(!ver())">{{ ver() ? 'Ocultar' : 'Mostrar' }}</button>
           </div>
@@ -56,7 +67,7 @@
               <span class="h-1 rounded-full" [class]="fuerza() >= i ? (fuerza() < 2 ? 'bg-rose-400' : fuerza() < 4 ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-zinc-200'"></span>
             }
           </div>
-          @if (v.error('password'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="mt-1.5 text-xs text-zinc-500">Mínimo {{ min }} caracteres.</p> }
+          @if (v.error('password'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">Mínimo {{ min }} caracteres.</p> }
         </div>
         <div>
           <label class="label req" for="r-conf">Confirmar contraseña</label>
@@ -66,14 +77,19 @@
         </div>
       </div>
 
+      </div>
+
       @if (error()) {
         <p class="alert-error" role="alert">{{ error() }}</p>
       }
+      </div>
 
-      <button type="submit" class="btn-brand w-full !h-12" [disabled]="cargando()">
-        @if (cargando()) { Creando cuenta… } @else { Crear cuenta }
-      </button>
-      <p class="text-center text-sm text-zinc-500">¿Ya tienes cuenta? <a routerLink="/login" class="link">Inicia sesión</a></p>
+      <div class="flex flex-col-reverse items-stretch gap-3 border-t border-zinc-100 bg-zinc-50/60 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <p class="text-center text-sm text-zinc-500 sm:text-left">¿Ya tienes cuenta? <a routerLink="/login" class="link">Inicia sesión</a></p>
+        <button type="submit" class="btn-dark" [disabled]="cargando()">
+          @if (cargando()) { Creando cuenta… } @else { <app-icon name="check" size="w-4 h-4" /> Crear cuenta }
+        </button>
+      </div>
     </form>
   </main>
 </div>

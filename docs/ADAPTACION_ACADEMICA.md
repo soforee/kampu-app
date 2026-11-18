@@ -140,6 +140,23 @@ Todos los módulos comparten la misma estructura:
 - barras de avance: cupos vendidos y cobrado sobre lo vendido (para el Operador, traslados asignados);
 - debajo: avisos, el día, las salidas y las últimas reservas.
 
+### Formularios y login
+
+- **Modales tapados por la barra superior:** la animación de entrada de cada pantalla (`fill-mode: both`) creaba una
+  capa propia que dejaba los modales por debajo de la barra superior y del menú. Ahora la animación no deja esa capa
+  y el modal y su fondo quedan por encima. Se comprobaron 6 formularios en escritorio, pantalla baja y celular: ninguno queda tapado.
+- **Modal:** encabezado con ícono, título y descripción, alto máximo ajustado a la pantalla con desplazamiento interno,
+  y los botones (Cancelar y Guardar) fijos abajo, siempre a la vista. Tiene tres anchos (`sm`, `md` y `lg`) según el formulario.
+- **Formularios más compactos:**
+  - campos y botones de 36 px y menos espacio entre campos y secciones;
+  - títulos de sección pequeños y áreas de texto más bajas;
+  - Salida pone los cupos y el guía en una sola fila; Paquete pone el estado junto a los días, las noches y el precio.
+- **Login:**
+  - foto en un panel redondeado y el logotipo en su cuadro, como en la plantilla;
+  - campos con ícono (usuario y candado), "Mostrar" con ícono, y "Ingresar" (principal, con flecha);
+  - "Crear mi cuenta" como botón secundario.
+- **Registro de clientes:** misma estructura que los modales: encabezado con ícono, secciones y botón principal abajo.
+
 ## 5. Errores corregidos durante la adaptación
 
 - **Credencial del logotipo:** usaba variables CSS de la paleta anterior, que ya no existían.
