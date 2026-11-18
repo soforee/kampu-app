@@ -1,10 +1,11 @@
-<section class="bg-white px-5 py-20 sm:px-8 sm:py-24">
-  <div class="relative mx-auto max-w-6xl overflow-hidden rounded-[28px] px-6 py-16 text-center sm:px-12 sm:py-20" appRevelar>
-    <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
-    <div class="absolute inset-0" style="background: linear-gradient(120deg, rgba(38, 46, 15, .92), rgba(75, 91, 29, .78))"></div>
-    <div class="relative">
-      <h2 class="mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-white sm:text-[40px]">¿Listo para tu próxima aventura?</h2>
-      <p class="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-white/80">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
+<section id="contacto" class="pantalla relative overflow-hidden" style="background: var(--kp-dark)">
+  <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
+  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(26, 32, 10, .55), rgba(38, 46, 15, .82) 55%, rgba(26, 32, 10, .95))"></div>
+  <div class="relative mx-auto w-full max-w-6xl px-5 text-center sm:px-8" appRevelar>
+    <div>
+      <p class="seccion-etiqueta !text-leaf-300 justify-center">Contacto</p>
+      <h2 class="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl">¿Listo para tu próxima aventura?</h2>
+      <p class="mx-auto mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
       <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
         @if (auth.autenticado()) {
           <a [routerLink]="auth.inicio()" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
@@ -23,4 +24,6 @@
       </div>
     </div>
   </div>
+  <a href="https://commons.wikimedia.org/wiki/File:99_-_Machu_Picchu_-_Juin_2009.edit3.jpg" target="_blank" rel="noopener"
+     class="absolute bottom-5 right-5 text-[11px] text-white/45 hover:text-white/75">Machu Picchu · Foto: Martin St-Amant · CC BY-SA 3.0</a>
 </section>
