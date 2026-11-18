@@ -11,10 +11,13 @@ import { ModalComponent } from '../../shared/modal.component';
 import { TelefonoInputComponent } from '../../shared/telefono-input.component';
 import { errorTelefonoPais } from '../../core/utils/paises';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { BuscadorComponent } from '../../shared/buscador.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
   selector: 'app-clientes',
   standalone: true,
-  imports: [FormsModule, IconComponent, ModalComponent, TelefonoInputComponent],
+  imports: [PaginacionComponent, BuscadorComponent, PageHeaderComponent, FormsModule, IconComponent, ModalComponent, TelefonoInputComponent],
   templateUrl: './clientes.component.html'
 })
 export class ClientesComponent {
@@ -56,6 +59,14 @@ export class ClientesComponent {
     return this.store.clientes()
       .filter(c => !t || c.nombreCompleto.toLowerCase().includes(t) || c.numeroDocumento.includes(t))
       .map(c => ({ cliente: c, reservas: this.store.reservas().filter(r => r.clienteId === c.clienteId).length }));
+  });
+
+  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  pagina = signal(0);
+  visibles = computed(() => {
+    const filas = this.filas();
+    const pagina = Math.min(this.pagina(), Math.max(0, Math.ceil(filas.length / 10) - 1));
+    return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 
   nuevo() { this.editId = null; this.form = this.vacio(); this.v.reiniciar(); this.abierto.set(true); }

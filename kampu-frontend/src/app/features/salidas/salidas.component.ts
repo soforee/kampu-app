@@ -13,10 +13,12 @@ import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filt
 import { FormValidacion, V } from '../../core/utils/validacion';
 import { ModalComponent } from '../../shared/modal.component';
 
+import { PageHeaderComponent } from '../../shared/page-header.component';
+import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
   selector: 'app-salidas',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
+  imports: [PaginacionComponent, PageHeaderComponent, FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './salidas.component.html'
 })
 export class SalidasComponent {
@@ -84,6 +86,14 @@ export class SalidasComponent {
         vendidos: s.cuposMaximos - s.cuposDisponibles,
         pct: Math.round((s.cuposMaximos - s.cuposDisponibles) * 100 / s.cuposMaximos)
       }));
+  });
+
+  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  pagina = signal(0);
+  visibles = computed(() => {
+    const filas = this.filas();
+    const pagina = Math.min(this.pagina(), Math.max(0, Math.ceil(filas.length / 10) - 1));
+    return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 
   private textoCuando(inicio: string, fin: string): string {

@@ -1,12 +1,8 @@
-<div class="page-header">
-  <div>
-    <h1 class="h1">Logística</h1>
-    <p class="page-sub">Kampu Tours (propio) y proveedores externos, con sus guías, conductores, vehículos y lugares.</p>
-  </div>
+<app-page-header titulo="Logística" subtitulo="Kampu Tours (propio) y proveedores externos, con sus guías, conductores, vehículos y lugares.">
   @if (puedeEditar()) {
     <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> Nuevo {{ actual.singular }}</button>
   }
-</div>
+</app-page-header>
 
 <div class="toolbar">
   <div class="seg">

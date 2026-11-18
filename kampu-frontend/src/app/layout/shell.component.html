@@ -1,10 +1,4 @@
 <div class="min-h-screen lg:pl-[76px]">
-  <!-- Celular: barra superior con el botón del menú -->
-  <header class="no-print lg:hidden sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-zinc-200/80 bg-white px-4">
-    <button type="button" class="icon-btn -ml-1.5 text-zinc-600" aria-label="Abrir menú" (click)="abierto.set(true)"><app-icon name="menu" /></button>
-    <a routerLink="/" aria-label="Ir a la página principal"><app-logo variante="horizontal" [alto]="20" /></a>
-  </header>
-
   @if (abierto()) {
     <div class="lg:hidden fixed inset-0 z-40 bg-zinc-900/30 animate-fade-in" (click)="abierto.set(false)"></div>
   }
@@ -42,28 +36,94 @@
       }
     </nav>
 
-    <div class="shrink-0 space-y-3 border-t border-zinc-100 px-4 py-4">
-      @if (auth.puede('GESTIONAR_RESERVAS')) {
+    @if (auth.puede('GESTIONAR_RESERVAS')) {
+    <div class="shrink-0 border-t border-zinc-100 px-4 py-4">
         <a routerLink="/reservas/nueva" (click)="abierto.set(false)" class="flex h-11 items-center gap-3 rounded-xl border border-zinc-200 bg-white px-[12px] text-sm font-medium text-zinc-700 shadow-soft outline-none transition-colors hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-brand-600/30"
            aria-label="Nueva reserva" title="Nueva reserva">
           <app-icon name="plus" size="w-[18px] h-[18px] shrink-0" />
           <span class="lbl whitespace-nowrap">Nueva reserva</span>
         </a>
-      }
-      <div class="flex items-center gap-3 px-[3px]">
-        <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white ring-2 ring-brand-100" [title]="auth.usuario()?.username + ' · ' + rolTexto()">{{ iniciales() }}</div>
-        <div class="lbl min-w-0 flex-1 whitespace-nowrap">
-          <div class="truncate text-sm font-medium text-zinc-900">{{ auth.usuario()?.username }}</div>
-          <div class="text-xs text-zinc-500">{{ rolTexto() }}</div>
-        </div>
-        <button type="button" class="lbl icon-btn shrink-0" title="Cerrar sesión" aria-label="Cerrar sesión" (click)="salir()">
-          <app-icon name="logout" size="w-4 h-4" />
-        </button>
-      </div>
     </div>
+    }
   </aside>
 
-  <main class="panel mx-auto max-w-6xl px-4 py-6 sm:px-8 lg:px-10 lg:py-10">
+  <!-- Barra superior única: sección actual, búsqueda, avisos y usuario -->
+  <header data-barra class="no-print sticky top-0 z-30 flex h-[76px] items-center gap-3 border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur sm:px-8 lg:px-10">
+    <button type="button" class="icon-btn-box lg:hidden" aria-label="Abrir menú" (click)="abierto.set(true)"><app-icon name="menu" size="w-[18px] h-[18px]" /></button>
+    <div class="flex min-w-0 items-center gap-3">
+      <span class="ico-tile hidden sm:grid"><app-icon [name]="seccion().icono" size="w-[18px] h-[18px]" /></span>
+      <div class="min-w-0">
+        <div class="truncate text-[15px] font-semibold text-zinc-900">{{ seccion().texto }}</div>
+        <div class="hidden text-xs text-zinc-500 sm:block">Kampu · Tour Manager</div>
+      </div>
+    </div>
+
+    <div class="ml-auto flex items-center gap-2">
+      <!-- Búsqueda -->
+      <div class="relative hidden md:block">
+        <div class="search w-64 lg:w-80">
+          <span class="search-icon"><app-icon name="search" size="w-4 h-4" /></span>
+          <input type="search" class="field" placeholder="Buscar reserva, cliente o salida" aria-label="Buscar en el sistema"
+                 [value]="consulta()" (input)="consulta.set($any($event.target).value); desplegado.set('busqueda')" (focus)="desplegado.set('busqueda')"
+                 (keydown.enter)="resultados().length && irA(resultados()[0].ruta)" (keydown.escape)="desplegado.set(null)">
+        </div>
+        @if (desplegado() === 'busqueda' && consulta().trim().length >= 2) {
+          <div class="absolute right-0 top-12 w-full overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lifted animate-pop-in">
+            @for (r of resultados(); track $index) {
+              <button type="button" class="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left hover:bg-zinc-50" (click)="irA(r.ruta)">
+                <span class="ico-tile h-8 w-8 rounded-lg"><app-icon [name]="r.icono" size="w-4 h-4" /></span>
+                <span class="min-w-0 flex-1"><span class="block truncate text-sm text-zinc-900">{{ r.texto }}</span><span class="block truncate text-xs text-zinc-500">{{ r.tipo }}@if (r.detalle) { · {{ r.detalle }} }</span></span>
+              </button>
+            } @empty {
+              <div class="px-3 py-3 text-sm text-zinc-500">Sin resultados para «{{ consulta().trim() }}».</div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Avisos -->
+      <div class="relative">
+        <button type="button" class="icon-btn-box relative" aria-label="Avisos" [attr.aria-expanded]="desplegado() === 'avisos'" (click)="alternar('avisos')">
+          <app-icon name="bell" size="w-[18px] h-[18px]" />
+          @if (alertas().length) { <span class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-leaf-400 px-1 text-[11px] font-semibold text-brand-900 ring-2 ring-white">{{ alertas().length }}</span> }
+        </button>
+        @if (desplegado() === 'avisos') {
+          <div class="absolute right-0 top-12 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lifted animate-pop-in">
+            <div class="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900">Requiere atención</div>
+            <ul class="max-h-80 divide-y divide-zinc-100 overflow-y-auto">
+              @for (a of alertas(); track a.titulo + a.detalle) {
+                <li><button type="button" class="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50" (click)="irA(a.ruta)">
+                  <span class="ico-tile h-8 w-8 rounded-lg" [class]="a.nivel === 'alta' ? '!text-rose-600' : '!text-leaf-700'"><app-icon [name]="a.icono" size="w-4 h-4" /></span>
+                  <span class="min-w-0"><span class="block text-sm text-zinc-900">{{ a.titulo }}</span><span class="block text-xs text-zinc-500">{{ a.detalle }}</span></span>
+                </button></li>
+              } @empty {
+                <li class="px-4 py-6 text-center text-sm text-zinc-500">No hay avisos pendientes.</li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+
+      <!-- Usuario -->
+      <div class="relative">
+        <button type="button" class="grid h-10 w-10 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white ring-2 ring-brand-100 outline-none focus-visible:ring-brand-300"
+                [attr.aria-label]="'Cuenta de ' + auth.usuario()?.username" [attr.aria-expanded]="desplegado() === 'usuario'" (click)="alternar('usuario')">{{ iniciales() }}</button>
+        @if (desplegado() === 'usuario') {
+          <div class="absolute right-0 top-12 w-60 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lifted animate-pop-in">
+            <div class="px-3 py-2.5">
+              <div class="truncate text-sm font-medium text-zinc-900">{{ auth.usuario()?.username }}</div>
+              <div class="text-xs text-zinc-500">{{ rolTexto() }}</div>
+            </div>
+            <div class="my-1 h-px bg-zinc-100"></div>
+            <a routerLink="/" class="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50" (click)="desplegado.set(null)"><app-icon name="home" size="w-4 h-4" /> Página principal</a>
+            <button type="button" class="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50" (click)="desplegado.set(null); salir()"><app-icon name="logout" size="w-4 h-4" /> Cerrar sesión</button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <main class="panel mx-auto max-w-[1320px] px-4 py-6 sm:px-8 lg:px-10 lg:py-8">
     @if (auth.autenticado()) { <router-outlet /> }
   </main>
 </div>
