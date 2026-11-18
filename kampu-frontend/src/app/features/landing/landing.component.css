@@ -1,17 +1,17 @@
-/* Paleta de la landing: las mismas variables del panel (styles.css), así sigue el tema claro u oscuro */
+/* Paleta de la página principal (tema claro) */
 :host {
-  --kp-primary: rgb(var(--c-brand-600));        /* botones primarios, acentos */
-  --kp-primary-hover: rgb(var(--c-brand-700));
-  --kp-primary-soft: rgb(var(--c-brand-50));
-  --kp-on-primary: rgb(var(--c-white));         /* texto sobre botones primarios */
-  --kp-secondary: rgb(var(--c-brand-500));      /* botones secundarios, iconos */
-  --kp-accent: rgb(var(--c-leaf-400));          /* detalles */
-  --kp-bg: rgb(var(--c-white));                 /* fondo principal */
-  --kp-bg-alt: rgb(var(--c-sand-100));          /* fondo alterno (arena) */
-  --kp-text: rgb(var(--c-zinc-900));            /* texto principal */
-  --kp-muted: rgb(var(--c-zinc-500));           /* texto secundario */
-  --kp-border: rgb(var(--c-zinc-200));
-  --kp-dark: #1D2409;                           /* fondo del pie de página (igual en ambos temas) */
+  --kp-primary: #18181B;       /* botones primarios */
+  --kp-primary-hover: #3F3F46;
+  --kp-primary-soft: #F5F6EF;
+  --kp-on-primary: #FFFFFF;
+  --kp-secondary: #5D673A;     /* acento oliva de la marca */
+  --kp-accent: #CBBF57;        /* amarillo pastel, detalles */
+  --kp-bg: #FFFFFF;
+  --kp-bg-alt: #F7F7F5;
+  --kp-text: #18181B;
+  --kp-muted: #71717A;
+  --kp-border: #E4E4E7;
+  --kp-dark: #18181B;          /* pie de página */
   --kp-ease: cubic-bezier(.4, 0, .2, 1);
 
   display: block;

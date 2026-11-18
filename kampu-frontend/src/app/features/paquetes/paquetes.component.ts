@@ -11,13 +11,12 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filtro';
 import { FormValidacion, V } from '../../core/utils/validacion';
-import { LogoComponent } from '../../shared/logo.component';
 import { ModalComponent } from '../../shared/modal.component';
 
 @Component({
   selector: 'app-paquetes',
   standalone: true,
-  imports: [FormsModule, RouterLink, CurrencyPipe, BadgeComponent, IconComponent, LogoComponent, ModalComponent],
+  imports: [FormsModule, RouterLink, CurrencyPipe, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './paquetes.component.html'
 })
 export class PaquetesComponent {
@@ -25,10 +24,6 @@ export class PaquetesComponent {
   private alerts = inject(AlertService);
   imagenes = inject(ImagenService);
 
-  private gradientes = [
-    'from-zinc-800 to-zinc-900', 'from-brand-500 to-brand-700', 'from-earth-500 to-earth-700',
-    'from-emerald-600 to-zinc-900', 'from-brand-600 to-zinc-900', 'from-earth-400 to-zinc-900'
-  ];
 
   texto = signal('');
   abierto = signal(false);
@@ -57,7 +52,6 @@ export class PaquetesComponent {
       .filter(p => !t || p.nombre.toLowerCase().includes(t) || p.descripcion.toLowerCase().includes(t))
       .map(p => ({
         paquete: p,
-        gradiente: this.gradientes[p.paqueteId % this.gradientes.length],
         proximas: this.store.salidasDe(p.paqueteId)
           .filter(s => (s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA') && s.fechaInicio >= hoyStr && s.cuposDisponibles > 0).length
       }));

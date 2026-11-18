@@ -9,7 +9,6 @@ import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
-import { EsqueletoComponent } from '../../shared/esqueleto.component';
 import { ModalComponent } from '../../shared/modal.component';
 import { filtrarEscritura, filtrarPegado, sinRueda } from '../../core/utils/filtro';
 import { FormValidacion, V } from '../../core/utils/validacion';
@@ -29,7 +28,7 @@ const EN_CURSO: EstadoOperacion[] = ['ASIGNADO', 'EMBARQUE', 'EN_RUTA'];
 @Component({
   selector: 'app-operaciones',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent, EsqueletoComponent],
+  imports: [FormsModule, DatePipe, RouterLink, BadgeComponent, IconComponent, ModalComponent],
   templateUrl: './operaciones.component.html'
 })
 export class OperacionesComponent {
@@ -143,7 +142,7 @@ export class OperacionesComponent {
     this.form.conductorId = null;
   }
 
-  // Duración con datos reales (OSRM / coordenadas): propone la llegada
+  // Duración estimada con las coordenadas de los lugares: propone la llegada
   calcularLlegada() {
     const f = this.form;
     if (!f.origenId || !f.destinoId || f.origenId === f.destinoId) { this.alerts.toast('Elige origen y destino', 'info'); return; }

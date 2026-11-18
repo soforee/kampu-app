@@ -5,14 +5,14 @@
   border-radius: 24px;
   background: #FFFFFF;
   border: 1px solid var(--kp-border);
-  box-shadow: 0 1px 3px rgba(46, 56, 18, .04);
+  box-shadow: 0 1px 3px rgba(16, 24, 40, .04);
   height: 100%;
   transition: all .3s ease-in-out;
 }
 .tour:hover {
   transform: scale(1.02);
   border-color: transparent;
-  box-shadow: 0 28px 60px -28px rgba(29, 36, 9, .45), 0 4px 14px -6px rgba(29, 36, 9, .12);
+  box-shadow: 0 28px 60px -28px rgba(16, 24, 40, .45), 0 4px 14px -6px rgba(16, 24, 40, .12);
 }
 
 .tour-media { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
@@ -28,7 +28,7 @@
   gap: .35rem;
   padding: .35rem .75rem;
   border-radius: 999px;
-  background: rgb(var(--c-white) / .92);
+  background: rgba(255, 255, 255, .92);
   backdrop-filter: blur(6px);
   font-size: 12px;
   font-weight: 800;

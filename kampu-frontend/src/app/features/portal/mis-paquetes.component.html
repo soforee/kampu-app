@@ -1,23 +1,22 @@
-<div class="min-h-screen bg-sand-50">
+<div class="min-h-screen">
   <app-portal-header />
 
   <main class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
     @if (bienvenido) {
-      <div class="mb-6 flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-sm font-semibold text-emerald-800 ring-1 ring-emerald-200" role="status">
-        <app-icon name="check-circle" size="w-4 h-4" /> Tu cuenta fue creada. ¡Bienvenido, {{ auth.usuario()?.nombre }}!
+      <div class="alert-info mb-6" role="status">
+        Tu cuenta fue creada. ¡Bienvenido, {{ auth.usuario()?.nombre }}!
       </div>
     }
 
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
-        <p class="text-xs font-extrabold uppercase tracking-[0.14em] text-brand-700">Mi cuenta</p>
-        <h1 class="mt-1 text-[28px] font-black tracking-tight text-zinc-900">Mis paquetes</h1>
+        <h1 class="text-2xl font-semibold tracking-tight text-zinc-900">Mis paquetes</h1>
         <p class="mt-1 text-sm text-zinc-500">Solo ves los paquetes reservados a tu nombre. Esta vista es de consulta.</p>
       </div>
       @if (saldoTotal() > 0) {
-        <div class="rounded-xl bg-white px-4 py-3 text-right shadow-card ring-1 ring-zinc-200/70">
-          <div class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Saldo por pagar</div>
-          <div class="text-xl font-black text-amber-700">S/ {{ saldoTotal() | number:'1.2-2' }}</div>
+        <div class="text-right">
+          <div class="text-xs text-zinc-500">Saldo por pagar</div>
+          <div class="text-xl font-semibold text-zinc-900">S/ {{ saldoTotal() | number:'1.2-2' }}</div>
         </div>
       }
     </div>
@@ -37,18 +36,17 @@
       </div>
     } @else if (!visibles().length) {
       <div class="card mt-8 p-10 text-center">
-        <app-icon name="inbox" size="w-8 h-8 mx-auto text-zinc-300" />
-        <p class="mt-3 font-bold text-zinc-800">{{ paquetes().length ? 'No hay paquetes con este estado.' : 'Aún no tienes paquetes reservados.' }}</p>
+        <p class="font-medium text-zinc-900">{{ paquetes().length ? 'No hay paquetes con este estado.' : 'Aún no tienes paquetes reservados.' }}</p>
         <p class="mt-1 text-sm text-zinc-500">Revisa nuestros tours en la página de inicio o escríbenos para reservar.</p>
-        <a routerLink="/" class="btn-brand btn-sm mt-5">Ver tours</a>
+        <a routerLink="/" class="btn-light btn-sm mt-5">Ver tours</a>
       </div>
     } @else {
       <ul class="mt-6 grid gap-4 md:grid-cols-2">
         @for (p of visibles(); track p.reservaId) {
           <li>
-            <a [routerLink]="['/mi-cuenta/paquetes', p.reservaId]" class="card card-hover flex h-full overflow-hidden" data-testid="paquete-cliente">
+            <a [routerLink]="['/mi-cuenta/paquetes', p.reservaId]" class="card transition-colors hover:border-zinc-300 flex h-full overflow-hidden" data-testid="paquete-cliente">
               <div class="relative w-28 shrink-0 bg-zinc-100 sm:w-36">
-                @if (faltan(p); as f) { <span class="absolute left-2 top-2 z-10 rounded-lg bg-white/90 px-2 py-1 text-[11px] font-black text-zinc-900 shadow-soft">{{ f }}</span> }
+                @if (faltan(p); as f) { <span class="absolute left-2 top-2 z-10 rounded-md bg-white/90 px-1.5 py-0.5 text-[11px] font-medium text-zinc-900">{{ f }}</span> }
                 @if (imagen(p); as src) { <img [src]="src" alt="" class="h-full w-full object-cover"> }
                 @else { <div class="grid h-full place-items-center text-zinc-300"><app-icon name="mountain" size="w-8 h-8" /></div> }
               </div>
@@ -57,21 +55,20 @@
                   <app-badge [estado]="p.estadoEjecucion" />
                   <app-badge [estado]="p.estadoPago" />
                 </div>
-                <h2 class="truncate font-extrabold text-zinc-900">{{ p.paqueteNombre }}</h2>
+                <h2 class="truncate font-semibold text-zinc-900">{{ p.paqueteNombre }}</h2>
                 <p class="text-sm text-zinc-600">
-                  <app-icon name="calendar" size="w-3.5 h-3.5 inline -mt-0.5 text-zinc-400" />
                   {{ p.fechaInicio | date:'dd/MM/yyyy' }} – {{ p.fechaFin | date:'dd/MM/yyyy' }} · {{ p.dias }}D/{{ p.noches }}N
                 </p>
                 <p class="text-sm text-zinc-600">{{ p.pasajeros }} pasajero{{ p.pasajeros === 1 ? '' : 's' }} · Reserva #{{ p.reservaId }}</p>
                 @if (p.estadoPago !== 'ANULADO') {
                   <div class="flex items-center gap-2" [title]="'Pagado ' + pagado(p) + '%'">
-                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100"><div class="h-full rounded-full bg-emerald-500" [style.width.%]="pagado(p)"></div></div>
+                    <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-zinc-100"><div class="h-full rounded-full bg-brand-500" [style.width.%]="pagado(p)"></div></div>
                     <span class="text-[11px] font-semibold text-zinc-500">{{ pagado(p) }}% pagado</span>
                   </div>
                 }
                 <div class="mt-auto flex items-end justify-between pt-2 text-sm">
                   <span class="text-zinc-500">Total <b class="text-zinc-900">S/ {{ p.montoTotal | number:'1.2-2' }}</b></span>
-                  @if (p.saldo > 0 && p.estadoPago !== 'ANULADO') { <span class="font-bold text-amber-700">Saldo S/ {{ p.saldo | number:'1.2-2' }}</span> }
+                  @if (p.saldo > 0 && p.estadoPago !== 'ANULADO') { <span class="font-medium text-zinc-900">Saldo S/ {{ p.saldo | number:'1.2-2' }}</span> }
                 </div>
               </div>
             </a>

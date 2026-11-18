@@ -2,13 +2,12 @@ import { CurrencyPipe } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { ImagenService } from '../../../core/services/imagen.service';
 import { IconComponent } from '../../../shared/icon.component';
-import { RevealDirective } from '../../../shared/reveal.directive';
 import { Contacto, TourCard } from '../landing.models';
 
 @Component({
   selector: 'app-landing-tours',
   standalone: true,
-  imports: [CurrencyPipe, IconComponent, RevealDirective],
+  imports: [CurrencyPipe, IconComponent],
   templateUrl: './landing-tours.component.html',
   styleUrl: './landing-tours.component.css'
 })

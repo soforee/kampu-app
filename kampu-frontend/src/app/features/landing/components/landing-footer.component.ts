@@ -2,13 +2,12 @@ import { Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../../shared/icon.component';
 import { LogoComponent } from '../../../shared/logo.component';
-import { RevealDirective } from '../../../shared/reveal.directive';
 import { Contacto } from '../landing.models';
 
 @Component({
   selector: 'app-landing-footer',
   standalone: true,
-  imports: [RouterLink, IconComponent, LogoComponent, RevealDirective],
+  imports: [RouterLink, IconComponent, LogoComponent],
   templateUrl: './landing-footer.component.html',
   styleUrl: './landing-footer.component.css'
 })
