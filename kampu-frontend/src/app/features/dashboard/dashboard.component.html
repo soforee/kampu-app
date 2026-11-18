@@ -57,13 +57,16 @@
         <ul class="divide-y divide-zinc-100">
           @for (a of alertasVisibles(); track a.titulo + a.detalle) {
             <li>
-              <a [routerLink]="a.ruta" [queryParams]="a.consulta" class="group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-zinc-50">
-                <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full" [class]="a.nivel === 'alta' ? 'bg-rose-500' : 'bg-amber-400'"></span>
+              <a [routerLink]="a.ruta" [queryParams]="a.consulta" class="group flex items-center gap-3.5 px-5 py-3 transition-colors hover:bg-zinc-50">
+                <span class="ico-tile relative">
+                  <app-icon [name]="a.icono" size="w-[18px] h-[18px]" />
+                  <span class="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full ring-2 ring-white" [class]="a.nivel === 'alta' ? 'bg-rose-500' : 'bg-leaf-400'"></span>
+                </span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-medium text-zinc-900">{{ a.titulo }}</div>
                   <div class="mt-0.5 text-xs leading-relaxed text-zinc-500">{{ a.detalle }}</div>
                 </div>
-                <app-icon name="chevron-right" size="w-4 h-4 mt-0.5 shrink-0 text-zinc-300 group-hover:text-zinc-500" />
+                <app-icon name="chevron-right" size="w-4 h-4 shrink-0 text-zinc-300 group-hover:text-zinc-500" />
               </a>
             </li>
           }
@@ -84,17 +87,17 @@
       @if (hoyDatos().operaciones.length || hoyDatos().salidas.length) {
         <ol class="divide-y divide-zinc-100">
           @for (s of hoyDatos().salidas; track s.salidaId) {
-            <li><a [routerLink]="['/salidas', s.salidaId]" class="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-zinc-50">
-              <span class="w-12 shrink-0 text-xs text-zinc-500">Inicio</span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-zinc-900">{{ s.paqueteNombre }}</span>
+            <li><a [routerLink]="['/salidas', s.salidaId]" class="flex items-center gap-3.5 px-5 py-3 transition-colors hover:bg-zinc-50">
+              <span class="ico-tile"><app-icon name="flag" size="w-[18px] h-[18px]" /></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-zinc-900">Empieza {{ s.paqueteNombre }}</span>
                 <span class="block text-xs text-zinc-500">{{ s.pasajeros }} pasajero(s) · {{ s.guia ? 'Guía ' + s.guia : 'Sin guía' }}</span></span>
               <app-badge [estado]="s.estadoSalida" />
             </a></li>
           }
           @for (o of hoyDatos().operaciones; track o.operacionId) {
-            <li><a [routerLink]="traficoVisible() ? '/operaciones' : null" class="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-zinc-50">
-              <span class="w-12 shrink-0 text-sm font-medium tabular-nums text-zinc-900">{{ o.horaProgramadaSalida | date:'HH:mm' }}</span>
-              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-zinc-900">{{ o.origen }} → {{ o.destino }}</span>
+            <li><a [routerLink]="traficoVisible() ? '/operaciones' : null" class="flex items-center gap-3.5 px-5 py-3 transition-colors hover:bg-zinc-50">
+              <span class="ico-tile"><app-icon name="truck" size="w-[18px] h-[18px]" /></span>
+              <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium text-zinc-900"><span class="tabular-nums text-zinc-500">{{ o.horaProgramadaSalida | date:'HH:mm' }}</span> · {{ o.origen }} → {{ o.destino }}</span>
                 <span class="block truncate text-xs text-zinc-500">{{ o.placa ?? 'Sin vehículo' }}{{ o.conductor ? ' · ' + o.conductor : '' }} · {{ o.paxProgramados }} pax</span></span>
               <app-badge [estado]="o.estadoActual" />
             </a></li>
@@ -135,10 +138,10 @@
             </div>
             <div class="flex shrink-0 items-center gap-2">
               @if (puedeIniciar(r)) {
-                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'CONFIRMADA')">Confirmar</button>
+                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'CONFIRMADA')"><app-icon name="check" size="w-3.5 h-3.5" /> Confirmar</button>
               }
               @if (puedeTerminar(r)) {
-                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'COMPLETADA')" data-testid="marcar-terminada">Terminar</button>
+                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'COMPLETADA')" data-testid="marcar-terminada"><app-icon name="flag" size="w-3.5 h-3.5" /> Terminar</button>
               }
               <app-badge [estado]="r.estadoEjecucion" />
             </div>
@@ -160,7 +163,8 @@
         @for (r of recientes(); track r.reserva.reservaId) {
           <li>
             <a [routerLink]="['/reservas', r.reserva.reservaId]" class="flex items-center justify-between gap-3 px-5 py-3 transition-colors hover:bg-zinc-50">
-              <div class="min-w-0">
+              <span class="ico-tile"><app-icon name="ticket" size="w-[18px] h-[18px]" /></span>
+              <div class="min-w-0 flex-1">
                 <div class="truncate text-sm font-medium text-zinc-900">{{ r.cliente }}</div>
                 <div class="truncate text-xs text-zinc-500">{{ r.codigo }} · {{ r.paquete?.nombre }}</div>
               </div>

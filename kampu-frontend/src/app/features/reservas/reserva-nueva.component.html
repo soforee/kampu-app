@@ -181,7 +181,7 @@
       @if (paso() < 4) {
         <button type="button" class="btn-dark" (click)="siguiente()">Continuar <app-icon name="arrow-right" size="w-4 h-4" /></button>
       } @else {
-        <button type="button" class="btn-dark" [disabled]="store.ocupado()" (click)="guardar()">Crear reserva</button>
+        <button type="button" class="btn-dark" [disabled]="store.ocupado()" (click)="guardar()"><app-icon name="check" size="w-4 h-4" /> Crear reserva</button>
       }
     </div>
   </div>
