@@ -87,7 +87,7 @@
               @if (okPago()) { <p class="alert-info mt-4" role="status">{{ okPago() }}</p> }
 
               @if (puedeInformar() && !informando()) {
-                <button type="button" class="btn-dark mt-4 w-full" (click)="abrirPago()">Informar un pago</button>
+                <button type="button" class="btn-dark mt-4 w-full" (click)="abrirPago()"><app-icon name="card" size="w-4 h-4" /> Informar un pago</button>
               }
               @if (informando()) {
                 <form class="mt-4 space-y-3 border-t border-zinc-100 pt-4" (ngSubmit)="informar()" novalidate>

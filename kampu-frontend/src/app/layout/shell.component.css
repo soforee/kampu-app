@@ -1,15 +1,5 @@
-/* Ítem activo del menú: fondo oliva muy claro, texto oliva (#4B5B1D del logo) y la línea lima de la hoja */
-.nav-item.nav-active { background: #F4F6E4; color: #3F4C18; font-weight: 500; }
-.nav-item.nav-active::before {
-  content: '';
-  position: absolute;
-  left: -12px;
-  top: 10px;
-  bottom: 10px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: #C4BD45;
-}
+/* Ítem activo del menú (como la plantilla): cuadro redondeado con fondo oliva muy claro y el ícono en el oliva del logo */
+.nav-item.nav-active { background: #F4F6E4; color: #3F4C18; font-weight: 500; box-shadow: inset 0 0 0 1px #E7ECC9; }
 
 /* Escritorio: los textos del menú solo se ven cuando se despliega (cursor o foco) */
 @media (min-width: 1024px) {
