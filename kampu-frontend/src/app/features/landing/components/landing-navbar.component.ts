@@ -18,8 +18,10 @@ export class LandingNavbarComponent {
   menu = signal(false);
 
   links = [
-    { href: '#tours', texto: 'Tours' },
-    { href: '#beneficios', texto: 'Por qué elegirnos' }
+    { href: '#tours', texto: 'Destinos' },
+    { href: '#nosotros', texto: 'Nosotros' },
+    { href: '#como-funciona', texto: 'Cómo funciona' },
+    { href: '#galeria', texto: 'Galería' }
   ];
 
   // Transparente sobre la portada; sólida al bajar.

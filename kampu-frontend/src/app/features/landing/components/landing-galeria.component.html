@@ -1,0 +1,25 @@
+<section id="galeria" class="scroll-mt-20" style="background: var(--kp-bg-alt)">
+  <div class="mx-auto max-w-6xl px-5 py-24 sm:px-8 sm:py-28">
+    <div class="flex flex-wrap items-end justify-between gap-6" appRevelar>
+      <div>
+        <p class="seccion-etiqueta">Galería</p>
+        <h2 class="seccion-titulo">Paisajes que te esperan.</h2>
+      </div>
+      <p class="max-w-xs text-sm leading-relaxed" style="color: var(--kp-muted)">Algunos de los lugares que recorren nuestros tours.</p>
+    </div>
+
+    <div class="mt-12 grid auto-rows-[180px] grid-cols-2 gap-4 sm:auto-rows-[220px] lg:grid-cols-4">
+      @for (f of fotos; track f.clave; let i = $index) {
+        <figure class="foto" appRevelar [retraso]="(i % 4) * 80"
+                [class.col-span-2]="i === 0 || i >= 5" [class.row-span-2]="i === 0">
+          <img [src]="f.src" [alt]="f.lugar + ', ' + f.region" loading="lazy">
+          <figcaption>
+            <span class="block text-sm font-semibold">{{ f.lugar }}</span>
+            <span class="block text-xs opacity-80">{{ f.region }}</span>
+            <a [href]="f.fuente" target="_blank" rel="noopener" class="credito mt-1 block text-[10px] hover:underline">Foto: {{ f.autor }} · {{ f.licencia }}</a>
+          </figcaption>
+        </figure>
+      }
+    </div>
+  </div>
+</section>
