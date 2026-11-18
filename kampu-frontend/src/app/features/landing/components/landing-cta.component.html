@@ -1,0 +1,26 @@
+<section class="bg-white px-5 py-20 sm:px-8 sm:py-24">
+  <div class="relative mx-auto max-w-6xl overflow-hidden rounded-[28px] px-6 py-16 text-center sm:px-12 sm:py-20" appRevelar>
+    <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
+    <div class="absolute inset-0" style="background: linear-gradient(120deg, rgba(38, 46, 15, .92), rgba(75, 91, 29, .78))"></div>
+    <div class="relative">
+      <h2 class="mx-auto max-w-2xl text-3xl font-semibold leading-tight tracking-tight text-white sm:text-[40px]">¿Listo para tu próxima aventura?</h2>
+      <p class="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-white/80">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        @if (auth.autenticado()) {
+          <a [routerLink]="auth.inicio()" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
+            {{ auth.esCliente() ? 'Ver mis paquetes' : 'Ir al panel' }} <app-icon name="arrow-right" size="w-4 h-4" />
+          </a>
+        } @else {
+          <a routerLink="/registro" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
+            Crear mi cuenta <app-icon name="arrow-right" size="w-4 h-4" />
+          </a>
+        }
+        @if (whatsapp) {
+          <a [href]="'https://wa.me/' + whatsapp" target="_blank" rel="noopener" class="inline-flex h-12 items-center gap-2 rounded-full px-6 font-medium text-white ring-1 ring-white/40 transition-colors hover:bg-white/10">
+            <app-icon name="whatsapp" size="w-5 h-5" /> Escríbenos
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+</section>

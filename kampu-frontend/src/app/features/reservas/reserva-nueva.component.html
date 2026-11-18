@@ -111,7 +111,7 @@
             <div class="flex items-center justify-between">
               <span class="text-sm font-medium text-zinc-900">Pasajero {{ i + 1 }}</span>
               @if (pasajeros.length > 1) {
-                <button type="button" class="icon-btn-danger" (click)="quitar(i)" title="Quitar pasajero" aria-label="Quitar pasajero"><app-icon name="trash" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn-danger" (click)="quitar(i)" data-tip="Quitar pasajero" aria-label="Quitar pasajero"><app-icon name="trash" size="w-4 h-4" /></button>
               }
             </div>
             <div class="grid sm:grid-cols-6 gap-3">

@@ -1,16 +1,19 @@
 <div class="min-h-screen bg-zinc-50 p-3 sm:p-4">
   <div class="grid min-h-[calc(100vh-1.5rem)] gap-3 sm:min-h-[calc(100vh-2rem)] lg:grid-cols-[1.05fr_1fr]">
 
-    <!-- Foto de la marca (escritorio), en un panel redondeado como en las plantillas -->
-    <section class="relative hidden overflow-hidden rounded-2xl bg-brand-900 lg:block">
-      <img src="machu-picchu-panorama.jpg" alt="Vista panorámica de Machu Picchu" class="absolute inset-0 h-full w-full object-cover">
-      <div class="absolute inset-0 bg-gradient-to-t from-brand-950/85 via-brand-950/30 to-brand-950/20"></div>
+    <!-- Fotos de destinos (escritorio), en un panel redondeado -->
+    <section class="entra-panel relative hidden overflow-hidden rounded-2xl bg-brand-900 lg:block">
+      @for (f of fotos; track f.clave; let i = $index) {
+        <img [src]="f.src" [alt]="i === foto() ? f.lugar + ', ' + f.region : ''" class="foto" [class.activa]="i === foto()" [attr.aria-hidden]="i !== foto()">
+      }
+      <div class="absolute inset-0 bg-gradient-to-t from-brand-950/90 via-brand-950/35 to-brand-950/25"></div>
       <div class="relative flex h-full flex-col justify-between p-10 text-white">
-        <a routerLink="/" class="inline-flex w-fit items-center gap-3 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur" aria-label="Ir a la página principal">
+        <a routerLink="/" class="inline-flex w-fit items-center gap-3 rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15" aria-label="Ir a la página principal">
           <app-logo variante="horizontal" [oscuro]="true" [alto]="22" />
         </a>
         <div class="max-w-md">
-          <h1 class="text-3xl font-semibold leading-tight tracking-tight">Salidas, reservas y pagos en un solo lugar.</h1>
+          <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-leaf-300"><span class="h-px w-6 bg-leaf-400"></span>Tour Manager</p>
+          <h1 class="mt-3 text-3xl font-semibold leading-tight tracking-tight xl:text-[34px]">Salidas, reservas y pagos en un solo lugar.</h1>
           <p class="mt-3 text-sm leading-relaxed text-white/80">Cupos al día, cobros claros y pasajeros, guías y transporte coordinados.</p>
           <ul class="mt-6 space-y-2.5 text-sm text-white/90">
             <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20"><app-icon name="ticket" size="w-3.5 h-3.5" /></span> Reservas con cupos en tiempo real</li>
@@ -18,58 +21,81 @@
             <li class="flex items-center gap-2.5"><span class="grid h-7 w-7 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20"><app-icon name="card" size="w-3.5 h-3.5" /></span> Pagos y saldos de cada pasajero</li>
           </ul>
         </div>
-        <a href="https://commons.wikimedia.org/wiki/File:99_-_Machu_Picchu_-_Juin_2009.edit3.jpg" target="_blank" rel="noopener"
-           class="text-[11px] text-white/50 hover:text-white/80">Foto: Martin St-Amant · CC BY-SA 3.0</a>
+        <div class="flex items-end justify-between gap-4">
+          <div class="flex gap-1.5" aria-hidden="true">
+            @for (f of fotos; track f.clave; let i = $index) {
+              <span class="h-1 rounded-full transition-all duration-500" [class]="i === foto() ? 'w-6 bg-leaf-400' : 'w-2 bg-white/40'"></span>
+            }
+          </div>
+          <a [href]="fotos[foto()].fuente" target="_blank" rel="noopener" class="text-right text-[11px] leading-snug text-white/55 hover:text-white/85">
+            {{ fotos[foto()].lugar }} · {{ fotos[foto()].region }}<br>Foto: {{ fotos[foto()].autor }} · {{ fotos[foto()].licencia }}
+          </a>
+        </div>
       </div>
     </section>
 
     <!-- Formulario -->
     <section class="flex items-center justify-center rounded-2xl border border-zinc-200/80 bg-white px-6 py-10 shadow-card sm:px-12">
       <div class="w-full max-w-sm">
-        <a routerLink="/" class="grid h-12 w-12 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft" aria-label="Ir a la página principal">
+        <a routerLink="/" class="entra entra-1 grid h-12 w-12 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft transition hover:-translate-y-0.5 hover:shadow-card" aria-label="Ir a la página principal">
           <app-logo variante="isotipo" [alto]="20" />
         </a>
 
-        <h2 class="mt-6 text-2xl font-semibold tracking-tight text-zinc-900">Iniciar sesión</h2>
-        <p class="mt-1.5 text-sm text-zinc-500">Personal de la agencia: tu usuario. Clientes: tu correo o número de documento.</p>
+        <div class="entra entra-2">
+          <h2 class="mt-6 text-2xl font-semibold tracking-tight text-zinc-900">Iniciar sesión</h2>
+          <p class="mt-1.5 text-sm text-zinc-500">Personal de la agencia: tu usuario. Clientes: tu correo o número de documento.</p>
+        </div>
 
-        <form class="mt-7 space-y-4" (ngSubmit)="entrar()">
+        <form class="entra entra-3 mt-7 space-y-4" (ngSubmit)="entrar()" novalidate>
           <div>
-            <label class="label" for="login-user">Usuario o correo</label>
+            <label class="label req" for="login-user">Usuario o correo</label>
             <div class="con-icono">
-              <span class="ico-campo"><app-icon name="user" size="w-4 h-4" /></span>
-              <input id="login-user" type="text" name="username" class="field !h-10" [(ngModel)]="username" maxlength="100" autocomplete="username"
-                     placeholder="usuario o nombre@correo.com" [class.field-invalid]="error() && !username.trim()">
+              <span class="ico-campo" [class.!text-rose-600]="faltaUsuario()"><app-icon name="user" size="w-4 h-4" /></span>
+              <input id="login-user" type="text" name="username" class="field !h-11" [(ngModel)]="username" (ngModelChange)="escribiendo()" maxlength="100"
+                     autocomplete="username" placeholder="usuario o nombre@correo.com" autofocus
+                     [class.field-invalid]="faltaUsuario()" [attr.aria-invalid]="faltaUsuario()" [attr.aria-describedby]="faltaUsuario() ? 'err-user' : null">
             </div>
+            @if (faltaUsuario()) { <p id="err-user" class="field-error aviso">Escribe tu usuario, correo o documento.</p> }
           </div>
+
           <div>
             <div class="flex items-center justify-between">
-              <label class="label" for="login-pass">Contraseña</label>
-              <button type="button" class="mb-1 inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900" (click)="ver.set(!ver())">
+              <label class="label req" for="login-pass">Contraseña</label>
+              <button type="button" class="mb-1 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-zinc-500 transition hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30"
+                      (click)="ver.set(!ver())" [attr.aria-pressed]="ver()" aria-controls="login-pass">
                 <app-icon [name]="ver() ? 'x' : 'eye'" size="w-3.5 h-3.5" /> {{ ver() ? 'Ocultar' : 'Mostrar' }}
               </button>
             </div>
             <div class="con-icono">
-              <span class="ico-campo"><app-icon name="lock" size="w-4 h-4" /></span>
-              <input id="login-pass" [type]="ver() ? 'text' : 'password'" name="password" class="field !h-10" [(ngModel)]="password" autocomplete="current-password"
-                     placeholder="Tu contraseña" [class.field-invalid]="error() && !password">
+              <span class="ico-campo" [class.!text-rose-600]="faltaClave()"><app-icon name="lock" size="w-4 h-4" /></span>
+              <input id="login-pass" [type]="ver() ? 'text' : 'password'" name="password" class="field !h-11" [(ngModel)]="password" (ngModelChange)="escribiendo()"
+                     (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="mayusculas.set(false)"
+                     autocomplete="current-password" placeholder="Tu contraseña"
+                     [class.field-invalid]="faltaClave()" [attr.aria-invalid]="faltaClave()" [attr.aria-describedby]="faltaClave() ? 'err-pass' : null">
             </div>
+            @if (faltaClave()) { <p id="err-pass" class="field-error aviso">Escribe tu contraseña.</p> }
+            @else if (mayusculas()) { <p class="hint aviso inline-flex items-center gap-1 !text-amber-700"><app-icon name="alert" size="w-3.5 h-3.5" /> Bloq Mayús está activado.</p> }
           </div>
 
           @if (error()) {
-            <p class="alert-error" role="alert"><app-icon name="alert" size="w-4 h-4" />{{ error() }}</p>
+            <p class="alert-error aviso sacudir" role="alert"><app-icon name="alert" size="w-4 h-4" />{{ error() }}</p>
           }
 
-          <button type="submit" [disabled]="cargando()" class="btn-dark !h-10 w-full">
-            @if (cargando()) { Ingresando… } @else { Ingresar <app-icon name="arrow-right" size="w-4 h-4" /> }
+          <button type="submit" [disabled]="cargando()" class="btn-dark !h-11 w-full" [attr.aria-busy]="cargando()">
+            @if (cargando()) {
+              <svg class="giro h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+              Ingresando…
+            } @else { Ingresar <app-icon name="arrow-right" size="w-4 h-4" /> }
           </button>
         </form>
 
-        <div class="my-6 flex items-center gap-3 text-xs text-zinc-400"><span class="h-px flex-1 bg-zinc-200"></span>¿Eres cliente y no tienes cuenta?<span class="h-px flex-1 bg-zinc-200"></span></div>
-        <a routerLink="/registro" class="btn-light !h-10 w-full"><app-icon name="users" size="w-4 h-4" /> Crear mi cuenta</a>
+        <div class="entra entra-4">
+          <div class="my-6 flex items-center gap-3 text-xs text-zinc-400"><span class="h-px flex-1 bg-zinc-200"></span>¿Eres cliente y no tienes cuenta?<span class="h-px flex-1 bg-zinc-200"></span></div>
+          <a routerLink="/registro" class="btn-light !h-11 w-full"><app-icon name="users" size="w-4 h-4" /> Crear mi cuenta</a>
+        </div>
 
-        <p class="mt-8 text-center text-sm">
-          <a routerLink="/" class="inline-flex items-center gap-1.5 text-zinc-500 hover:text-zinc-900"><app-icon name="arrow-left" size="w-3.5 h-3.5" /> Volver a la página principal</a>
+        <p class="entra entra-5 mt-8 text-center text-sm">
+          <a routerLink="/" class="inline-flex items-center gap-1.5 text-zinc-500 transition hover:text-zinc-900"><app-icon name="arrow-left" size="w-3.5 h-3.5" /> Volver a la página principal</a>
         </p>
       </div>
     </section>

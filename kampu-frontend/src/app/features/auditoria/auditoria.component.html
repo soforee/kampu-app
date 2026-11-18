@@ -127,11 +127,12 @@
             <td class="td text-right whitespace-nowrap">
               <span class="chip mr-1" [title]="a.origen === 'BD' ? 'Registrado por Oracle (trigger / procedimiento)' : 'Registrado por la aplicación'">{{ a.origen === 'BD' ? 'Oracle' : 'App' }}</span>
               @if ((a.detalle?.length ?? 0) > 90 && !a.campo) {
-                <button type="button" class="icon-btn" [title]="abierta() === a.auditoriaId ? 'Ver menos' : 'Ver todo'"
+                <button type="button" class="icon-btn" [attr.data-tip]="abierta() === a.auditoriaId ? 'Ver menos' : 'Ver todo'"
+                        [attr.aria-label]="abierta() === a.auditoriaId ? 'Ver menos' : 'Ver todo el detalle'" [attr.aria-expanded]="abierta() === a.auditoriaId"
                         (click)="abierta.set(abierta() === a.auditoriaId ? null : a.auditoriaId)"><app-icon name="eye" size="w-4 h-4" /></button>
               }
               @if (a.entidadId !== null && !filtro.entidadId) {
-                <button type="button" class="icon-btn" title="Historial de este registro" (click)="historial(a)"><app-icon name="clock" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="Historial de este registro" aria-label="Historial de este registro" (click)="historial(a)"><app-icon name="clock" size="w-4 h-4" /></button>
               }
             </td>
           </tr>
