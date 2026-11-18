@@ -306,7 +306,7 @@ Las mismas reglas se aplican en ambos lados: `kampu-frontend/src/app/core/utils/
 - Los tipos y longitudes coinciden con `01_schema.sql`; las reglas que dependen de otros datos (cupos, cruces de
   horario, transiciones, capacidad) las valida la base de datos con sus triggers.
 
-## 1. Base de datos (Oracle 12.2 o superior)
+## 1. Base de datos (Oracle 12.2 o superiorr)
 
 1. Usuario dueño del esquema (por defecto `LP2` / `admin123`) con permisos para crear tablas, vistas, secuencias,
    procedimientos y triggers. Para el paso 3 también `CREATE ROLE` (`GRANT CREATE ROLE TO LP2;` como DBA).
