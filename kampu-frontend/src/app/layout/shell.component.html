@@ -49,7 +49,7 @@
 
   <!-- Barra superior única: sección actual, búsqueda, avisos y usuario -->
   <header data-barra class="no-print sticky top-0 z-30 flex h-[76px] items-center gap-3 border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur sm:px-8 lg:px-10">
-    <button type="button" class="icon-btn-box lg:hidden" aria-label="Abrir menú" (click)="abierto.set(true)"><app-icon name="menu" size="w-[18px] h-[18px]" /></button>
+    <button type="button" class="icon-btn-box !h-10 !w-10 lg:hidden" aria-label="Abrir menú" (click)="abierto.set(true)"><app-icon name="menu" size="w-[18px] h-[18px]" /></button>
     <div class="flex min-w-0 items-center gap-3">
       <span class="ico-tile hidden sm:grid"><app-icon [name]="seccion().icono" size="w-[18px] h-[18px]" /></span>
       <div class="min-w-0">
@@ -83,7 +83,7 @@
 
       <!-- Avisos -->
       <div class="relative">
-        <button type="button" class="icon-btn-box relative" aria-label="Avisos" [attr.aria-expanded]="desplegado() === 'avisos'" (click)="alternar('avisos')">
+        <button type="button" class="icon-btn-box relative !h-10 !w-10" aria-label="Avisos" [attr.aria-expanded]="desplegado() === 'avisos'" (click)="alternar('avisos')">
           <app-icon name="bell" size="w-[18px] h-[18px]" />
           @if (alertas().length) { <span class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-leaf-400 px-1 text-[11px] font-semibold text-brand-900 ring-2 ring-white">{{ alertas().length }}</span> }
         </button>

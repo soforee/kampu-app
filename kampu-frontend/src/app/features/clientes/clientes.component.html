@@ -41,8 +41,8 @@
 </div>
 
 @if (abierto()) {
-  <app-modal [titulo]="editId ? 'Editar cliente' : 'Nuevo cliente'" (cerrar)="abierto.set(false)">
-    <div class="space-y-5">
+  <app-modal icono="users" subtitulo="Datos personales y de contacto" [titulo]="editId ? 'Editar cliente' : 'Nuevo cliente'" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
         <div class="form-section-title">Datos personales</div>

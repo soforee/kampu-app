@@ -169,8 +169,8 @@
 }
 
 @if (abierto()) {
-  <app-modal [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
-    <div class="space-y-5">
+  <app-modal [icono]="actual.icono" subtitulo="Logística de la agencia" [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
         @switch (tab()) {
