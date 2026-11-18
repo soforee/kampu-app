@@ -5,6 +5,7 @@
   height: 100vh;
   height: 100svh;
   min-height: 620px;
+  scroll-snap-align: start;
   overflow: hidden;
   background: var(--kp-dark);
 }
@@ -57,7 +58,16 @@
 .indicador-activo .indicador-barra::after { animation: progreso 6.5s linear forwards; }
 @keyframes progreso { to { transform: scaleX(1); } }
 
+/* Indicador de desplazamiento (ratón con rueda) */
+.bajar { position: absolute; left: 50%; bottom: 1.5rem; z-index: 10; transform: translateX(-50%); padding: .5rem; border-radius: 999px; }
+.bajar:focus-visible { outline: 2px solid #C4BD45; outline-offset: 2px; }
+.bajar-raton { display: block; width: 24px; height: 38px; border-radius: 14px; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .6); position: relative; }
+.bajar-rueda { position: absolute; left: 50%; top: 8px; width: 3px; height: 7px; margin-left: -1.5px; border-radius: 2px; background: #C4BD45; animation: rueda 1.8s ease-in-out infinite; }
+@keyframes rueda { 0% { opacity: 0; transform: translateY(-3px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(10px); } }
+@media (max-width: 639px) { .bajar { display: none; } }
+
 @media (prefers-reduced-motion: reduce) {
+  .bajar-rueda { animation: none; }
   .hero-foto { transition: none; transform: none; }
   .hero-foto-activa { transform: none; }
   .indicador-activo .indicador-barra::after { animation: none; transform: scaleX(1); }

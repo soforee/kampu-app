@@ -1,5 +1,5 @@
 import { CurrencyPipe } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
 import { ImagenService } from '../../../core/services/imagen.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
@@ -12,7 +12,47 @@ import { Contacto, TipoTour, TourCard, fotoDePaquete } from '../landing.models';
   templateUrl: './landing-tours.component.html',
   styleUrl: './landing-tours.component.css'
 })
-export class LandingToursComponent {
+export class LandingToursComponent implements OnChanges, OnDestroy {
+  private observador?: ResizeObserver;
+  private _carrusel?: ElementRef<HTMLElement>;
+  // El carrusel aparece cuando terminan de cargar los tours: al aparecer se observa su tamaño para mostrar u ocultar las flechas
+  @ViewChild('carrusel') set carrusel(ref: ElementRef<HTMLElement> | undefined) {
+    this.observador?.disconnect();
+    this._carrusel = ref;
+    if (ref && typeof ResizeObserver !== 'undefined') {
+      this.observador = new ResizeObserver(() => this.revisarBordes());
+      this.observador.observe(ref.nativeElement);
+    }
+  }
+  get carrusel() { return this._carrusel; }
+  alInicio = signal(true);
+  alFinal = signal(true);
+
+  // Flechas: avanzan o retroceden el ancho visible del carrusel (el navegador ajusta a la tarjeta más cercana)
+  mover(dir: number) {
+    const el = this.carrusel?.nativeElement;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
+  }
+
+  revisarBordes() {
+    const el = this.carrusel?.nativeElement;
+    if (!el) return;
+    const inicio = el.scrollLeft <= 4, fin = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+    if (inicio !== this.alInicio()) this.alInicio.set(inicio);
+    if (fin !== this.alFinal()) this.alFinal.set(fin);
+  }
+
+  // Al cambiar de categoría el carrusel vuelve al inicio
+  cambiar(valor: TipoTour) {
+    this.categoriaChange.emit(valor);
+    this.carrusel?.nativeElement.scrollTo({ left: 0 });
+  }
+
+  // Con otra lista de tours (búsqueda o categoría) cambian los bordes del carrusel
+  ngOnChanges() { setTimeout(() => this.revisarBordes()); }
+
+  ngOnDestroy() { this.observador?.disconnect(); }
+
   @Input() tours: TourCard[] = [];
   @Input() cargando = false;
   @Input() hayFiltro = false;
