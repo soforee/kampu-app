@@ -39,7 +39,7 @@ public class UsuarioInicialConfig {
         return u;
     }
 
-    // Antes de usar las tablas: si el esquema de trabajo (CURRENT_SCHEMA, p. ej. KAMPU cuando la app entra
+    // Antes de usar las tablas: si el esquema de trabajo (CURRENT_SCHEMA, p. ej. KAMPU_BD cuando la app entra
     // como KAMPU_APP) no tiene el script instalado, se detiene con un mensaje claro en lugar de un ORA-00942.
     private void verificarEsquema() {
         var datos = jdbc.queryForMap("SELECT USER AS usuario, SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AS esquema, "

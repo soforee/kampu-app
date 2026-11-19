@@ -288,4 +288,4 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
    - `kventas` / `Kampu2026*`
    - `koperador` / `Kampu2026*`
    - cliente: `maria.rios@example.com` / `Kampu2026*`
-5. **Verificación (opcional):** `SELECT object_name FROM all_objects WHERE owner='KAMPU' AND status<>'VALID';` debe devolver 0 filas.
+5. **Verificación (opcional):** `SELECT object_name FROM all_objects WHERE owner='KAMPU_BD' AND status<>'VALID';` debe devolver 0 filas.
