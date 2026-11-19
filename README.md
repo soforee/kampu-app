@@ -21,7 +21,7 @@ aplicación lo sigue (solo funcionalidad; el diseño visual es el mismo). Detall
   aprobarse un pago; la anulación registra reembolso; el cliente pide la anulación (`SOLICITUDES_ANULACION`) y Ventas la atiende.
 - **Despacho de flota**: operaciones con código `KMP-…` e historial automático por trigger; personal con catálogo de `CARGOS`.
 - **Seguridad**: contraseñas con **BCrypt** y bloqueo a los 5 intentos fallidos (lo exige la BD). El backend se conecta
-  con `KAMPU_APP` (interno) y `KAMPU_WEB` (portal del cliente); el dueño de los objetos es `KAMPU`.
+  con `KAMPU_APP` (interno) y `KAMPU_WEB` (portal del cliente); el dueño de los objetos es `KAMPU_BD`.
 - Sin permisos `DELETE` en la mayoría de tablas: *eliminar* pasa a ser **desactivar/retirar** (estado INACTIVO, salida CANCELADA…).
 - Reemplaza en lo funcional a lo descrito en las versiones 4 y 5 (BCrypt vuelve; ya no hay particionamiento ni `VW_CUADRE_INTEGRIDAD`).
 
@@ -315,15 +315,16 @@ Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`.
 
 1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`).
 2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
-   - `KAMPU`: dueño de tablas, vistas y PL/SQL (clave `Kampu_Owner_2026`).
+   - `KAMPU_BD`: dueño de tablas, vistas y PL/SQL. Si ya existe, **se conserva el usuario y su clave**
+     (si no existe, se crea con la clave `Kampu_Bd_2026`).
    - `KAMPU_APP`: conexión del backend para ADMIN / VENTAS / OPERADOR (clave `Kampu_App_2026`).
    - `KAMPU_WEB`: conexión del portal del cliente, solo con `ROL_CLIENTE` (clave `Kampu_Web_2026`).
    - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` y cuentas de prueba `KADMIN`, `KVENTAS`, `KOPERADOR`.
-3. **Borra y recrea** los objetos de `KAMPU` (18 tablas, paquetes PL/SQL, triggers, 7 vistas y datos demo con
+3. **Borra y recrea** los objetos de `KAMPU_BD` (18 tablas, paquetes PL/SQL, triggers, 7 vistas y datos demo con
    **fechas relativas a hoy**). Cada bloque imprime `[OK]` (30 en total); al final todo debe quedar `VALID`.
 4. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
 
-> Se puede ejecutar las veces que haga falta. Como borra los datos de `KAMPU`, exporta antes los datos reales.
+> Se puede ejecutar las veces que haga falta. Recrea las tablas del sistema dentro de `KAMPU_BD` (sus datos se reemplazan por los de demostración): exporta antes los datos reales. Tablas tuyas con otros nombres no se tocan.
 > Qué cambió en el backend y el frontend para seguir este script: `docs/MIGRACION_BACKEND_v10.md`.
 
 ### Correo (boleta informativa)
@@ -348,7 +349,7 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 | `DB_URL`      | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
 | `DB_USERNAME` | `KAMPU_APP`                                |
 | `DB_PASSWORD` | `Kampu_App_2026`                           |
-| `DB_SCHEMA`   | `KAMPU` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
+| `DB_SCHEMA`   | `KAMPU_BD` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
 | `DB_WEB_USERNAME` | `KAMPU_WEB` (conexión del portal del cliente) |
 | `DB_WEB_PASSWORD` | `Kampu_Web_2026` |
 
@@ -368,14 +369,14 @@ cd kampu-backend
 
 - Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
 - Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
-- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU` (si falta una columna, no arranca y dice cuál).
+- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU_BD` (si falta una columna, no arranca y dice cuál).
 
 ### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201
 
 El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
 esquema, contenedor y servicio se conectó. Opciones:
 
-1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea `KAMPU`, `KAMPU_APP` y `KAMPU_WEB`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
+1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP` y `KAMPU_WEB`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
 2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
    las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
 
