@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// Cambios de estado_reserva / estado_pago quedan en AUDITORIA (TRG_AUDITORIA_ESTADO_PAQUETE)
+// RESERVAS (v10): una reserva = un paquete en una fecha (salida). Se crea con PKG_RESERVAS.reservar.
+// Montos, estados, codigo y precio los mantiene la BD (PKG_RESERVAS y TRG_RESERVAS_BIU): solo lectura en JPA.
 @Entity
 @DynamicUpdate
 @Table(name = "RESERVAS")
@@ -15,35 +16,65 @@ public class Reserva {
     @Column(name = "reserva_id")
     private Long reservaId;
 
-    @Column(name = "cliente_id", nullable = false)
+    @Column(name = "codigo_reserva", insertable = false, updatable = false)
+    private String codigoReserva;
+
+    @Column(name = "cliente_id", insertable = false, updatable = false)
     private Long clienteId;
 
-    @Column(name = "fecha_reserva")
-    private LocalDateTime fechaReserva;
+    @Column(name = "salida_id", insertable = false, updatable = false)
+    private Long salidaId;
 
-    @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
+    @Column(name = "cantidad_pasajeros", insertable = false, updatable = false)
+    private Integer cantidadPasajeros;
+
+    @Column(name = "precio_unitario", insertable = false, updatable = false)
+    private BigDecimal precioUnitario;
+
+    @Column(name = "descuento", insertable = false, updatable = false)
+    private BigDecimal descuento;
+
+    @Column(name = "monto_total", insertable = false, updatable = false)
     private BigDecimal montoTotal;
 
-    @Column(name = "monto_pagado", nullable = false, precision = 10, scale = 2)
+    @Column(name = "canal", insertable = false, updatable = false)
+    private String canal;
+
+    @Column(name = "usuario_registra_id", insertable = false, updatable = false)
+    private Long usuarioRegistraId;
+
+    @Column(name = "fecha_reserva", insertable = false, updatable = false)
+    private LocalDateTime fechaReserva;
+
+    @Column(name = "monto_pagado", insertable = false, updatable = false)
     private BigDecimal montoPagado;
 
-    @Column(name = "estado_reserva", length = 20)
+    @Column(name = "estado_reserva", insertable = false, updatable = false)
     private String estadoReserva;
 
-    @Column(name = "estado_pago", length = 20)
+    @Column(name = "estado_pago", insertable = false, updatable = false)
     private String estadoPago;
 
-    @Column(name = "observaciones", length = 200)
+    @Column(name = "observaciones")
     private String observaciones;
 
-    @Column(name = "forma_reembolso", length = 50)
+    @Column(name = "fecha_anulacion", insertable = false, updatable = false)
+    private LocalDateTime fechaAnulacion;
+
+    @Column(name = "motivo_anulacion", insertable = false, updatable = false)
+    private String motivoAnulacion;
+
+    @Column(name = "forma_reembolso", insertable = false, updatable = false)
     private String formaReembolso;
 
-    @Column(name = "usuario_anula_id")
+    @Column(name = "usuario_anula_id", insertable = false, updatable = false)
     private Long usuarioAnulaId;
 
     @Column(name = "boleta_enviada_en")
     private LocalDateTime boletaEnviadaEn;
+
+    @Column(name = "lugar_recojo_id")
+    private Long lugarRecojoId;
 
     public Reserva() {
     }
@@ -56,6 +87,14 @@ public class Reserva {
         this.reservaId = reservaId;
     }
 
+    public String getCodigoReserva() {
+        return codigoReserva;
+    }
+
+    public void setCodigoReserva(String codigoReserva) {
+        this.codigoReserva = codigoReserva;
+    }
+
     public Long getClienteId() {
         return clienteId;
     }
@@ -64,12 +103,36 @@ public class Reserva {
         this.clienteId = clienteId;
     }
 
-    public LocalDateTime getFechaReserva() {
-        return fechaReserva;
+    public Long getSalidaId() {
+        return salidaId;
     }
 
-    public void setFechaReserva(LocalDateTime fechaReserva) {
-        this.fechaReserva = fechaReserva;
+    public void setSalidaId(Long salidaId) {
+        this.salidaId = salidaId;
+    }
+
+    public Integer getCantidadPasajeros() {
+        return cantidadPasajeros;
+    }
+
+    public void setCantidadPasajeros(Integer cantidadPasajeros) {
+        this.cantidadPasajeros = cantidadPasajeros;
+    }
+
+    public BigDecimal getPrecioUnitario() {
+        return precioUnitario;
+    }
+
+    public void setPrecioUnitario(BigDecimal precioUnitario) {
+        this.precioUnitario = precioUnitario;
+    }
+
+    public BigDecimal getDescuento() {
+        return descuento;
+    }
+
+    public void setDescuento(BigDecimal descuento) {
+        this.descuento = descuento;
     }
 
     public BigDecimal getMontoTotal() {
@@ -78,6 +141,30 @@ public class Reserva {
 
     public void setMontoTotal(BigDecimal montoTotal) {
         this.montoTotal = montoTotal;
+    }
+
+    public String getCanal() {
+        return canal;
+    }
+
+    public void setCanal(String canal) {
+        this.canal = canal;
+    }
+
+    public Long getUsuarioRegistraId() {
+        return usuarioRegistraId;
+    }
+
+    public void setUsuarioRegistraId(Long usuarioRegistraId) {
+        this.usuarioRegistraId = usuarioRegistraId;
+    }
+
+    public LocalDateTime getFechaReserva() {
+        return fechaReserva;
+    }
+
+    public void setFechaReserva(LocalDateTime fechaReserva) {
+        this.fechaReserva = fechaReserva;
     }
 
     public BigDecimal getMontoPagado() {
@@ -112,6 +199,22 @@ public class Reserva {
         this.observaciones = observaciones;
     }
 
+    public LocalDateTime getFechaAnulacion() {
+        return fechaAnulacion;
+    }
+
+    public void setFechaAnulacion(LocalDateTime fechaAnulacion) {
+        this.fechaAnulacion = fechaAnulacion;
+    }
+
+    public String getMotivoAnulacion() {
+        return motivoAnulacion;
+    }
+
+    public void setMotivoAnulacion(String motivoAnulacion) {
+        this.motivoAnulacion = motivoAnulacion;
+    }
+
     public String getFormaReembolso() {
         return formaReembolso;
     }
@@ -134,5 +237,13 @@ public class Reserva {
 
     public void setBoletaEnviadaEn(LocalDateTime boletaEnviadaEn) {
         this.boletaEnviadaEn = boletaEnviadaEn;
+    }
+
+    public Long getLugarRecojoId() {
+        return lugarRecojoId;
+    }
+
+    public void setLugarRecojoId(Long lugarRecojoId) {
+        this.lugarRecojoId = lugarRecojoId;
     }
 }

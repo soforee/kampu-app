@@ -75,6 +75,15 @@ public class LugarServiceImpl implements ILugarService {
         if (mismo.isPresent() && !mismo.get().getLugarId().equals(id)) {
             throw new DuplicateResourceException("Ya existe el lugar " + nombre + " en " + ciudad + ".");
         }
+        boolean oficina = "OFICINA".equals(dto.tipoLugar());
+        // La oficina es el punto de encuentro por defecto (chk_lug_oficina) y solo hay una (uq_lug_oficina)
+        if (oficina) {
+            for (Lugar otro : lugarRepository.findAll()) {
+                if ("OFICINA".equals(otro.getTipoLugar()) && !otro.getLugarId().equals(id)) {
+                    throw new BusinessException("Ya existe la oficina (" + otro.getNombre() + "): solo puede haber una.");
+                }
+            }
+        }
         if ((dto.latitud() == null) != (dto.longitud() == null)) {
             throw new BusinessException("Indica la latitud y la longitud juntas (o deja ambas vacías).");
         }
@@ -83,5 +92,9 @@ public class LugarServiceImpl implements ILugarService {
         l.setCiudad(ciudad);
         l.setLatitud(dto.latitud());
         l.setLongitud(dto.longitud());
+        l.setDireccion(dto.direccion() == null || dto.direccion().isBlank() ? null : dto.direccion().trim());
+        boolean recojo = oficina || Boolean.TRUE.equals(dto.esPuntoRecojo());
+        l.setEsPuntoRecojo(recojo ? 1 : 0);
+        l.setMinutosAntesRecojo(recojo && dto.minutosAntesRecojo() != null ? dto.minutosAntesRecojo() : 0);
     }
 }

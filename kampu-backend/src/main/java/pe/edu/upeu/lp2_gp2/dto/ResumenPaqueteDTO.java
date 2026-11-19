@@ -13,10 +13,13 @@ public record ResumenPaqueteDTO(
         LocalDate fechaInicio,
         LocalDate fechaFin,
         String estadoSalida,
+        String origenSalida,
         String estadoEjecucion,
         Integer cuposMaximos,
         Integer cuposDisponibles,
         Integer pasajeros,
+        Integer minimoPasajeros,
+        Integer faltanParaGarantizar,
         Integer reservasActivas,
         Integer operaciones,
         String guia,
@@ -25,7 +28,8 @@ public record ResumenPaqueteDTO(
 ) {
     public static ResumenPaqueteDTO desde(VistaResumenPaquete v) {
         return new ResumenPaqueteDTO(v.getSalidaId(), v.getPaqueteId(), v.getPaqueteNombre(), v.getFechaInicio(), v.getFechaFin(),
-                v.getEstadoSalida(), v.getEstadoEjecucion(), v.getCuposMaximos(), v.getCuposDisponibles(), v.getPasajeros(),
-                v.getReservasActivas(), v.getOperaciones(), v.getGuia(), v.getMontoVendido(), v.getMontoCobrado());
+                v.getEstadoSalida(), v.getOrigenSalida(), v.getEstadoEjecucion(), v.getCuposMaximos(), v.getCuposDisponibles(),
+                v.getPasajeros(), v.getMinimoPasajeros(), v.getFaltanParaGarantizar(), v.getReservasActivas(), v.getOperaciones(),
+                v.getGuia(), v.getMontoVendido(), v.getMontoCobrado());
     }
 }

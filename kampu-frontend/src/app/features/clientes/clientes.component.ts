@@ -38,6 +38,7 @@ export class ClientesComponent {
       : V.nombrePersona(this.form.nombreCompleto),
     documento: V.documento(this.form.tipoDocumento, this.form.numeroDocumento) ?? this.documentoRepetido(),
     email: this.form.email.trim() ? V.email(this.form.email) : 'El correo es obligatorio.',
+    nacionalidad: V.nacionalidad(this.form.nacionalidad),
     telefono: errorTelefonoPais(this.form.telefono)
       ?? (telefonoRepetido(this.form.telefono, this.store.clientes(), c => c.telefono, c => c.clienteId === this.editId)
         ? 'Ese teléfono ya está registrado para otro cliente.' : null)
@@ -51,7 +52,7 @@ export class ClientesComponent {
   }
 
   private vacio(): ClienteForm {
-    return { nombreCompleto: '', tipoDocumento: 'DNI' as TipoDocumentoCliente, numeroDocumento: '', email: '', telefono: '' };
+    return { nombreCompleto: '', tipoDocumento: 'DNI' as TipoDocumentoCliente, numeroDocumento: '', email: '', telefono: '', nacionalidad: 'Peruana' };
   }
 
   filas = computed(() => {
@@ -74,7 +75,7 @@ export class ClientesComponent {
   editar(id: number) {
     const c = this.store.getCliente(id)!;
     this.editId = c.clienteId;
-    this.form = { nombreCompleto: c.nombreCompleto, tipoDocumento: c.tipoDocumento, numeroDocumento: c.numeroDocumento, email: c.email, telefono: c.telefono };
+    this.form = { nombreCompleto: c.nombreCompleto, tipoDocumento: c.tipoDocumento, numeroDocumento: c.numeroDocumento, email: c.email, telefono: c.telefono, nacionalidad: c.nacionalidad };
     this.v.reiniciar();
     this.abierto.set(true);
   }
@@ -85,7 +86,7 @@ export class ClientesComponent {
     const f = this.form;
     const datos: ClienteForm = {
       nombreCompleto: f.nombreCompleto.trim(), tipoDocumento: f.tipoDocumento, numeroDocumento: f.numeroDocumento.trim(),
-      email: f.email.trim(), telefono: f.telefono.trim()
+      email: f.email.trim(), telefono: f.telefono.trim(), nacionalidad: f.nacionalidad.trim()
     };
     const editando = this.editId !== null;
     this.store.ocupado.set(true);
@@ -105,11 +106,12 @@ export class ClientesComponent {
   }
 
   async eliminar(id: number) {
-    if (!(await this.alerts.confirm('Esta acción no se puede deshacer.', 'Eliminar cliente'))) return;
+    // v10 no otorga DELETE sobre CLIENTES: su cuenta queda INACTIVA y se conservan sus reservas
+    if (!(await this.alerts.confirm('Su cuenta quedará INACTIVA; sus reservas se conservan.', 'Desactivar cliente'))) return;
     this.store.eliminarCliente(id).subscribe({
       next: () => {
         this.store.cargarClientes();
-        this.alerts.toast('Cliente eliminado');
+        this.alerts.toast('Cliente desactivado');
       },
       error: (err) => this.alerts.error(this.store.error(err))
     });

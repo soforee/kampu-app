@@ -14,10 +14,11 @@ import java.util.Optional;
 @Repository
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
     boolean existsByClienteId(Long clienteId);
-
+    boolean existsBySalidaId(Long salidaId);
+    List<Reserva> findBySalidaIdOrderByReservaIdAsc(Long salidaId);
+    List<Reserva> findByClienteIdOrderByReservaIdDesc(Long clienteId);
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from Reserva r where r.reservaId = :id")
     Optional<Reserva> findByIdParaActualizar(@Param("id") Long id);
-
     List<Reserva> findAllByOrderByReservaIdAsc();
 }

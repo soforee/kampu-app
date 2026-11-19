@@ -64,6 +64,46 @@
       </div>
 
       <div class="form-section">
+        <div class="form-section-title">Reglas de venta</div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div><label class="label req">Cupo por salida</label><input type="number" min="1" max="999" class="field" [(ngModel)]="form.cupoPorDefecto" (blur)="v.tocar('cupo')" [class.field-invalid]="v.error('cupo')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric">@if (v.error('cupo'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req">Mínimo para garantizar</label><input type="number" min="1" max="999" class="field" [(ngModel)]="form.minimoPasajeros" (blur)="v.tocar('minimo')" [class.field-invalid]="v.error('minimo')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric">@if (v.error('minimo'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req">Anticipación web (h)</label><input type="number" min="0" max="720" class="field" [(ngModel)]="form.anticipacionMinHoras" (blur)="v.tocar('anticipacion')" [class.field-invalid]="v.error('anticipacion')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric">@if (v.error('anticipacion'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req">Hora de inicio</label><input type="time" class="field" [(ngModel)]="form.horaInicio" (blur)="v.tocar('hora')" [class.field-invalid]="v.error('hora')">@if (v.error('hora'); as e) { <p class="field-error">{{ e }}</p> }</div>
+        </div>
+        <div>
+          <label class="label req">Días que opera</label>
+          <div class="seg">
+            @for (d of diasSemana; track d; let i = $index) {
+              <button type="button" class="seg-btn" [class.on]="opera(i)" (click)="alternarDia(i)">{{ d }}</button>
+            }
+          </div>@if (v.error('diasOperacion'); as e) { <p class="field-error">{{ e }}</p> }
+          <p class="hint">Al reservar una fecha sin salida, la base de datos la crea con este cupo; queda garantizada al llegar al mínimo. La hora de inicio define la hora de recojo.</p>
+        </div>
+      </div>
+
+      @if (editId) {
+        <div class="form-section">
+          <div class="form-section-title">Itinerario <span class="opt">Opcional</span></div>
+          @for (a of itinerario(); track a.itinerarioId) {
+            <div class="flex items-center justify-between gap-3 text-sm">
+              <span><strong>Día {{ a.diaNumero }}</strong>@if (a.horaInicio) { · {{ a.horaInicio }} } · {{ a.titulo }}@if (a.lugar) { <span class="text-zinc-500"> · {{ a.lugar }}</span> }</span>
+              <button type="button" class="icon-btn-danger" title="Quitar actividad" aria-label="Quitar actividad" (click)="quitarActividad(a)"><app-icon name="trash" size="w-4 h-4" /></button>
+            </div>
+          } @empty { <p class="hint">Aún no hay actividades.</p> }
+          <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
+            <div><label class="label">Día</label><input type="number" min="1" [max]="form.dias" class="field" [(ngModel)]="actividad.diaNumero" (wheel)="rueda($event)"></div>
+            <div><label class="label">Hora</label><input type="time" class="field" [(ngModel)]="actividad.horaInicio"></div>
+            <div class="col-span-2"><label class="label">Lugar</label>
+              <select class="field" [(ngModel)]="actividad.lugarId"><option [ngValue]="null">—</option>@for (l of store.lugares(); track l.lugarId) { <option [ngValue]="l.lugarId">{{ l.nombre }}</option> }</select>
+            </div>
+            <div class="col-span-2"><label class="label">Actividad</label><input class="field" maxlength="150" [(ngModel)]="actividad.titulo"></div>
+          </div>
+          <div class="flex justify-end"><button type="button" class="btn-light btn-sm" (click)="agregarActividad()"><app-icon name="plus" size="w-3.5 h-3.5" /> Agregar actividad</button></div>
+        </div>
+      }
+
+      <div class="form-section">
         <div class="form-section-title">Imagen <span class="opt">Opcional</span></div>
         <input #archivo type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="elegir($event)">
         @if (vistaPrevia; as src) {

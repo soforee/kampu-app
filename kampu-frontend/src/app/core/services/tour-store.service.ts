@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal, WritableSignal } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  Cliente, ClienteForm, ContactoReserva, EstadoOperacion, EstadoOperacionInfo, EstadoTransaccion, EstimacionDuracion,
+  ActividadItinerario, CalendarioDia, Cargo, Cliente, ClienteForm, FormaReembolso, MetodoPago, PuntoRecojo, SolicitudAnulacion, ContactoReserva, EstadoOperacion, EstadoOperacionInfo, EstadoTransaccion, EstimacionDuracion,
   HistorialOperacion, Lugar, LugarForm, Manifiesto, Moneda, Operacion, OperacionForm, PaqueteForm, PaqueteTour, Pago, PasajeroDraft,
   PasajeroReserva, Permiso, Personal, PersonalForm, Proveedor, ProveedorForm, RecursoCandidato, Reserva, ResumenPaquete, Rol,
   SalidaForm, SalidaProgramada, Sesion, Vehiculo, VehiculoForm
@@ -26,7 +26,9 @@ const LISTAS: { [lista: string]: Permiso | null } = {
   clientes: 'VER_CLIENTES',
   reservas: 'VER_RESERVAS',
   pasajeros: 'VER_RESERVAS',
-  pagos: 'VER_MONTOS'
+  pagos: 'VER_MONTOS',
+  'personal/cargos': 'VER_LOGISTICA',
+  'solicitudes-anulacion': 'GESTIONAR_RESERVAS'
 };
 
 @Injectable({ providedIn: 'root' })
@@ -51,10 +53,13 @@ export class TourStore {
   pagos = signal<Pago[]>([]);
   // Vista VW_RESUMEN_PAQUETES_POR_ROL
   resumen = signal<ResumenPaquete[]>([]);
+  // v10: catálogo de cargos y solicitudes de anulación del portal
+  cargos = signal<Cargo[]>([]);
+  solicitudes = signal<SolicitudAnulacion[]>([]);
 
-  // Personal que puede guiar o conducir
-  guias = computed(() => this.personal().filter(p => p.rol !== 'CONDUCTOR'));
-  conductores = computed(() => this.personal().filter(p => p.rol !== 'GUIA'));
+  // Personal que puede guiar o conducir: lo define la función de su cargo (CARGOS)
+  guias = computed(() => this.personal().filter(p => p.funcion === 'GUIADO'));
+  conductores = computed(() => this.personal().filter(p => p.funcion === 'TRANSPORTE'));
 
   ocupado = signal(false);
   // Último registro creado o editado ('cliente-12'): su fila se resalta un momento en la lista
@@ -95,7 +100,8 @@ export class TourStore {
       ['proveedores', this.proveedores], ['personal', this.personal], ['vehiculos', this.vehiculos],
       ['lugares', this.lugares], ['operaciones', this.operaciones], ['operaciones/estados', this.estadosOperacion],
       ['resumen-paquetes', this.resumen], ['clientes', this.clientes], ['reservas', this.reservas],
-      ['pasajeros', this.pasajeros], ['pagos', this.pagos]
+      ['pasajeros', this.pasajeros], ['pagos', this.pagos],
+      ['personal/cargos', this.cargos], ['solicitudes-anulacion', this.solicitudes]
     ];
     const permitidas = tareas.filter(([url]) => this.puede(url));
     this.cargando = true;
@@ -126,7 +132,7 @@ export class TourStore {
     this.cargando = false;
     for (const s of [this.paquetes, this.proveedores, this.personal, this.vehiculos, this.lugares,
       this.operaciones, this.estadosOperacion, this.clientes, this.salidas, this.reservas, this.pasajeros, this.pagos,
-      this.resumen] as WritableSignal<unknown[]>[]) {
+      this.resumen, this.cargos, this.solicitudes] as WritableSignal<unknown[]>[]) {
       s.set([]);
     }
   }
@@ -149,6 +155,8 @@ export class TourStore {
   cargarSalidas() { this.cargarLista('salidas', this.salidas, false); this.cargarResumen(); }
   cargarReservas() { this.cargarLista('reservas', this.reservas, false); }
   cargarPagos() { this.cargarLista('pagos', this.pagos, false); }
+  cargarPasajeros() { this.cargarLista('pasajeros', this.pasajeros, false); }
+  cargarSolicitudes() { this.cargarLista('solicitudes-anulacion', this.solicitudes, false); }
 
   getPaquete(id?: number | null) { return this.paquetes().find(p => p.paqueteId === id); }
   getGuia(id?: number | null) { return this.personal().find(p => p.personalId === id); }
@@ -161,7 +169,12 @@ export class TourStore {
   getSalida(id?: number | null) { return this.salidas().find(s => s.salidaId === id); }
   getReserva(id?: number | null) { return this.reservas().find(r => r.reservaId === id); }
   operacionesDe(salidaId: number) { return this.operaciones().filter(o => o.salidaId === salidaId); }
-  nombreProveedor(id?: number | null): string { return this.getProveedor(id)?.nombreComercial ?? '—'; }
+  // v10: proveedorId null = recurso propio de Kampu Tours
+  nombreProveedor(id?: number | null): string {
+    return id == null ? 'Kampu Tours (propio)' : this.getProveedor(id)?.nombreComercial ?? '—';
+  }
+  getCargo(codigo?: string | null) { return this.cargos().find(c => c.codigo === codigo); }
+  nombreCargo(codigo?: string | null): string { return this.getCargo(codigo)?.nombre ?? codigo ?? ''; }
 
   nombreCliente(r?: Reserva | null): string {
     return r ? this.getCliente(r.clienteId)?.nombreCompleto ?? '' : '';
@@ -170,7 +183,10 @@ export class TourStore {
   pagosDe(reservaId: number) { return this.pagos().filter(p => p.reservaId === reservaId); }
   salidasDe(paqueteId: number) { return this.salidas().filter(s => s.paqueteId === paqueteId); }
 
-  codigoReserva(id: number) { return 'R-' + String(id).padStart(4, '0'); }
+  // Código de negocio que genera la BD (KR-AAAA-NNNNNN)
+  codigoReserva(id: number) {
+    return this.getReserva(id)?.codigoReserva ?? 'R-' + String(id).padStart(4, '0');
+  }
   saldo(r: Reserva): number {
     return r.estadoReserva === 'ANULADA' ? 0 : Math.max(redondear(r.montoTotal - r.montoPagado), 0);
   }
@@ -223,10 +239,31 @@ export class TourStore {
   eliminarCliente(id: number) { return this.http.delete<void>(`${API}/clientes/${id}`); }
 
   guardarSalida(d: SalidaForm, id: number | null) { return this.guardarEn<SalidaProgramada>('salidas', d, id); }
-  eliminarSalida(id: number) { return this.http.delete<void>(`${API}/salidas/${id}`); }
-  // Operador / Ventas: salida en ejecución (CONFIRMADA) o terminada (COMPLETADA)
-  marcarEjecucion(id: number, estado: 'CONFIRMADA' | 'COMPLETADA'): Observable<SalidaProgramada> {
+  // v10: una salida no se borra; se cancela con PKG_RESERVAS.cancelar_salida (anula y reembolsa sus reservas)
+  cancelarSalida(id: number, motivo: string, formaReembolso: FormaReembolso | null): Observable<SalidaProgramada> {
+    return this.http.patch<SalidaProgramada>(`${API}/salidas/${id}/cancelar`, { motivo: motivo, formaReembolso: formaReembolso });
+  }
+  // Ciclo de la salida: GARANTIZADA (llegó al mínimo) o COMPLETADA (sus reservas confirmadas pasan a COMPLETADA)
+  marcarEjecucion(id: number, estado: 'GARANTIZADA' | 'COMPLETADA'): Observable<SalidaProgramada> {
     return this.http.patch<SalidaProgramada>(`${API}/salidas/${id}/ejecucion`, { estado: estado });
+  }
+
+  // ---------- Catálogo de un paquete (v10) ----------
+  calendario(paqueteId: number, desde: string, dias = 60): Observable<CalendarioDia[]> {
+    return this.http.get<CalendarioDia[]>(`${API}/paquetes/${paqueteId}/calendario`, { params: { desde: desde, dias: dias } });
+  }
+  puntosRecojo(paqueteId: number): Observable<PuntoRecojo[]> {
+    return this.http.get<PuntoRecojo[]>(`${API}/paquetes/${paqueteId}/puntos-recojo`);
+  }
+  itinerario(paqueteId: number): Observable<ActividadItinerario[]> {
+    return this.http.get<ActividadItinerario[]>(`${API}/paquetes/${paqueteId}/itinerario`);
+  }
+  guardarActividad(paqueteId: number, d: unknown, id: number | null): Observable<ActividadItinerario> {
+    return id ? this.http.put<ActividadItinerario>(`${API}/paquetes/${paqueteId}/itinerario/${id}`, d)
+      : this.http.post<ActividadItinerario>(`${API}/paquetes/${paqueteId}/itinerario`, d);
+  }
+  eliminarActividad(paqueteId: number, id: number) {
+    return this.http.delete<void>(`${API}/paquetes/${paqueteId}/itinerario/${id}`);
   }
 
   // Lista de pasajeros de la salida (para el guía y el conductor)
@@ -234,15 +271,29 @@ export class TourStore {
     return this.http.get<Manifiesto>(`${API}/salidas/${salidaId}/manifiesto`);
   }
 
-  // Se envía clienteId (cliente registrado) o contacto (cliente nuevo), nunca ambos
-  crearReserva(clienteId: number | null, contacto: ContactoReserva | null, salidaId: number, observaciones: string,
-               pasajeros: PasajeroDraft[]): Observable<Reserva> {
-    const lista = pasajeros.map(p => ({
+  // v10 (PKG_RESERVAS.reservar): paquete + fecha + cantidad. La BD busca o crea la salida de ese día.
+  // Se envía clienteId (cliente registrado) o contacto (invitado sin cuenta web), nunca ambos.
+  // Los pasajeros son opcionales (hasta la cantidad): se pueden registrar después.
+  crearReserva(datos: {
+    clienteId: number | null; contacto: ContactoReserva | null; paqueteId: number; fecha: string; cantidad: number;
+    canal: 'PRESENCIAL' | 'TELEFONO' | 'WHATSAPP'; descuento: number; lugarRecojoId: number | null; observaciones: string;
+    pasajeros: PasajeroDraft[];
+  }): Observable<Reserva> {
+    const cuerpo = { ...datos, pasajeros: datos.pasajeros.map(p => this.pasajero(p)) };
+    return this.http.post<Reserva>(`${API}/reservas`, cuerpo);
+  }
+  agregarPasajero(reservaId: number, p: PasajeroDraft): Observable<PasajeroReserva> {
+    return this.http.post<PasajeroReserva>(`${API}/reservas/${reservaId}/pasajeros`, this.pasajero(p));
+  }
+  eliminarPasajero(pasajeroId: number) { return this.http.delete<void>(`${API}/pasajeros/${pasajeroId}`); }
+  cambiarRecojo(reservaId: number, lugarRecojoId: number | null): Observable<Reserva> {
+    return this.http.patch<Reserva>(`${API}/reservas/${reservaId}/recojo`, { lugarRecojoId: lugarRecojoId });
+  }
+  private pasajero(p: PasajeroDraft) {
+    return {
       nombreCompleto: p.nombreCompleto, tipoDocumento: p.tipoDocumento, numeroDocumento: p.numeroDocumento,
       nacionalidad: p.nacionalidad, fechaNacimiento: p.fechaNacimiento ? p.fechaNacimiento : null
-    }));
-    const cuerpo = { clienteId: clienteId, contacto: contacto, salidaId: salidaId, observaciones: observaciones, pasajeros: lista };
-    return this.http.post<Reserva>(`${API}/reservas`, cuerpo);
+    };
   }
 
   verBoleta(id: number): Observable<string> {
@@ -251,17 +302,18 @@ export class TourStore {
   enviarBoleta(id: number): Observable<{ destinatario: string; enviadaEn: string }> {
     return this.http.post<{ destinatario: string; enviadaEn: string }>(`${API}/reservas/${id}/boleta`, {});
   }
-  confirmarReserva(id: number): Observable<Reserva> {
-    return this.http.patch<Reserva>(`${API}/reservas/${id}/confirmar`, {});
+  // v10: la reserva se confirma sola con el primer pago aprobado y se completa sola con su salida.
+  // Anular (PKG_RESERVAS.anular) exige motivo y, si hay pagos aprobados, la forma de reembolso.
+  anularReserva(id: number, motivo: string, formaReembolso: FormaReembolso | null): Observable<Reserva> {
+    return this.http.patch<Reserva>(`${API}/reservas/${id}/anular`, { motivo: motivo, formaReembolso: formaReembolso });
   }
-  completarReserva(id: number): Observable<Reserva> {
-    return this.http.patch<Reserva>(`${API}/reservas/${id}/completar`, {});
-  }
-  anularReserva(id: number, formaReembolso: string | null): Observable<Reserva> {
-    return this.http.patch<Reserva>(`${API}/reservas/${id}/anular`, { formaReembolso: formaReembolso, usuarioId: this.auth.usuario()?.usuarioId ?? null });
+  // Solicitudes de anulación del portal: aprobar (anula y reembolsa) o rechazar (con respuesta)
+  atenderSolicitud(id: number, aprobar: boolean, formaReembolso: FormaReembolso | null, respuesta: string): Observable<SolicitudAnulacion> {
+    return this.http.patch<SolicitudAnulacion>(`${API}/solicitudes-anulacion/${id}`,
+      { aprobar: aprobar, formaReembolso: formaReembolso, respuesta: respuesta });
   }
 
-  registrarPago(reservaId: number, monto: number, moneda: Moneda, metodoPago: string,
+  registrarPago(reservaId: number, monto: number, moneda: Moneda, metodoPago: MetodoPago,
                 codigoTransaccion: string, estadoTransaccion: EstadoTransaccion): Observable<Pago> {
     const cuerpo = {
       reservaId: reservaId, monto: monto, moneda: moneda, metodoPago: metodoPago,

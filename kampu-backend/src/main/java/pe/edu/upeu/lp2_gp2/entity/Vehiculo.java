@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
+// VEHICULOS (v10): proveedor_id NULL = flota propia
 @Entity
 @DynamicUpdate
 @Table(name = "VEHICULOS")
@@ -13,25 +14,25 @@ public class Vehiculo {
     @Column(name = "vehiculo_id")
     private Long vehiculoId;
 
-    @Column(name = "proveedor_id", nullable = false)
+    @Column(name = "proveedor_id")
     private Long proveedorId;
 
-    @Column(name = "placa", nullable = false, length = 10)
+    @Column(name = "placa")
     private String placa;
 
-    @Column(name = "tipo_vehiculo", nullable = false, length = 20)
+    @Column(name = "tipo_vehiculo")
     private String tipoVehiculo;
 
-    @Column(name = "marca_modelo", length = 100)
+    @Column(name = "marca_modelo")
     private String marcaModelo;
 
-    @Column(name = "capacidad_pax", nullable = false)
+    @Column(name = "capacidad_pax")
     private Integer capacidadPax;
 
     @Column(name = "prox_mantenimiento")
     private LocalDate proxMantenimiento;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "estado")
     private String estado;
 
     public Vehiculo() {

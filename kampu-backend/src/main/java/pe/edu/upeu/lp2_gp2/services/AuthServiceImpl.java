@@ -1,8 +1,6 @@
 package pe.edu.upeu.lp2_gp2.services;
 
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.lp2_gp2.auditoria.AuditoriaService;
 import pe.edu.upeu.lp2_gp2.auditoria.RegistroAuditoria;
 import pe.edu.upeu.lp2_gp2.dto.LoginRequestDTO;
@@ -14,43 +12,48 @@ import pe.edu.upeu.lp2_gp2.entity.UsuarioSistema;
 import pe.edu.upeu.lp2_gp2.exception.BusinessException;
 import pe.edu.upeu.lp2_gp2.repository.ClienteRepository;
 import pe.edu.upeu.lp2_gp2.repository.PkgSeguridadRepository;
+import pe.edu.upeu.lp2_gp2.repository.PortalJdbc;
 import pe.edu.upeu.lp2_gp2.repository.UsuarioSistemaRepository;
 import pe.edu.upeu.lp2_gp2.seguridad.SesionActual;
 import pe.edu.upeu.lp2_gp2.seguridad.SesionUsuario;
 
 import java.sql.CallableStatement;
+import java.time.LocalDateTime;
 import java.sql.Types;
 import java.util.Optional;
 
 /**
- * Login único para el personal interno (USUARIOS_SISTEMA, por usuario) y para los clientes del
- * portal (CLIENTES, por correo o documento). Como en la plantilla del curso, la contraseña se
- * compara tal cual (sin cifrado). El login devuelve el usuario, su rol y sus permisos
- * (PKG_SEGURIDAD_ROLES.permisos); el registro de clientes pasa por SP_REGISTRAR_CLIENTE_EXTERNO.
+ * Login único (kampu_tours_v10.sql):
+ *  - Personal interno (USUARIOS_SISTEMA, por usuario): clave BCrypt. Cada intento fallido suma
+ *    intentos_fallidos y a los 5 la cuenta queda BLOQUEADA; un ingreso correcto los reinicia y
+ *    guarda ultimo_acceso.
+ *  - Clientes del portal (por correo o documento): el hash se obtiene con
+ *    PKG_GESTION_PAQUETES_CLIENTE.hash_credencial por la conexión KAMPU_WEB y se verifica aquí.
+ *  - Registro: SP_REGISTRAR_CLIENTE_EXTERNO (KAMPU_WEB) con la clave ya cifrada con BCrypt.
  */
 @Service
 public class AuthServiceImpl implements IAuthService {
     private static final String CREDENCIALES = "Usuario o contraseña incorrectos.";
+    private static final int MAX_INTENTOS = 5;
 
     private final UsuarioSistemaRepository usuarioRepository;
     private final ClienteRepository clienteRepository;
-    private final JdbcTemplate jdbc;
+    private final PortalJdbc portal;
     private final PkgSeguridadRepository seguridad;
     private final AuditoriaService auditoria;
 
     public AuthServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
-                           JdbcTemplate jdbc, PkgSeguridadRepository seguridad, AuditoriaService auditoria) {
+                           PortalJdbc portal, PkgSeguridadRepository seguridad, AuditoriaService auditoria) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
-        this.jdbc = jdbc;
+        this.portal = portal;
         this.seguridad = seguridad;
         this.auditoria = auditoria;
     }
 
     // Inicio de sesión auditado: LOGIN si entra, LOGIN_FALLIDO (con el motivo) si no.
-    // La bitácora se guarda en transacción propia porque el fallido termina en excepción.
+    // Sin @Transactional: el conteo de intentos fallidos se guarda aunque el login termine en excepción.
     @Override
-    @Transactional(readOnly = true)
     public SesionDTO login(LoginRequestDTO dto) {
         String id = dto.username().trim();
         try {
@@ -71,9 +74,25 @@ public class AuthServiceImpl implements IAuthService {
         Optional<UsuarioSistema> usuario = usuarioRepository.findByUsernameIgnoreCase(id);
         if (usuario.isPresent()) {
             UsuarioSistema u = usuario.get();
-            if (!password.equals(u.getPasswordHash())) throw new BusinessException(CREDENCIALES);
+            if ("BLOQUEADO".equals(u.getEstado())) {
+                throw new BusinessException("Tu usuario está bloqueado por intentos fallidos. Contacta al administrador.");
+            }
+            if (!Claves.coincide(password, u.getPasswordHash())) {
+                int intentos = (u.getIntentosFallidos() == null ? 0 : u.getIntentosFallidos()) + 1;
+                u.setIntentosFallidos(Math.min(intentos, 99));
+                if (intentos >= MAX_INTENTOS && "ACTIVO".equals(u.getEstado())) u.setEstado("BLOQUEADO");
+                usuarioRepository.save(u);
+                if ("BLOQUEADO".equals(u.getEstado())) {
+                    throw new BusinessException("Demasiados intentos fallidos: tu usuario quedó bloqueado. Contacta al administrador.");
+                }
+                throw new BusinessException(CREDENCIALES);
+            }
             if (!"ACTIVO".equals(u.getEstado())) throw new BusinessException("Tu usuario está inactivo. Contacta al administrador.");
-            return sesion(u.getUsuarioId(), null, u.getUsername(), u.getUsername(), u.getRol(), u.getEstado());
+            u.setIntentosFallidos(0);
+            u.setUltimoAcceso(LocalDateTime.now());
+            usuarioRepository.save(u);
+            String nombre = u.getNombreCompleto() == null || u.getNombreCompleto().isBlank() ? u.getUsername() : u.getNombreCompleto();
+            return sesion(u.getUsuarioId(), null, u.getUsername(), nombre, u.getRol(), u.getEstado());
         }
         // 2) Cliente del portal (correo o número de documento)
         Optional<Cliente> cliente = id.contains("@")
@@ -84,13 +103,14 @@ public class AuthServiceImpl implements IAuthService {
         if (c.getPasswordHash() == null) {
             throw new BusinessException("Tu cuenta web aún no está activada. Usa \"Registrarse\" con tu mismo documento y correo.");
         }
-        if (!password.equals(c.getPasswordHash())) throw new BusinessException(CREDENCIALES);
         if (!"ACTIVO".equals(c.getEstadoCuenta())) throw new BusinessException("Tu cuenta está " + c.getEstadoCuenta().toLowerCase() + ". Contacta a la agencia.");
+        String hash = portal.jdbc().queryForObject("SELECT PKG_GESTION_PAQUETES_CLIENTE.hash_credencial(?) FROM dual",
+                String.class, c.getEmail());
+        if (!Claves.coincide(password, hash)) throw new BusinessException(CREDENCIALES);
         return sesion(null, c.getClienteId(), c.getEmail(), c.getNombreCompleto(), "CLIENTE", c.getEstadoCuenta());
     }
 
     @Override
-    @Transactional
     public SesionDTO registrar(RegistroRequestDTO dto) {
         if (!dto.password().equals(dto.confirmacion())) throw new BusinessException("Las contraseñas no coinciden.");
         if (dto.password().isBlank() || dto.password().trim().length() < 8) {
@@ -100,15 +120,16 @@ public class AuthServiceImpl implements IAuthService {
         String errorTelefono = Reglas.errorTelefonoPais(dto.telefono());
         if (errorTelefono != null) throw new BusinessException(errorTelefono);
 
-        // SP_REGISTRAR_CLIENTE_EXTERNO: valida correo/documento/teléfono, guarda y audita
-        Long clienteId = jdbc.execute((java.sql.Connection con) -> {
+        String hash = Claves.cifrar(dto.password());
+        // SP_REGISTRAR_CLIENTE_EXTERNO (solo ROL_CLIENTE: conexión KAMPU_WEB): valida, guarda y audita
+        Long clienteId = portal.ejecutar(con -> {
             try (CallableStatement cs = con.prepareCall("{call SP_REGISTRAR_CLIENTE_EXTERNO(?, ?, ?, ?, ?, ?, ?)}")) {
                 cs.setString(1, dto.nombreCompleto().trim());
                 cs.setString(2, dto.tipoDocumento());
                 cs.setString(3, dto.numeroDocumento().trim());
                 cs.setString(4, dto.email().trim());
                 cs.setString(5, dto.telefono().trim());
-                cs.setString(6, dto.password());
+                cs.setString(6, hash);
                 cs.registerOutParameter(7, Types.NUMERIC);
                 cs.execute();
                 return cs.getLong(7);

@@ -29,9 +29,12 @@ public class ProveedorServiceImpl implements IProveedorService {
     private final VehiculoRepository vehiculoRepository;
     private final PersonalRepository personalRepository;
     private final IOperacionTransporteService operaciones;
+    private final Recursos recursos;
 
     public ProveedorServiceImpl(ProveedorRepository proveedorRepository, VehiculoRepository vehiculoRepository,
-                                PersonalRepository personalRepository, IOperacionTransporteService operaciones) {
+                                PersonalRepository personalRepository, IOperacionTransporteService operaciones,
+                                Recursos recursos) {
+        this.recursos = recursos;
         this.proveedorRepository = proveedorRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.personalRepository = personalRepository;
@@ -43,7 +46,7 @@ public class ProveedorServiceImpl implements IProveedorService {
     public List<ProveedorDTO> listarTodo() {
         List<Vehiculo> vehiculos = vehiculoRepository.findAll();
         List<Personal> personal = personalRepository.findAll();
-        return proveedorRepository.findAllByOrderByEsPropioDescProveedorIdAsc().stream()
+        return proveedorRepository.findAllByOrderByProveedorIdAsc().stream()
                 .map(p -> dto(p, vehiculos, personal)).toList();
     }
 
@@ -74,11 +77,12 @@ public class ProveedorServiceImpl implements IProveedorService {
     @Override
     @Transactional
     public void eliminar(Long id) {
+        // kampu_tours_v10.sql no otorga DELETE sobre PROVEEDORES: la baja es lógica (estado INACTIVO)
         Proveedor p = obtener(id);
-        if (vehiculoRepository.existsByProveedorId(id) || personalRepository.existsByProveedorId(id)) {
-            throw new BusinessException("El proveedor tiene vehículos o personal registrados. Puedes marcarlo como INACTIVO.");
-        }
-        proveedorRepository.delete(p);
+        if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El proveedor ya está INACTIVO.");
+        p.setEstado("INACTIVO");
+        proveedorRepository.saveAndFlush(p);
+        operaciones.verificarAsignacionesPendientes(null, null, id);
     }
 
     private ProveedorDTO buscarPorIdInterno(Proveedor p) {
@@ -94,8 +98,9 @@ public class ProveedorServiceImpl implements IProveedorService {
         }
         for (Personal x : personal) {
             if (!p.getProveedorId().equals(x.getProveedorId()) || "INACTIVO".equals(x.getEstado())) continue;
-            if (!"GUIA".equals(x.getRol())) conductores++;
-            if (!"CONDUCTOR".equals(x.getRol())) guias++;
+            String funcion = recursos.funcion(x);
+            if ("TRANSPORTE".equals(funcion)) conductores++;
+            if ("GUIADO".equals(funcion)) guias++;
         }
         return ProveedorDTO.desde(p, flota, capacidad, conductores, guias);
     }
@@ -116,18 +121,17 @@ public class ProveedorServiceImpl implements IProveedorService {
                 && proveedorRepository.contarTelefono(Reglas.digitos(dto.telefono()), Reglas.idOMenosUno(id)) > 0) {
             throw new DuplicateResourceException("El teléfono " + dto.telefono().trim() + " ya está registrado para otro proveedor.");
         }
-        if (dto.esPropio()) {
-            Optional<Proveedor> propio = proveedorRepository.findFirstByEsPropio(1);
-            if (propio.isPresent() && !propio.get().getProveedorId().equals(id)) {
-                throw new BusinessException("Ya existe el proveedor propio (" + propio.get().getNombreComercial() + ").");
-            }
-        } else if (id != null && Integer.valueOf(1).equals(p.getEsPropio())) {
-            throw new BusinessException("Kampu Tours debe seguir siendo el proveedor propio.");
+        if (!dto.ofreceTransporte() && !dto.ofreceGuiado() && !dto.ofreceHospedaje() && !dto.ofreceAlimentacion()) {
+            throw new BusinessException("Marca al menos un soporte que brinda el proveedor (transporte, guiado, hospedaje o alimentación).");
         }
         p.setNombreComercial(dto.nombreComercial().trim());
         p.setRuc(ruc);
         p.setTelefono(dto.telefono() == null || dto.telefono().isBlank() ? null : dto.telefono().trim());
-        p.setEsPropio(dto.esPropio() ? 1 : 0);
+        p.setEmail(dto.email() == null || dto.email().isBlank() ? null : dto.email().trim().toLowerCase());
+        p.setOfreceTransporte(dto.ofreceTransporte() ? 1 : 0);
+        p.setOfreceGuiado(dto.ofreceGuiado() ? 1 : 0);
+        p.setOfreceHospedaje(dto.ofreceHospedaje() ? 1 : 0);
+        p.setOfreceAlimentacion(dto.ofreceAlimentacion() ? 1 : 0);
         p.setEstado(dto.estado());
     }
 }

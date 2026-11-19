@@ -19,9 +19,11 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
     private final PaqueteTourRepository paqueteRepository;
     private final SalidaProgramadaRepository salidaRepository;
     private final IFileStorageService fileStorageService;
+    private final jakarta.persistence.EntityManager em;
 
     public PaqueteTourServiceImpl(PaqueteTourRepository paqueteRepository, SalidaProgramadaRepository salidaRepository,
-                                  IFileStorageService fileStorageService) {
+                                  IFileStorageService fileStorageService, jakarta.persistence.EntityManager em) {
+        this.em = em;
         this.paqueteRepository = paqueteRepository;
         this.salidaRepository = salidaRepository;
         this.fileStorageService = fileStorageService;
@@ -45,7 +47,9 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         validar(dto);
         PaqueteTour p = new PaqueteTour();
         copiar(dto, p);
-        return PaqueteTourDTO.desde(paqueteRepository.save(p));
+        PaqueteTour guardado = paqueteRepository.saveAndFlush(p);
+        em.refresh(guardado);   // valores por defecto de la BD (cupo, mínimo, días, hora)
+        return PaqueteTourDTO.desde(guardado);
     }
 
     @Override
@@ -55,7 +59,7 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         PaqueteTour p = obtener(id);
         String imagenAnterior = p.getImagen();
         copiar(dto, p);
-        PaqueteTourDTO guardado = PaqueteTourDTO.desde(paqueteRepository.save(p));
+        PaqueteTourDTO guardado = PaqueteTourDTO.desde(paqueteRepository.saveAndFlush(p));
         if (imagenAnterior != null && !Objects.equals(imagenAnterior, p.getImagen())) {
             fileStorageService.delete(imagenAnterior);
         }
@@ -65,12 +69,11 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
     @Override
     @Transactional
     public void eliminar(Long id) {
+        // kampu_tours_v10.sql no otorga DELETE sobre PAQUETES_TOUR: se retira de la venta (INACTIVO)
         PaqueteTour p = obtener(id);
-        if (salidaRepository.existsByPaqueteId(id)) {
-            throw new BusinessException("El paquete tiene salidas programadas. Desactívalo en lugar de eliminarlo.");
-        }
-        paqueteRepository.delete(p);
-        fileStorageService.delete(p.getImagen());
+        if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El paquete ya está INACTIVO.");
+        p.setEstado("INACTIVO");
+        paqueteRepository.saveAndFlush(p);
     }
 
     @Override
@@ -85,6 +88,12 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
 
     private void validar(PaqueteTourRequestDTO dto) {
         if (dto.noches() > dto.dias()) throw new BusinessException("Las noches no pueden ser más que los días.");
+        if (dto.diasOperacion() != null && !dto.diasOperacion().contains("1")) {
+            throw new BusinessException("El paquete debe operar al menos un día de la semana.");
+        }
+        if (dto.cupoPorDefecto() != null && dto.minimoPasajeros() != null && dto.minimoPasajeros() > dto.cupoPorDefecto()) {
+            throw new BusinessException("El mínimo de pasajeros no puede ser mayor que el cupo por defecto.");
+        }
     }
 
     private void copiar(PaqueteTourRequestDTO dto, PaqueteTour p) {
@@ -95,5 +104,11 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         p.setNoches(dto.noches());
         p.setImagen(dto.imagen() == null || dto.imagen().isBlank() ? null : dto.imagen().trim());
         p.setEstado(dto.estado() == null ? "ACTIVO" : dto.estado());
+        // Sin valor: se conserva el actual (o el DEFAULT ON NULL de la tabla al crear)
+        if (dto.cupoPorDefecto() != null) p.setCupoPorDefecto(dto.cupoPorDefecto());
+        if (dto.minimoPasajeros() != null) p.setMinimoPasajeros(dto.minimoPasajeros());
+        if (dto.diasOperacion() != null) p.setDiasOperacion(dto.diasOperacion());
+        if (dto.anticipacionMinHoras() != null) p.setAnticipacionMinHoras(dto.anticipacionMinHoras());
+        if (dto.horaInicio() != null) p.setHoraInicio(dto.horaInicio());
     }
 }

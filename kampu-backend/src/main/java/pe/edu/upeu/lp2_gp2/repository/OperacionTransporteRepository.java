@@ -48,6 +48,4 @@ public interface OperacionTransporteRepository extends JpaRepository<OperacionTr
     List<OperacionTransporte> asignadasPendientes(@Param("vehiculo") Long vehiculoId, @Param("conductor") Long conductorId,
                                                   @Param("proveedor") Long proveedorId, @Param("desde") LocalDateTime desde);
 
-    @Query(value = "SELECT SEQ_CODIGO_OPERACION.NEXTVAL FROM dual", nativeQuery = true)
-    Long siguienteCodigo();
 }

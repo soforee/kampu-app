@@ -9,6 +9,22 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 | Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
 | Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind CSS 3 (compilado con Angular) · SweetAlert2 |
 
+## Versión 10 — backend y frontend alineados con `kampu_tours_v10.sql`
+
+La base de datos manda: el script `kampu-backend/src/main/resources/db/kampu_tours_v10.sql` define el flujo y la
+aplicación lo sigue (solo funcionalidad; el diseño visual es el mismo). Detalle y diagnóstico en
+[`docs/MIGRACION_BACKEND_v10.md`](docs/MIGRACION_BACKEND_v10.md).
+
+- **Reservar = paquete + fecha + cantidad** (`PKG_RESERVAS.reservar`): si no hay salida ese día, la BD la crea con las
+  reglas de venta del paquete (cupo por defecto, mínimo de pasajeros, días de operación, anticipación, hora de inicio).
+- **Huéspedes/pasajeros** (`PASAJEROS_RESERVA`) y **punto de recojo** por reserva; la reserva se **confirma sola** al
+  aprobarse un pago; la anulación registra reembolso; el cliente pide la anulación (`SOLICITUDES_ANULACION`) y Ventas la atiende.
+- **Despacho de flota**: operaciones con código `KMP-…` e historial automático por trigger; personal con catálogo de `CARGOS`.
+- **Seguridad**: contraseñas con **BCrypt** y bloqueo a los 5 intentos fallidos (lo exige la BD). El backend se conecta
+  con `KAMPU_APP` (interno) y `KAMPU_WEB` (portal del cliente); el dueño de los objetos es `KAMPU`.
+- Sin permisos `DELETE` en la mayoría de tablas: *eliminar* pasa a ser **desactivar/retirar** (estado INACTIVO, salida CANCELADA…).
+- Reemplaza en lo funcional a lo descrito en las versiones 4 y 5 (BCrypt vuelve; ya no hay particionamiento ni `VW_CUADRE_INTEGRIDAD`).
+
 ## Versión 5 — adaptación al curso y rediseño visual
 
 Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.md).
@@ -46,11 +62,11 @@ Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.m
 
 | Usuario | Contraseña | Rol | Entra a |
 |---|---|---|---|
-| `admin` | `admin123` | ADMIN | Panel completo |
-| `ventas` | `ventas123` | VENDEDOR | Panel comercial |
-| `operador` | `operador123` | OPERADOR | Panel operativo |
-| `ana.ramirez@mail.com` (o DNI `45871236`) | `cliente123` | CLIENTE | Mis paquetes |
-| `john.miller@mail.com` | `cliente123` | CLIENTE | Mis paquetes |
+| `kadmin` | `Kampu2026*` | ADMIN | Panel completo |
+| `kventas` | `Kampu2026*` | VENDEDOR | Panel comercial |
+| `koperador` | `Kampu2026*` | OPERADOR | Panel operativo |
+| `maria.rios@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
+| `emma.schneider@example.com` · `jose.vela@example.com` · `valeria.huaman@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
 
 Los demás clientes de la demo los creó Ventas y **no tienen cuenta web**: pueden activarla con *Registrarse* usando
 su **mismo documento y correo** (el procedimiento "reclama" el cliente existente y sus reservas aparecen solas).
@@ -127,12 +143,12 @@ Solo frontend; además, los datos de demostración cargan una foto del paquete M
 (`PKG_ASIGNACION`, `PKG_RUTAS`, `trg_*`, `DOMINIO_ESTADOS`) y dependencias de prueba comentadas en `pom.xml`.
 Los estados `SUSPENDIDO`, `MANTENIMIENTO` y `OCUPADO` ahora tienen color y texto propios.
 
-**Datos de demostración (`kampu_tours_v11.sql`, sección 12):** la salida *Paracas e Ica* pasa a `PROGRAMADA` (no tenía transporte
-completo) y la reserva R-0008 tiene un adelanto aprobado (estaba confirmada sin pagos).
+**Datos de demostración:** sección 13 de `kampu_tours_v10.sql` (fechas relativas a hoy). Las claves de las cuentas
+de la aplicación las fija `UsuarioInicialConfig` al arrancar el backend.
 
 ## Objetos críticos de backend (2 por categoría) y su justificación
 
-Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`, comentados (la v11 suma triggers de trazabilidad y vistas de panel: ver `docs/ACOPLAMIENTO_BD_v11.md`).
+Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`, comentados (la v10 suma `PKG_RESERVAS`, `TRG_RESERVAS_BIU`, `TRG_OPERACIONES_VALIDAR` y las vistas `VW_MANIFIESTO_SALIDA`, `VW_RECOJOS_SALIDA`, `VW_ALERTAS_OPERACION`, `VW_METRICAS_ESTADOS`, `VW_RESUMEN_CLIENTES`: ver `docs/MIGRACION_BACKEND_v10.md`).
 
 | Categoría | Objeto | Qué hace | Por qué este y no otro |
 |---|---|---|---|
@@ -187,23 +203,14 @@ ingresos fallidos usan una transacción propia para que queden). Las contraseña
 
 La pantalla permite filtrar por texto, rango de fechas (atajos Hoy / 7 días / 30 días), rol, acción, entidad y usuario;
 ver el **historial completo de un registro**; paginar en el servidor (50 por página) y **exportar a CSV** con los mismos filtros.
-Filtrar por rol aprovecha la partición de `AUDITORIA` por `rol_usuario`.
 
-## Particionamiento y roles por nivel de usuario (incluidos en `kampu_tours_v11.sql`)
+## Roles de Oracle por nivel de usuario (incluidos en `kampu_tours_v10.sql`)
 
-| Tabla | Particionada por (LIST) | Particiones | Para qué nivel |
-|---|---|---|---|
-| `AUDITORIA` | `rol_usuario` | admin · ventas · operador · cliente · sistema | El ADMIN revisa todo; cada nivel se consulta por separado. |
-| `PAGOS` | `registrado_por` | admin · ventas · cliente | Los pagos informados en el portal quedan como cola de validación de Ventas. |
-| `OPERACIONES_TRANSPORTE` | `estado` | cola del operador (PROGRAMADO, ASIGNADO, EMBARQUE, EN_RUTA) · cerradas | Cola de trabajo del Operador. `ROW MOVEMENT`: al finalizar pasa sola al histórico. |
-| `RESERVAS` | `estado_reserva` | vigentes (PENDIENTE, CONFIRMADA) · cerradas | Trabajo diario de Ventas separado de lo histórico. |
+El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` (otorgados a `KAMPU_APP`) y `ROL_CLIENTE` (otorgado a `KAMPU_WEB`),
+además de las cuentas de prueba `KADMIN`, `KVENTAS` y `KOPERADOR` para entrar directo a Oracle. El nivel de cada petición lo
+fija `PKG_SEGURIDAD_ROLES` con la identidad validada de la sesión. La v10 no usa particionamiento (funciona en cualquier XE).
 
-Además crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE` con los mismos ámbitos que la matriz
-(Ventas sin usuarios ni flota; Operador sin pagos, sin `CLIENTES` y sin montos; Cliente solo las vistas y el paquete
-del portal) para cuentas que entren directo a Oracle (reportes, SQL Developer). La aplicación usa un único usuario
-de conexión y su nivel lo controla `PKG_SEGURIDAD_ROLES`.
-
-Requisitos: opción *Partitioning* (XE 18c/21c, 23ai Free o Enterprise) y ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz. Las tablas se crean ya particionadas y los roles se respetan si ya existían.
+Requisito: ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz.
 
 ## Especificación de cambios de interfaz
 
@@ -299,25 +306,25 @@ Las mismas reglas se aplican en ambos lados: `kampu-frontend/src/app/core/utils/
   (por ejemplo letras o la "e" en campos numéricos) y los mensajes aparecen debajo de cada campo.
 - En el backend, Bean Validation rechaza los datos con estado 400 y un mensaje claro; si llega un tipo incorrecto
   (letras o decimales en un campo entero, fechas mal escritas) se indica qué campo falló.
-- Los tipos y longitudes coinciden con `kampu_tours_v11.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
+- Los tipos y longitudes coinciden con `kampu_tours_v10.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
   horario, transiciones, capacidad) las valida la base de datos con sus triggers.
 
 ## 1. Base de datos (Oracle Database 21c XE, PDB `XEPDB1`)
 
-Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`.
+Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`.
 
 1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`).
 2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
-   - `KAMPU_BD`: dueño de tablas, vistas y PL/SQL (clave `Kampu_Bd_2026`).
-   - `KAMPU_APP`: usuario con el que se conecta el backend, solo con los permisos que usa (clave `Kampu_App_2026`).
-   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` para cuentas que entren directo a Oracle.
-3. **Borra y recrea** los objetos de `KAMPU_BD` (tablas particionadas, PL/SQL, triggers, 9 vistas y datos demo con
-   **fechas relativas a hoy**). Al final verifica que todo quede `VALID` y que `VW_CUADRE_INTEGRIDAD` esté vacía;
-   si no, se detiene con el motivo.
+   - `KAMPU`: dueño de tablas, vistas y PL/SQL (clave `Kampu_Owner_2026`).
+   - `KAMPU_APP`: conexión del backend para ADMIN / VENTAS / OPERADOR (clave `Kampu_App_2026`).
+   - `KAMPU_WEB`: conexión del portal del cliente, solo con `ROL_CLIENTE` (clave `Kampu_Web_2026`).
+   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` y cuentas de prueba `KADMIN`, `KVENTAS`, `KOPERADOR`.
+3. **Borra y recrea** los objetos de `KAMPU` (18 tablas, paquetes PL/SQL, triggers, 7 vistas y datos demo con
+   **fechas relativas a hoy**). Cada bloque imprime `[OK]` (30 en total); al final todo debe quedar `VALID`.
 4. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
 
-> Se puede ejecutar las veces que haga falta. Como borra los datos de `KAMPU_BD`, exporta antes los datos reales.
-> Diagnóstico de acoplamiento BD ↔ backend y guía de ajuste: `docs/ACOPLAMIENTO_BD_v11.md`.
+> Se puede ejecutar las veces que haga falta. Como borra los datos de `KAMPU`, exporta antes los datos reales.
+> Qué cambió en el backend y el frontend para seguir este script: `docs/MIGRACION_BACKEND_v10.md`.
 
 ### Correo (boleta informativa)
 
@@ -341,7 +348,9 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 | `DB_URL`      | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
 | `DB_USERNAME` | `KAMPU_APP`                                |
 | `DB_PASSWORD` | `Kampu_App_2026`                           |
-| `DB_SCHEMA`   | `KAMPU_BD` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
+| `DB_SCHEMA`   | `KAMPU` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
+| `DB_WEB_USERNAME` | `KAMPU_WEB` (conexión del portal del cliente) |
+| `DB_WEB_PASSWORD` | `Kampu_Web_2026` |
 
 Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
 
@@ -359,14 +368,14 @@ cd kampu-backend
 
 - Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
 - Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
-- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU_BD` (si falta una columna, no arranca y dice cuál).
+- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU` (si falta una columna, no arranca y dice cuál).
 
 ### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201
 
 El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
 esquema, contenedor y servicio se conectó. Opciones:
 
-1. Ejecuta `kampu_tours_v11.sql` como `SYSTEM` en esa misma PDB (crea `KAMPU_BD` y `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
+1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea `KAMPU`, `KAMPU_APP` y `KAMPU_WEB`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
 2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
    las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
 
@@ -385,7 +394,7 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 
 ## 4. Pruebas realizadas
 
-**Verificación de integridad:** `SELECT * FROM KAMPU_BD.VW_CUADRE_INTEGRIDAD;` debe devolver 0 filas (anuladas sin dinero, confirmadas con pago, cupos y montos cuadrados). El script de instalación lo comprueba al terminar.
+**Verificación v10:** script instalado en Oracle 21c XE (`XEPDB1`) con 30 `[OK]`, backend arrancado con `ddl-auto=validate`, 56 pruebas de API del flujo nuevo (reserva por paquete y fecha, pasajeros, recojo, confirmación automática al pagar, anulación con reembolso, solicitudes, portal con `KAMPU_WEB`, registro, salidas, flota, operaciones con historial, auditoría) y recorrido de las pantallas de los cuatro roles.
 
 - Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
   validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,

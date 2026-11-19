@@ -70,9 +70,11 @@ public class ClienteServiceImpl implements IClienteService {
     @Override
     @Transactional
     public void eliminar(Long id) {
+        // kampu_tours_v10.sql no otorga DELETE sobre CLIENTES: la cuenta se desactiva (estado_cuenta INACTIVO)
         Cliente c = obtener(id);
-        if (reservaRepository.existsByClienteId(id)) throw new BusinessException("El cliente tiene reservas registradas.");
-        clienteRepository.delete(c);
+        if ("INACTIVO".equals(c.getEstadoCuenta())) throw new BusinessException("El cliente ya está INACTIVO.");
+        c.setEstadoCuenta("INACTIVO");
+        clienteRepository.saveAndFlush(c);
     }
 
     private Cliente obtener(Long id) {
@@ -112,5 +114,6 @@ public class ClienteServiceImpl implements IClienteService {
         c.setNumeroDocumento(documento);
         c.setEmail(dto.email().trim().toLowerCase());
         c.setTelefono(dto.telefono().trim());
+        c.setNacionalidad(dto.nacionalidad() == null || dto.nacionalidad().isBlank() ? null : dto.nacionalidad().trim());
     }
 }

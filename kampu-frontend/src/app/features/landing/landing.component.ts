@@ -104,7 +104,7 @@ export class LandingComponent {
     const inicio = desde && desde > hoyStr ? desde : hoyStr;
     const fechas = this.salidas()
       .filter(s => s.paqueteId === paqueteId && s.cuposDisponibles > 0)
-      .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA')
+      .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA')
       .filter(s => s.fechaInicio >= inicio)
       .map(s => s.fechaInicio)
       .sort();

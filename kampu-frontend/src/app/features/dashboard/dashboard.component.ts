@@ -159,7 +159,7 @@ export class DashboardComponent {
 
   // ---------- Barras de progreso ----------
   progreso = computed(() => {
-    const proximas = this.store.salidas().filter(s => (s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA') && s.fechaFin >= this.fechaLocal(new Date()));
+    const proximas = this.store.salidas().filter(s => (s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA') && s.fechaFin >= this.fechaLocal(new Date()));
     const vendidos = proximas.reduce((a, s) => a + s.cuposMaximos - s.cuposDisponibles, 0);
     const cupos = proximas.reduce((a, s) => a + s.cuposMaximos, 0);
     const barras: { texto: string; valor: string; total: string; pct: number }[] = [
@@ -193,22 +193,22 @@ export class DashboardComponent {
     return r.cuposMaximos ? Math.round((r.cuposMaximos - r.cuposDisponibles) * 100 / r.cuposMaximos) : 0;
   }
 
-  // Actualizar el estado de ejecución (ACTUALIZAR_EJECUCION: Admin, Ventas y Operador)
-  // Confirmar: PROGRAMADA -> CONFIRMADA (exige transporte) · Terminar: EN_CURSO -> COMPLETADA
-  // Solo se ofrece confirmar si hay pasajeros (el backend además exige guía y transporte)
+  // Ciclo de la salida (v10, ACTUALIZAR_EJECUCION: Admin, Ventas y Operador)
+  // Garantizar: PROGRAMADA -> GARANTIZADA (la BD lo hace sola al llegar al mínimo; aquí se adelanta)
+  // Terminar: GARANTIZADA -> COMPLETADA (sus reservas confirmadas pasan a COMPLETADA)
   puedeIniciar(r: ResumenPaquete) { return this.ejecuta() && r.estadoSalida === 'PROGRAMADA' && r.estadoEjecucion !== 'TERMINADO' && r.pasajeros > 0; }
-  puedeTerminar(r: ResumenPaquete) { return this.ejecuta() && r.estadoEjecucion === 'EN_CURSO' && r.estadoSalida !== 'COMPLETADA'; }
+  puedeTerminar(r: ResumenPaquete) { return this.ejecuta() && r.estadoSalida === 'GARANTIZADA' && r.estadoEjecucion !== 'POR_EMPEZAR'; }
 
-  async cambiar(r: ResumenPaquete, estado: 'CONFIRMADA' | 'COMPLETADA') {
+  async cambiar(r: ResumenPaquete, estado: 'GARANTIZADA' | 'COMPLETADA') {
     const texto = estado === 'COMPLETADA'
       ? 'Las reservas confirmadas pasarán a COMPLETADA y la salida ya no podrá modificarse.'
-      : 'El grupo queda confirmado: debe tener guía, pasajeros y transporte para todos.';
+      : 'La salida queda garantizada: se opera aunque no llegue al mínimo de pasajeros.';
     if (!(await this.alerts.confirm(texto, r.paqueteNombre, 'Continuar'))) return;
     this.procesando.set(r.salidaId);
     this.store.marcarEjecucion(r.salidaId, estado).subscribe({
       next: () => {
         this.procesando.set(null);
-        this.alerts.toast(estado === 'COMPLETADA' ? 'Salida terminada' : 'Salida confirmada');
+        this.alerts.toast(estado === 'COMPLETADA' ? 'Salida terminada' : 'Salida garantizada');
         this.store.cargarSalidas();
         this.store.cargarReservas();   // al terminar, sus reservas pasan a COMPLETADA
       },

@@ -5,16 +5,29 @@
     <div detalle class="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-500">
       <app-badge [estado]="r.estadoReserva" />
       <app-badge [estado]="r.estadoPago" />
-      <span>Creada el {{ r.fechaReserva | date:'dd/MM/yyyy HH:mm' }}</span>
+      <span>Creada el {{ r.fechaReserva | date:'dd/MM/yyyy HH:mm' }} · {{ etiqueta(r.canal) }}@if (r.usuarioRegistra) { · por {{ r.usuarioRegistra }} }</span>
     </div>
       @if (gestiona) {
-      @if (r.estadoReserva === 'PENDIENTE') { <button type="button" class="btn-brand" (click)="confirmar()"><app-icon name="check" size="w-4 h-4" /> Confirmar</button> }
-      @if (r.estadoReserva === 'CONFIRMADA') { <button type="button" class="btn-dark" (click)="completar()"><app-icon name="flag" size="w-4 h-4" /> Marcar completada</button> }
-      @if (r.estadoReserva === 'PENDIENTE' || r.estadoReserva === 'CONFIRMADA') {
+      @if (abierta()) {
         <button type="button" class="btn-danger" (click)="anular()"><app-icon name="x" size="w-4 h-4" /> Anular</button>
       }
       }
   </app-page-header>
+
+  @if (r.estadoReserva === 'PENDIENTE') {
+    <div class="alert-info mb-6"><span>Se confirma sola al aprobarse el primer pago (adelanto) y se completa sola cuando su salida termina.</span></div>
+  }
+  @if (solicitud(); as s) {
+    <div class="alert-warn mb-6 flex flex-wrap items-center justify-between gap-3">
+      <span>El cliente pidió anular esta reserva desde el portal el {{ s.fechaSolicitud | date:'dd/MM/yyyy HH:mm' }}: “{{ s.motivo }}”.</span>
+      @if (gestiona) {
+        <span class="flex gap-2">
+          <button type="button" class="btn-danger btn-sm" [disabled]="store.ocupado()" (click)="atenderSolicitud(true)"><app-icon name="check" size="w-3.5 h-3.5" /> Aprobar y anular</button>
+          <button type="button" class="btn-light btn-sm" [disabled]="store.ocupado()" (click)="atenderSolicitud(false)"><app-icon name="x" size="w-3.5 h-3.5" /> Rechazar</button>
+        </span>
+      }
+    </div>
+  }
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
     <div class="lg:col-span-2 space-y-6 min-w-0">
@@ -34,14 +47,25 @@
           </div>
           <div class="py-1"><dt class="mb-0.5 text-xs text-zinc-500">Cliente</dt><dd class="font-medium">{{ nombreCliente() }}@if (cliente()?.cuentaWeb) { <span class="chip ml-1.5" title="Ve su paquete en el portal">Web</span> }</dd></div>
           <div class="py-1"><dt class="mb-0.5 text-xs text-zinc-500">Contacto</dt><dd class="font-medium">{{ telefonoCliente() || '—' }}</dd><dd class="text-xs text-zinc-500 mt-0.5 truncate">{{ emailCliente() || 'Sin correo' }}</dd></div>
+          <div class="py-1 sm:col-span-2"><dt class="mb-0.5 text-xs text-zinc-500">Punto de recojo</dt>
+            @if (gestiona && abierta()) {
+              <dd class="flex flex-wrap gap-2">
+                <select class="field max-w-sm" [(ngModel)]="recojoSel" aria-label="Punto de recojo">
+                  @for (p of puntos(); track p.lugarId) { <option [ngValue]="p.lugarId">{{ p.nombre }} · {{ p.horaRecojo }}</option> }
+                </select>
+                <button type="button" class="btn-light btn-sm" [disabled]="store.ocupado() || recojoSel === r.lugarRecojoId" (click)="cambiarRecojo()">Guardar</button>
+              </dd>
+            } @else { <dd class="font-medium">{{ r.puntoRecojo ?? 'Oficina de la agencia' }}</dd> }
+          </div>
         </dl>
         @if (r.observaciones) {
           <div class="mt-5 border-t border-zinc-100 pt-4 text-sm"><span class="text-zinc-500">Observaciones:</span> {{ r.observaciones }}</div>
         }
         @if (r.estadoReserva === 'ANULADA') {
           <div class="alert-error mt-5"><div>
-            Anulada por <strong>{{ usuarioAnula() }}</strong>.
-            @if (r.formaReembolso) { Reembolso por <strong>{{ r.formaReembolso }}</strong>. }
+            Anulada por <strong>{{ usuarioAnula() }}</strong>@if (r.fechaAnulacion) { el {{ r.fechaAnulacion | date:'dd/MM/yyyy HH:mm' }} }.
+            @if (r.motivoAnulacion) { Motivo: {{ r.motivoAnulacion }}. }
+            @if (r.formaReembolso) { Reembolso por <strong>{{ etiqueta(r.formaReembolso) }}</strong>. }
           </div></div>
         }
       </section>
@@ -67,10 +91,31 @@
         </div>
       </section>
       <section class="card overflow-hidden">
-        <div class="card-header"><h2 class="card-title">Pasajeros <span class="chip">{{ pasajeros().length }}</span></h2></div>
+        <div class="card-header flex flex-wrap items-center justify-between gap-3">
+          <h2 class="card-title">Pasajeros <span class="chip">{{ pasajeros().length }} / {{ r.numeroViajeros }}</span></h2>
+          @if (gestiona && abierta() && faltanPasajeros() > 0 && !agregando()) {
+            <button type="button" class="btn-light btn-sm" (click)="agregando.set(true)"><app-icon name="plus" size="w-3.5 h-3.5" /> Registrar pasajero</button>
+          }
+        </div>
+        @if (abierta() && faltanPasajeros() > 0) {
+          <div class="alert-warn mx-5 mt-4 !py-2.5 !text-xs"><span>Faltan registrar {{ faltanPasajeros() }} pasajero(s): el traslado no puede embarcar sin el manifiesto completo.</span></div>
+        }
+        @if (agregando()) {
+          <div class="border-b border-zinc-100 p-5 grid sm:grid-cols-6 gap-3">
+            <div class="sm:col-span-6"><label class="label req">Nombre completo</label><input class="field" maxlength="150" [(ngModel)]="nuevoPasajero.nombreCompleto" (blur)="vp.tocar('nombre')" [class.field-invalid]="vp.error('nombre')" (beforeinput)="filtrar($event, 'nombre')" (paste)="pegar($event, 'nombre')">@if (vp.error('nombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div class="sm:col-span-2"><label class="label req">Tipo doc.</label><select class="field" [(ngModel)]="nuevoPasajero.tipoDocumento" (ngModelChange)="vp.tocar('documento')">@for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }</select></div>
+            <div class="sm:col-span-4"><label class="label req">N° de documento</label><input class="field" [maxlength]="nuevoPasajero.tipoDocumento === 'DNI' ? 8 : 12" [(ngModel)]="nuevoPasajero.numeroDocumento" (blur)="vp.tocar('documento')" [class.field-invalid]="vp.error('documento')" (beforeinput)="filtrar($event, nuevoPasajero.tipoDocumento === 'DNI' ? 'dni' : 'alfanumerico')" (paste)="pegar($event, nuevoPasajero.tipoDocumento === 'DNI' ? 'dni' : 'alfanumerico')">@if (vp.error('documento'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div class="sm:col-span-3"><label class="label">Nacionalidad <span class="opt">Opcional</span></label><input class="field" maxlength="50" [(ngModel)]="nuevoPasajero.nacionalidad" (blur)="vp.tocar('nacionalidad')" [class.field-invalid]="vp.error('nacionalidad')">@if (vp.error('nacionalidad'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div class="sm:col-span-3"><label class="label">Fecha de nacimiento <span class="opt">Opcional</span></label><input type="date" class="field" min="1900-01-01" [(ngModel)]="nuevoPasajero.fechaNacimiento"></div>
+            <div class="sm:col-span-6 flex justify-end gap-2">
+              <button type="button" class="btn-light" (click)="agregando.set(false)">Cancelar</button>
+              <button type="button" class="btn-dark" [disabled]="store.ocupado()" (click)="agregarPasajero()"><app-icon name="check" size="w-4 h-4" /> Registrar</button>
+            </div>
+          </div>
+        }
         <div class="overflow-x-auto">
           <table class="tbl">
-            <thead><tr><th class="th">Nombre</th><th class="th">Tipo doc.</th><th class="th">N° documento</th><th class="th">Nacionalidad</th><th class="th">Nacimiento</th></tr></thead>
+            <thead><tr><th class="th">Nombre</th><th class="th">Tipo doc.</th><th class="th">N° documento</th><th class="th">Nacionalidad</th><th class="th">Nacimiento</th><th class="th"></th></tr></thead>
             <tbody>
               @for (p of pasajeros(); track p.pasajeroId) {
                 <tr>
@@ -79,6 +124,7 @@
                   <td class="td">{{ p.numeroDocumento }}</td>
                   <td class="td">{{ p.nacionalidad }}</td>
                   <td class="td">{{ p.fechaNacimiento | date:'dd/MM/yyyy' }}</td>
+                  <td class="td text-right">@if (gestiona && abierta()) { <button type="button" class="icon-btn-danger" title="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(p.pasajeroId, p.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }</td>
                 </tr>
               }
             </tbody>
@@ -95,7 +141,7 @@
               @for (p of pagos(); track p.pagoId) {
                 <tr>
                   <td class="td">{{ p.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
-                  <td class="td">{{ p.metodoPago }}</td>
+                  <td class="td">{{ etiqueta(p.metodoPago) }}@if (p.registradoPor === 'CLIENTE') { <span class="chip ml-1.5">Portal</span> }</td>
                   <td class="td text-zinc-500">{{ p.codigoTransaccion }}</td>
                   <td class="td text-right font-medium">{{ p.monto | currency:p.moneda + ' ' }}</td>
                   <td class="td"><app-badge [estado]="p.estadoTransaccion" /></td>
@@ -132,7 +178,7 @@
               <div class="sm:col-span-3">
                 <label class="label req">Método</label>
                 <select class="field" [(ngModel)]="metodo">
-                  @for (m of metodos; track m) { <option [value]="m">{{ m }}</option> }
+                  @for (m of metodos; track m) { <option [value]="m">{{ etiqueta(m) }}</option> }
                 </select>
               </div>
               <div class="sm:col-span-3">
@@ -142,7 +188,7 @@
               <div class="sm:col-span-3">
                 <label class="label req">Estado</label>
                 <select class="field" [(ngModel)]="estadoTx">
-                  <option value="APROBADO">Aprobado</option>
+                  <option value="APROBADO">Aprobado (confirma la reserva si es el primer pago)</option>
                   <option value="PENDIENTE">Pendiente de validación</option>
                 </select>
               </div>
