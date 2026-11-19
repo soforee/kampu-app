@@ -9,7 +9,7 @@ las reglas y las llamadas.
 | Elemento | v10 |
 |---|---|
 | Script | `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`, como `SYSTEM` en `XEPDB1` (imprime 30 `[OK]`) |
-| Dueño de objetos | `KAMPU` (`DB_SCHEMA`, `CURRENT_SCHEMA` y `hibernate.default_schema`) |
+| Dueño de objetos | `KAMPU_BD` (`DB_SCHEMA`, `CURRENT_SCHEMA` y `hibernate.default_schema`) |
 | Conexión interna | `KAMPU_APP` / `Kampu_App_2026` → `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` |
 | Conexión del portal | `KAMPU_WEB` / `Kampu_Web_2026` (`DB_WEB_USERNAME`, `DB_WEB_PASSWORD`) → `ROL_CLIENTE` |
 | JPA | `ddl-auto: validate`: el backend no arranca si una entidad no coincide con la tabla |
