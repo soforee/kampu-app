@@ -21,7 +21,7 @@ aplicación lo sigue (solo funcionalidad; el diseño visual es el mismo). Detall
   aprobarse un pago; la anulación registra reembolso; el cliente pide la anulación (`SOLICITUDES_ANULACION`) y Ventas la atiende.
 - **Despacho de flota**: operaciones con código `KMP-…` e historial automático por trigger; personal con catálogo de `CARGOS`.
 - **Seguridad**: contraseñas con **BCrypt** y bloqueo a los 5 intentos fallidos (lo exige la BD). El backend se conecta
-  con `KAMPU_APP` (interno) y `KAMPU_WEB` (portal del cliente); el dueño de los objetos es `KAMPU_BD`.
+  solo con `KAMPU_APP`, que recibe los roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`; el dueño de los objetos es `KAMPU_BD`.
 - Sin permisos `DELETE` en la mayoría de tablas: *eliminar* pasa a ser **desactivar/retirar** (estado INACTIVO, salida CANCELADA…).
 - Reemplaza en lo funcional a lo descrito en las versiones 4 y 5 (BCrypt vuelve; ya no hay particionamiento ni `VW_CUADRE_INTEGRIDAD`).
 
@@ -206,9 +206,8 @@ ver el **historial completo de un registro**; paginar en el servidor (50 por pá
 
 ## Roles de Oracle por nivel de usuario (incluidos en `kampu_tours_v10.sql`)
 
-El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` (otorgados a `KAMPU_APP`) y `ROL_CLIENTE` (otorgado a `KAMPU_WEB`),
-además de las cuentas de prueba `KADMIN`, `KVENTAS` y `KOPERADOR` para entrar directo a Oracle. El nivel de cada petición lo
-fija `PKG_SEGURIDAD_ROLES` con la identidad validada de la sesión. La v10 no usa particionamiento (funciona en cualquier XE).
+El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`, todos otorgados a `KAMPU_APP`; no crea usuarios de prueba
+ni una conexión aparte para el portal. El nivel de cada petición lo fija `PKG_SEGURIDAD_ROLES` con la identidad validada de la sesión. La v10 no usa particionamiento (funciona en cualquier XE).
 
 Requisito: ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz.
 
@@ -317,9 +316,9 @@ Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`.
 2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
    - `KAMPU_BD`: dueño de tablas, vistas y PL/SQL. Si ya existe, **se conserva el usuario y su clave**
      (si no existe, se crea con la clave `Kampu_Bd_2026`).
-   - `KAMPU_APP`: conexión del backend para ADMIN / VENTAS / OPERADOR (clave `Kampu_App_2026`).
-   - `KAMPU_WEB`: conexión del portal del cliente, solo con `ROL_CLIENTE` (clave `Kampu_Web_2026`).
-   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` y cuentas de prueba `KADMIN`, `KVENTAS`, `KOPERADOR`.
+   - `KAMPU_APP`: única conexión del backend, personal interno y portal de clientes (clave `Kampu_App_2026`).
+   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`, otorgados a `KAMPU_APP`.
+   - Si existen de una instalación anterior, elimina los usuarios `KAMPU_WEB`, `KADMIN`, `KVENTAS` y `KOPERADOR`.
 3. **Borra y recrea** los objetos de `KAMPU_BD` (18 tablas, paquetes PL/SQL, triggers, 7 vistas y datos demo con
    **fechas relativas a hoy**). Cada bloque imprime `[OK]` (30 en total); al final todo debe quedar `VALID`.
 4. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
@@ -350,8 +349,6 @@ Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar 
 | `DB_USERNAME` | `KAMPU_APP`                                |
 | `DB_PASSWORD` | `Kampu_App_2026`                           |
 | `DB_SCHEMA`   | `KAMPU_BD` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
-| `DB_WEB_USERNAME` | `KAMPU_WEB` (conexión del portal del cliente) |
-| `DB_WEB_PASSWORD` | `Kampu_Web_2026` |
 
 Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
 
@@ -376,7 +373,7 @@ cd kampu-backend
 El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
 esquema, contenedor y servicio se conectó. Opciones:
 
-1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP` y `KAMPU_WEB`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
+1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
 2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
    las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
 
@@ -395,7 +392,7 @@ Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `htt
 
 ## 4. Pruebas realizadas
 
-**Verificación v10:** script instalado en Oracle 21c XE (`XEPDB1`) con 30 `[OK]`, backend arrancado con `ddl-auto=validate`, 56 pruebas de API del flujo nuevo (reserva por paquete y fecha, pasajeros, recojo, confirmación automática al pagar, anulación con reembolso, solicitudes, portal con `KAMPU_WEB`, registro, salidas, flota, operaciones con historial, auditoría) y recorrido de las pantallas de los cuatro roles.
+**Verificación v10:** script instalado en Oracle 21c XE (`XEPDB1`) con 30 `[OK]`, backend arrancado con `ddl-auto=validate`, 56 pruebas de API del flujo nuevo (reserva por paquete y fecha, pasajeros, recojo, confirmación automática al pagar, anulación con reembolso, solicitudes, portal del cliente, registro, salidas, flota, operaciones con historial, auditoría) y recorrido de las pantallas de los cuatro roles.
 
 - Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
   validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,

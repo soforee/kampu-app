@@ -1,13 +1,14 @@
 package pe.edu.upeu.lp2_gp2.repository;
 
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import pe.edu.upeu.lp2_gp2.seguridad.PortalSesionDataSource;
 
+import javax.sql.DataSource;
+
 /**
- * Acceso del portal de clientes por la conexión KAMPU_WEB (solo ROL_CLIENTE).
+ * Acceso del portal de clientes por la conexión de la aplicación con la identidad del cliente.
  * Cada llamada toma su propia conexión (autocommit): las operaciones del portal son
  * procedimientos de PKG_GESTION_PAQUETES_CLIENTE, atómicos por sí mismos.
  */
@@ -15,8 +16,8 @@ import pe.edu.upeu.lp2_gp2.seguridad.PortalSesionDataSource;
 public class PortalJdbc {
     private final JdbcTemplate jdbc;
 
-    public PortalJdbc(@Qualifier("portalDataSource") PortalSesionDataSource dataSource) {
-        this.jdbc = new JdbcTemplate(dataSource);
+    public PortalJdbc(DataSource dataSource) {
+        this.jdbc = new JdbcTemplate(new PortalSesionDataSource(dataSource));
     }
 
     public JdbcTemplate jdbc() {

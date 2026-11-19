@@ -9,10 +9,10 @@ import java.sql.SQLException;
 import java.sql.Types;
 
 /**
- * Pool del portal (KAMPU_WEB). Al tomar una conexión:
+ * Conexión del portal de clientes: la misma de la aplicación (KAMPU_APP, que tiene ROL_CLIENTE).
+ * Al tomarla:
  *  - cliente de la petición -> PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente(correo)
  *  - sin cliente (registro, login)      -> PKG_GESTION_PAQUETES_CLIENTE.cerrar_sesion_cliente
- * KAMPU_WEB no tiene EXECUTE sobre PKG_SEGURIDAD_ROLES: solo entra por ese paquete.
  */
 public class PortalSesionDataSource extends DelegatingDataSource {
 

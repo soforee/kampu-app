@@ -11,7 +11,7 @@ las reglas y las llamadas.
 | Script | `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`, como `SYSTEM` en `XEPDB1` (imprime 30 `[OK]`) |
 | Dueño de objetos | `KAMPU_BD` (`DB_SCHEMA`, `CURRENT_SCHEMA` y `hibernate.default_schema`) |
 | Conexión interna | `KAMPU_APP` / `Kampu_App_2026` → `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` |
-| Conexión del portal | `KAMPU_WEB` / `Kampu_Web_2026` (`DB_WEB_USERNAME`, `DB_WEB_PASSWORD`) → `ROL_CLIENTE` |
+| Roles | `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`, todos otorgados a `KAMPU_APP` (sin usuarios de prueba ni conexión aparte para el portal) |
 | JPA | `ddl-auto: validate`: el backend no arranca si una entidad no coincide con la tabla |
 | Cuentas de la app | `kadmin`, `kventas`, `koperador`; clientes `maria.rios@example.com`, `emma.schneider@example.com`, `jose.vela@example.com`, `valeria.huaman@example.com`; clave `Kampu2026*` (la fija `UsuarioInicialConfig` al arrancar) |
 
@@ -24,7 +24,7 @@ con el comentario `(corregido)`.
 | Tema | Antes (backend v5) | v10 | Ajuste en el backend |
 |---|---|---|---|
 | Contraseñas | Texto plano | `CHK_USU_HASH` exige BCrypt (≥ 60) e `INTENTOS_FALLIDOS` | `Claves` (BCrypt, `spring-security-crypto`), bloqueo a los 5 intentos en `AuthServiceImpl` |
-| Identidad de sesión | Un solo usuario de conexión | `PKG_SEGURIDAD_ROLES` valida la identidad; cliente por `KAMPU_WEB` | `SesionOracleConfig` + `DataSourceConfig` (dos DataSources) + `PortalSesionDataSource`/`PortalJdbc` |
+| Identidad de sesión | Un solo usuario de conexión | `PKG_SEGURIDAD_ROLES` valida la identidad; cliente por `PKG_GESTION_PAQUETES_CLIENTE` | `SesionOracleConfig` + `PortalSesionDataSource`/`PortalJdbc` sobre la conexión `KAMPU_APP` |
 | Reserva | Cliente + salida + `DETALLE_RESERVA` | `PKG_RESERVAS.reservar(paquete, fecha, cantidad)`; montos y estados los calcula `TRG_RESERVAS_BIU` | `ReservaServiceImpl.crear` llama al paquete; columnas calculadas como solo lectura y `refresh` tras guardar. Se eliminaron `DetalleReserva` y su repositorio |
 | Pasajeros | Detalle de reserva | `PASAJEROS_RESERVA` (`TRG_PASAJEROS_VALIDAR`: no más que la cantidad, documento único) | Endpoints `/reservas/{id}/pasajeros` y `DELETE /pasajeros/{id}` |
 | Confirmación | Manual con pago | Automática al aprobar un pago (`recalcular`) | `PagoServiceImpl` solo registra/aprueba; la reserva se relee |
@@ -34,7 +34,7 @@ con el comentario `(corregido)`.
 | Paquetes | Datos básicos | Reglas de venta (`CUPO_POR_DEFECTO`, `MINIMO_PASAJEROS`, `DIAS_OPERACION`, `ANTICIPACION_MIN_HORAS`, `HORA_INICIO`) e itinerario (`PAQUETE_ITINERARIO`) | Campos nuevos en DTO; `/paquetes/{id}/calendario` e `/itinerario` (CRUD) en `CatalogoService` |
 | Personal | Cargo como texto | Catálogo `CARGOS` (`FK_PERS_CARGO`), `TRG_PERSONAL_VALIDAR` | Entidad `Cargo`, `GET /personal/cargos` |
 | Operaciones | Código e historial en Java | Código `KMP-…` e historial en `TRG_OPERACIONES_VALIDAR` | `codigo` solo lectura; se quitó el historial manual de `OperacionTransporteServiceImpl` |
-| Portal del cliente | Vista `VW_PAQUETES_CLIENTE` por JPA | `PKG_GESTION_PAQUETES_CLIENTE` (reservar, pasajeros, recojo, solicitar anulación, iniciar pago, detalle) | `PortalClienteService/Controller` vía `KAMPU_WEB`; se eliminó `VistaPaqueteCliente` |
+| Portal del cliente | Vista `VW_PAQUETES_CLIENTE` por JPA | `PKG_GESTION_PAQUETES_CLIENTE` (reservar, pasajeros, recojo, solicitar anulación, iniciar pago, detalle) | `PortalClienteService/Controller` (ROL_CLIENTE); se eliminó `VistaPaqueteCliente` |
 | Bajas | `DELETE` | Sin permiso `DELETE` en la mayoría de tablas | Eliminar = desactivar (`INACTIVO`), retirar paquete, cancelar salida |
 | Auditoría | Listener JPA | Triggers propios para varios campos (pago, usuario) | `AuditoriaHibernateListener` ignora esos campos/altas, quita el prefijo de esquema y `RegistroAuditoria` recorta por **bytes** UTF-8 |
 | Errores | Nombres de restricciones v5 | Nuevos nombres (`UQ_SAL_PAQUETE_FECHA`, `CHK_PAQ_CUPOS`, …) | `ErroresOracle` traduce cada restricción a un mensaje en español; los `ORA-20xxx` se muestran tal cual |
@@ -56,7 +56,7 @@ con el comentario `(corregido)`.
 - Oracle 21c XE (`XEPDB1`) limpio: script v10 instalado con 30 `[OK]` y todos los objetos `VALID`.
 - Backend arrancado con `ddl-auto=validate` sin diferencias.
 - 56/56 pruebas de API del flujo: inicios de sesión y bloqueo, reserva por paquete y fecha, límite de pasajeros, recojo,
-  confirmación automática al pagar, anulación con reembolso, solicitudes, portal con `KAMPU_WEB`, registro de clientes,
+  confirmación automática al pagar, anulación con reembolso, solicitudes, portal del cliente, registro de clientes,
   salidas (manual, garantizada, cancelar), reglas de personal/proveedor/vehículo, operaciones con historial por trigger,
   paquetes e itinerario, resumen y auditoría.
 - `ng build` sin errores y recorrido con Playwright de las pantallas de los cuatro roles.
