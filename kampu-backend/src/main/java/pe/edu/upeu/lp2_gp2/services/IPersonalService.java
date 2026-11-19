@@ -11,4 +11,6 @@ public interface IPersonalService {
     PersonalDTO crear(PersonalRequestDTO dto);
     PersonalDTO actualizar(Long id, PersonalRequestDTO dto);
     void eliminar(Long id);
+
+    java.util.List<pe.edu.upeu.lp2_gp2.dto.CargoDTO> cargos();
 }

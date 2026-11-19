@@ -1,19 +1,21 @@
 package pe.edu.upeu.lp2_gp2.dto;
 
-import pe.edu.upeu.lp2_gp2.entity.DetalleReserva;
 import pe.edu.upeu.lp2_gp2.entity.Reserva;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// Cabecera (RESERVAS) + detalle de la salida reservada (DETALLE_RESERVA)
+// RESERVAS (v10): una reserva = un paquete en una fecha (salida)
 public record ReservaDTO(
         Long reservaId,
+        String codigoReserva,
         Long clienteId,
-        Long detalleId,
         Long salidaId,
+        Long paqueteId,
         LocalDateTime fechaReserva,
+        // cantidad_pasajeros: cupos tomados
         Integer numeroViajeros,
+        Integer pasajerosRegistrados,
         BigDecimal precioUnitario,
         BigDecimal descuento,
         BigDecimal montoTotal,
@@ -21,25 +23,31 @@ public record ReservaDTO(
         BigDecimal saldo,
         String estadoReserva,
         String estadoPago,
+        String canal,
         String observaciones,
         String formaReembolso,
+        String motivoAnulacion,
+        LocalDateTime fechaAnulacion,
         Long usuarioAnulaId,
         // Usuario que anuló (así Ventas lo ve sin necesitar permiso para listar usuarios)
         String usuarioAnula,
-        LocalDateTime boletaEnviadaEn
+        String usuarioRegistra,
+        Long lugarRecojoId,
+        String puntoRecojo,
+        LocalDateTime boletaEnviadaEn,
+        // Solicitud de anulación del portal pendiente de atender
+        Long solicitudPendienteId
 ) {
-    public static ReservaDTO desde(Reserva r, DetalleReserva d) {
-        return desde(r, d, null);
-    }
-
-    public static ReservaDTO desde(Reserva r, DetalleReserva d, String usuarioAnula) {
+    public static ReservaDTO desde(Reserva r, Long paqueteId, int pasajeros, String usuarioAnula, String usuarioRegistra,
+                                   String puntoRecojo, Long solicitudPendienteId) {
         BigDecimal pagado = r.getMontoPagado() == null ? BigDecimal.ZERO : r.getMontoPagado();
         BigDecimal total = r.getMontoTotal() == null ? BigDecimal.ZERO : r.getMontoTotal();
-        return new ReservaDTO(r.getReservaId(), r.getClienteId(),
-                d == null ? null : d.getDetalleId(), d == null ? null : d.getSalidaId(), r.getFechaReserva(),
-                d == null ? 0 : d.getCantidad(), d == null ? null : d.getPrecioUnitario(),
-                d == null ? BigDecimal.ZERO : d.getDescuento(), total, pagado, total.subtract(pagado).max(BigDecimal.ZERO),
-                r.getEstadoReserva(), r.getEstadoPago(), r.getObservaciones() == null ? "" : r.getObservaciones(),
-                r.getFormaReembolso(), r.getUsuarioAnulaId(), usuarioAnula, r.getBoletaEnviadaEn());
+        BigDecimal saldo = "ANULADA".equals(r.getEstadoReserva()) ? BigDecimal.ZERO : total.subtract(pagado).max(BigDecimal.ZERO);
+        return new ReservaDTO(r.getReservaId(), r.getCodigoReserva(), r.getClienteId(), r.getSalidaId(), paqueteId,
+                r.getFechaReserva(), r.getCantidadPasajeros(), pasajeros, r.getPrecioUnitario(),
+                r.getDescuento() == null ? BigDecimal.ZERO : r.getDescuento(), total, pagado, saldo,
+                r.getEstadoReserva(), r.getEstadoPago(), r.getCanal(), r.getObservaciones() == null ? "" : r.getObservaciones(),
+                r.getFormaReembolso(), r.getMotivoAnulacion(), r.getFechaAnulacion(), r.getUsuarioAnulaId(), usuarioAnula,
+                usuarioRegistra, r.getLugarRecojoId(), puntoRecojo, r.getBoletaEnviadaEn(), solicitudPendienteId);
     }
 }

@@ -5,7 +5,7 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-// Proveedores de transporte y personal. es_propio = 1: Kampu Tours (único, uq_prov_propio).
+// PROVEEDORES (v10): solo terceros. Lo propio de Kampu no tiene proveedor (proveedor_id NULL en PERSONAL y VEHICULOS).
 @Entity
 @DynamicUpdate
 @Table(name = "PROVEEDORES")
@@ -15,20 +15,32 @@ public class Proveedor {
     @Column(name = "proveedor_id")
     private Long proveedorId;
 
-    @Column(name = "nombre_comercial", nullable = false, length = 150)
+    @Column(name = "nombre_comercial")
     private String nombreComercial;
 
     @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(name = "ruc", nullable = false, length = 11)
+    @Column(name = "ruc")
     private String ruc;
 
-    @Column(name = "telefono", length = 20)
+    @Column(name = "telefono")
     private String telefono;
 
-    @Column(name = "es_propio", nullable = false)
-    private Integer esPropio;
+    @Column(name = "email")
+    private String email;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "ofrece_transporte")
+    private Integer ofreceTransporte;
+
+    @Column(name = "ofrece_guiado")
+    private Integer ofreceGuiado;
+
+    @Column(name = "ofrece_hospedaje")
+    private Integer ofreceHospedaje;
+
+    @Column(name = "ofrece_alimentacion")
+    private Integer ofreceAlimentacion;
+
+    @Column(name = "estado")
     private String estado;
 
     public Proveedor() {
@@ -66,12 +78,44 @@ public class Proveedor {
         this.telefono = telefono;
     }
 
-    public Integer getEsPropio() {
-        return esPropio;
+    public String getEmail() {
+        return email;
     }
 
-    public void setEsPropio(Integer esPropio) {
-        this.esPropio = esPropio;
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public Integer getOfreceTransporte() {
+        return ofreceTransporte;
+    }
+
+    public void setOfreceTransporte(Integer ofreceTransporte) {
+        this.ofreceTransporte = ofreceTransporte;
+    }
+
+    public Integer getOfreceGuiado() {
+        return ofreceGuiado;
+    }
+
+    public void setOfreceGuiado(Integer ofreceGuiado) {
+        this.ofreceGuiado = ofreceGuiado;
+    }
+
+    public Integer getOfreceHospedaje() {
+        return ofreceHospedaje;
+    }
+
+    public void setOfreceHospedaje(Integer ofreceHospedaje) {
+        this.ofreceHospedaje = ofreceHospedaje;
+    }
+
+    public Integer getOfreceAlimentacion() {
+        return ofreceAlimentacion;
+    }
+
+    public void setOfreceAlimentacion(Integer ofreceAlimentacion) {
+        this.ofreceAlimentacion = ofreceAlimentacion;
     }
 
     public String getEstado() {

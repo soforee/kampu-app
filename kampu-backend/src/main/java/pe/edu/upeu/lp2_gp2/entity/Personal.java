@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// Guías y conductores (rol GUIA, CONDUCTOR o AMBOS) de un proveedor.
+// PERSONAL (v10): cargo (FK a CARGOS); proveedor_id NULL = personal propio de Kampu.
+// TRG_PERSONAL_VALIDAR exige licencia vigente si el cargo la requiere y que el proveedor brinde ese soporte.
 @Entity
 @DynamicUpdate
 @Table(name = "PERSONAL")
@@ -14,28 +15,31 @@ public class Personal {
     @Column(name = "personal_id")
     private Long personalId;
 
-    @Column(name = "proveedor_id", nullable = false)
+    @Column(name = "proveedor_id")
     private Long proveedorId;
 
-    @Column(name = "nombre_completo", nullable = false, length = 150)
+    @Column(name = "numero_documento")
+    private String numeroDocumento;
+
+    @Column(name = "nombre_completo")
     private String nombreCompleto;
 
-    @Column(name = "rol", nullable = false, length = 20)
-    private String rol;
+    @Column(name = "cargo")
+    private String cargo;
 
-    @Column(name = "telefono", length = 20)
+    @Column(name = "telefono")
     private String telefono;
 
-    @Column(name = "num_licencia", length = 20)
+    @Column(name = "num_licencia")
     private String numLicencia;
 
-    @Column(name = "cat_licencia", length = 10)
+    @Column(name = "cat_licencia")
     private String catLicencia;
 
     @Column(name = "venc_licencia")
     private LocalDate vencLicencia;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "estado")
     private String estado;
 
     public Personal() {
@@ -57,6 +61,14 @@ public class Personal {
         this.proveedorId = proveedorId;
     }
 
+    public String getNumeroDocumento() {
+        return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
+    }
+
     public String getNombreCompleto() {
         return nombreCompleto;
     }
@@ -65,12 +77,12 @@ public class Personal {
         this.nombreCompleto = nombreCompleto;
     }
 
-    public String getRol() {
-        return rol;
+    public String getCargo() {
+        return cargo;
     }
 
-    public void setRol(String rol) {
-        this.rol = rol;
+    public void setCargo(String cargo) {
+        this.cargo = cargo;
     }
 
     public String getTelefono() {

@@ -17,7 +17,16 @@ export class AlertasService {
 
   lista = computed<Alerta[]>(() => {
     const alertas: Alerta[] = [];
-    const activa = (estado: string) => estado === 'PROGRAMADA' || estado === 'CONFIRMADA';
+    const activa = (estado: string) => estado === 'PROGRAMADA' || estado === 'GARANTIZADA';
+
+    // v10: solicitudes de anulación del portal pendientes (Ventas aprueba con reembolso o rechaza)
+    for (const sol of this.store.solicitudes()) {
+      if (sol.estado !== 'PENDIENTE') continue;
+      alertas.push({
+        nivel: 'alta', icono: 'x', titulo: `${sol.cliente ?? 'Un cliente'} pidió anular ${sol.codigoReserva}`,
+        detalle: `${sol.paquete ?? ''} · motivo: ${sol.motivo}`, ruta: ['/reservas', sol.reservaId]
+      });
+    }
 
     // Salidas próximas o que ya terminaron y siguen abiertas
     for (const s of this.store.salidas()) {
@@ -87,7 +96,7 @@ export class AlertasService {
 
     // Licencias de conducir y mantenimiento de la flota
     for (const p of this.store.personal()) {
-      if (p.estado === 'INACTIVO' || p.rol === 'GUIA' || !p.vencLicencia) continue;
+      if (p.estado === 'INACTIVO' || p.funcion !== 'TRANSPORTE' || !p.vencLicencia) continue;
       const dias = diasHasta(p.vencLicencia);
       if (dias > DIAS_LICENCIA) continue;
       alertas.push({

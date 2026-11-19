@@ -6,7 +6,6 @@ import java.time.LocalDate;
 
 public record PasajeroReservaDTO(
         Long pasajeroId,
-        Long detalleId,
         Long reservaId,
         String nombreCompleto,
         String tipoDocumento,
@@ -14,8 +13,8 @@ public record PasajeroReservaDTO(
         String nacionalidad,
         LocalDate fechaNacimiento
 ) {
-    public static PasajeroReservaDTO desde(PasajeroReserva p, Long reservaId) {
-        return new PasajeroReservaDTO(p.getPasajeroId(), p.getDetalleId(), reservaId, p.getNombreCompleto(), p.getTipoDocumento(),
+    public static PasajeroReservaDTO desde(PasajeroReserva p) {
+        return new PasajeroReservaDTO(p.getPasajeroId(), p.getReservaId(), p.getNombreCompleto(), p.getTipoDocumento(),
                 p.getNumeroDocumento(), p.getNacionalidad() == null ? "" : p.getNacionalidad(), p.getFechaNacimiento());
     }
 }

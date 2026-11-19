@@ -10,9 +10,14 @@ public record LugarDTO(
         String tipoLugar,
         String ciudad,
         BigDecimal latitud,
-        BigDecimal longitud
+        BigDecimal longitud,
+        String direccion,
+        boolean esPuntoRecojo,
+        Integer minutosAntesRecojo
 ) {
     public static LugarDTO desde(Lugar l) {
-        return new LugarDTO(l.getLugarId(), l.getNombre(), l.getTipoLugar(), l.getCiudad(), l.getLatitud(), l.getLongitud());
+        return new LugarDTO(l.getLugarId(), l.getNombre(), l.getTipoLugar(), l.getCiudad(), l.getLatitud(), l.getLongitud(),
+                l.getDireccion() == null ? "" : l.getDireccion(), Integer.valueOf(1).equals(l.getEsPuntoRecojo()),
+                l.getMinutosAntesRecojo() == null ? 0 : l.getMinutosAntesRecojo());
     }
 }

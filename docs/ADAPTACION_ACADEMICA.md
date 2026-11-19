@@ -57,7 +57,7 @@
   - `TokenService`, `IntentosLogin`, `NoAutenticadoException` y el endpoint `GET /auth/sesion`;
   - la dependencia `spring-security-crypto`;
   - la caché de permisos.
-- **Datos de demostración:** contraseñas en texto: `admin123`, `ventas123`, `operador123` y `cliente123`. La columna se sigue llamando `password_hash`, para no cambiar la estructura.
+- **Datos de demostración:** *(v10)* la BD exige BCrypt (`CHK_USU_HASH`), así que vuelven `spring-security-crypto` y el bloqueo por intentos; todas las cuentas demo usan `Kampu2026*`.
 - **Duración de traslados:** se quitó OSRM. Queda la estimación con las coordenadas de los lugares (fórmula de haversine) y, si faltan coordenadas, la hora se indica a mano.
 
 ### Frontend
@@ -276,16 +276,16 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
   - M1: qué hacer con los traslados al cambiar la fecha de una salida;
   - H3: si se usan o se eliminan los descuentos.
 - **Gestión de usuarios internos** (alta y cambio de contraseña desde la interfaz): no existe.
-- **Error 500 de tu instalación:** sigue sin diagnóstico. Hace falta la línea "Error no controlado en …" de la consola del backend. Causa probable, corregida en la v11: `AUDITORIA.entidad` era `VARCHAR2(30)` en bytes y el backend recorta a 30 caracteres; con tildes en UTF-8 daba ORA-12899 (ver `docs/ACOPLAMIENTO_BD_v11.md`).
+- **Error 500 de tu instalación:** sigue sin diagnóstico. Hace falta la línea "Error no controlado en …" de la consola del backend. Causa probable, corregida en el backend: el registro de auditoría recortaba por caracteres y no por bytes; con tildes en UTF-8 daba ORA-12899 (ahora recorta por bytes, ver `docs/MIGRACION_BACKEND_v10.md`).
 
 ## 8. Cómo ejecutar
 
-1. **Oracle:** como `SYSTEM` en la PDB `XEPDB1`, ejecutar `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` (F5). Ver `docs/ACOPLAMIENTO_BD_v11.md`.
+1. **Oracle:** como `SYSTEM` en la PDB `XEPDB1`, ejecutar `kampu-backend/src/main/resources/db/kampu_tours_v10.sql` (F5). Ver `docs/MIGRACION_BACKEND_v10.md`.
 2. **Backend:** `cd kampu-backend && ./mvnw spring-boot:run`. Si la base no es la de los valores por defecto, indicar `DB_URL`, `DB_USERNAME` y `DB_PASSWORD`.
 3. **Frontend:** `cd kampu-frontend && npm install && npm start`, y abrir http://localhost:4200.
 4. **Usuarios:**
-   - `admin` / `admin123`
-   - `ventas` / `ventas123`
-   - `operador` / `operador123`
-   - cliente: `ana.ramirez@mail.com` / `cliente123`
-5. **Verificación (opcional):** `SELECT * FROM KAMPU_BD.VW_CUADRE_INTEGRIDAD;` debe devolver 0 filas.
+   - `kadmin` / `Kampu2026*`
+   - `kventas` / `Kampu2026*`
+   - `koperador` / `Kampu2026*`
+   - cliente: `maria.rios@example.com` / `Kampu2026*`
+5. **Verificación (opcional):** `SELECT object_name FROM all_objects WHERE owner='KAMPU' AND status<>'VALID';` debe devolver 0 filas.

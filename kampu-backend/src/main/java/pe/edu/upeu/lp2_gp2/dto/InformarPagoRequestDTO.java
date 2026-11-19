@@ -11,8 +11,8 @@ public record InformarPagoRequestDTO(
         @Digits(integer = 8, fraction = 2, message = "El monto admite 8 enteros y 2 decimales.")
         BigDecimal monto,
         @NotBlank(message = "Indica cómo pagaste.")
-        @Size(max = 50, message = "El método de pago admite máximo 50 caracteres.")
-        @Pattern(regexp = Reglas.TEXTO, message = "El método de pago contiene caracteres no permitidos.")
+        // chk_pag_metodo (v10): el paquete lo guarda en mayúsculas
+        @Pattern(regexp = "(?i)EFECTIVO|TRANSFERENCIA|DEPOSITO|YAPE|PLIN|TARJETA|PASARELA", message = "Método de pago no válido (EFECTIVO, TRANSFERENCIA, DEPOSITO, YAPE, PLIN, TARJETA, PASARELA).")
         String metodoPago,
         @NotBlank(message = "Ingresa el número de operación o código de la transferencia.")
         @Size(max = 100, message = "El código admite máximo 100 caracteres.")

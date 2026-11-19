@@ -11,12 +11,10 @@ import java.util.Optional;
 
 @Repository
 public interface ProveedorRepository extends JpaRepository<Proveedor, Long> {
-    // Kampu Tours (propio) primero
-    List<Proveedor> findAllByOrderByEsPropioDescProveedorIdAsc();
+    List<Proveedor> findAllByOrderByProveedorIdAsc();
 
     Optional<Proveedor> findByRuc(String ruc);
 
-    Optional<Proveedor> findFirstByEsPropio(Integer esPropio);
 
     // Teléfono repetido comparando solo dígitos (mismo criterio que el índice único). idExcluir = -1 al crear.
     @Query(value = "SELECT COUNT(*) FROM PROVEEDORES WHERE TRANSLATE(telefono, '0+-() ', '0') = :digitos AND proveedor_id <> :idExcluir", nativeQuery = true)

@@ -6,7 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import pe.edu.upeu.lp2_gp2.dto.ImagenDTO;
+import pe.edu.upeu.lp2_gp2.dto.*;
 import pe.edu.upeu.lp2_gp2.dto.PaqueteTourDTO;
 import pe.edu.upeu.lp2_gp2.dto.PaqueteTourRequestDTO;
 import pe.edu.upeu.lp2_gp2.services.IPaqueteTourService;
@@ -17,9 +17,48 @@ import java.util.List;
 @RequestMapping("/api/v1/paquetes")
 public class PaqueteTourController {
     private final IPaqueteTourService paqueteService;
+    private final pe.edu.upeu.lp2_gp2.services.CatalogoService catalogo;
 
-    public PaqueteTourController(IPaqueteTourService paqueteService) {
+    public PaqueteTourController(IPaqueteTourService paqueteService, pe.edu.upeu.lp2_gp2.services.CatalogoService catalogo) {
         this.paqueteService = paqueteService;
+        this.catalogo = catalogo;
+    }
+
+    // Calendario de fechas del paquete (PKG_RESERVAS.calendario): días que opera y cupos
+    @GetMapping("/{id}/calendario")
+    public ResponseEntity<List<CalendarioDiaDTO>> calendario(@PathVariable Long id,
+                                                             @RequestParam(required = false) java.time.LocalDate desde,
+                                                             @RequestParam(required = false) Integer dias) {
+        return ResponseEntity.ok(catalogo.calendario(id, desde, dias));
+    }
+
+    // Puntos de recojo y hora a la que pasa la movilidad (v10)
+    @GetMapping("/{id}/puntos-recojo")
+    public ResponseEntity<List<PuntoRecojoDTO>> puntosRecojo(@PathVariable Long id) {
+        return ResponseEntity.ok(catalogo.puntosRecojo(id));
+    }
+
+    // Itinerario por días (PAQUETE_ITINERARIO)
+    @GetMapping("/{id}/itinerario")
+    public ResponseEntity<List<ItinerarioDTO>> itinerario(@PathVariable Long id) {
+        return ResponseEntity.ok(catalogo.itinerario(id));
+    }
+
+    @PostMapping("/{id}/itinerario")
+    public ResponseEntity<ItinerarioDTO> agregarActividad(@PathVariable Long id, @Valid @RequestBody ItinerarioRequestDTO dto) {
+        return new ResponseEntity<>(catalogo.guardarActividad(id, null, dto), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}/itinerario/{itinerarioId}")
+    public ResponseEntity<ItinerarioDTO> editarActividad(@PathVariable Long id, @PathVariable Long itinerarioId,
+                                                         @Valid @RequestBody ItinerarioRequestDTO dto) {
+        return ResponseEntity.ok(catalogo.guardarActividad(id, itinerarioId, dto));
+    }
+
+    @DeleteMapping("/{id}/itinerario/{itinerarioId}")
+    public ResponseEntity<Void> eliminarActividad(@PathVariable Long id, @PathVariable Long itinerarioId) {
+        catalogo.eliminarActividad(id, itinerarioId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pe.edu.upeu.lp2_gp2.dto.AnulacionRequestDTO;
 import pe.edu.upeu.lp2_gp2.dto.EjecucionRequestDTO;
 import pe.edu.upeu.lp2_gp2.dto.ManifiestoDTO;
 import pe.edu.upeu.lp2_gp2.dto.SalidaProgramadaDTO;
@@ -45,10 +46,17 @@ public class SalidaProgramadaController {
         return ResponseEntity.ok(salidaService.actualizar(id, dto));
     }
 
-    // Operador / Ventas: en ejecución (CONFIRMADA) o terminada (COMPLETADA)
+    // Ciclo de la salida (v10): GARANTIZADA o COMPLETADA
     @PatchMapping("/{id}/ejecucion")
     public ResponseEntity<SalidaProgramadaDTO> ejecucion(@PathVariable Long id, @Valid @RequestBody EjecucionRequestDTO dto) {
         return ResponseEntity.ok(salidaService.actualizarEjecucion(id, dto.estado()));
+    }
+
+    // PKG_RESERVAS.cancelar_salida: anula y reembolsa sus reservas y cancela sus traslados.
+    // (v10 no otorga DELETE sobre SALIDAS_PROGRAMADAS: una salida no se borra, se cancela)
+    @PatchMapping("/{id}/cancelar")
+    public ResponseEntity<SalidaProgramadaDTO> cancelar(@PathVariable Long id, @Valid @RequestBody AnulacionRequestDTO dto) {
+        return ResponseEntity.ok(salidaService.cancelar(id, dto.motivo(), dto.formaReembolso()));
     }
 
     // Manifiesto: pasajeros de la salida. Los datos de pago solo van a quien puede ver montos.
@@ -56,11 +64,5 @@ public class SalidaProgramadaController {
     public ResponseEntity<ManifiestoDTO> manifiesto(@PathVariable Long id) {
         boolean conMontos = seguridad.puede(SesionActual.rol(), "VER_MONTOS");
         return ResponseEntity.ok(salidaService.manifiesto(id, conMontos));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        salidaService.eliminar(id);
-        return ResponseEntity.noContent().build();
     }
 }

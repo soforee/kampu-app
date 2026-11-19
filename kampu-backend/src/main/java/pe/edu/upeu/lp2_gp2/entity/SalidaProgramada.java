@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// fecha_fin = inicio + días del paquete - 1 y cupos_disponibles: los calcula el backend
+// SALIDAS_PROGRAMADAS (v10): PROGRAMADA -> GARANTIZADA -> COMPLETADA | CANCELADA.
+// fecha_fin y cupos_disponibles los calcula TRG_SALIDAS_VALIDAR (solo lectura en JPA).
 @Entity
 @DynamicUpdate
 @Table(name = "SALIDAS_PROGRAMADAS")
@@ -14,27 +15,29 @@ public class SalidaProgramada {
     @Column(name = "salida_id")
     private Long salidaId;
 
-    @Column(name = "paquete_id", nullable = false)
+    @Column(name = "paquete_id")
     private Long paqueteId;
 
-    // PERSONAL con rol GUIA o AMBOS
     @Column(name = "guia_id")
     private Long guiaId;
 
-    @Column(name = "fecha_inicio", nullable = false)
+    @Column(name = "fecha_inicio")
     private LocalDate fechaInicio;
 
-    @Column(name = "fecha_fin", nullable = false)
+    @Column(name = "fecha_fin", insertable = false, updatable = false)
     private LocalDate fechaFin;
 
-    @Column(name = "cupos_maximos", nullable = false)
+    @Column(name = "cupos_maximos")
     private Integer cuposMaximos;
 
-    @Column(name = "cupos_disponibles", nullable = false)
+    @Column(name = "cupos_disponibles", insertable = false, updatable = false)
     private Integer cuposDisponibles;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "estado")
     private String estado;
+
+    @Column(name = "origen", updatable = false)
+    private String origen;
 
     public SalidaProgramada() {
     }
@@ -101,5 +104,13 @@ public class SalidaProgramada {
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getOrigen() {
+        return origen;
+    }
+
+    public void setOrigen(String origen) {
+        this.origen = origen;
     }
 }

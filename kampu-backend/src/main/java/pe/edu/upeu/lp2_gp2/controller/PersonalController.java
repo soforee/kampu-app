@@ -24,6 +24,12 @@ public class PersonalController {
         return ResponseEntity.ok(personalService.listarTodo());
     }
 
+    // Catálogo CARGOS (v10): GUIA, CONDUCTOR y los que agregue el administrador
+    @GetMapping("/cargos")
+    public ResponseEntity<List<pe.edu.upeu.lp2_gp2.dto.CargoDTO>> cargos() {
+        return ResponseEntity.ok(personalService.cargos());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<PersonalDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(personalService.buscarPorId(id));

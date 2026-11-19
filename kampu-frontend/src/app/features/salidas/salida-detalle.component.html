@@ -10,10 +10,10 @@
       <span class="capitalize-first">{{ cuandoSale() }}</span>
     </div>
         @if (puedeVender()) {
-          <a class="btn-light" routerLink="/reservas/nueva" [queryParams]="{ salida: s.salidaId }"><app-icon name="ticket" size="w-4 h-4" /> Vender cupo</a>
+          <a class="btn-light" routerLink="/reservas/nueva" [queryParams]="{ paquete: s.paqueteId, fecha: s.fechaInicio }"><app-icon name="ticket" size="w-4 h-4" /> Vender cupo</a>
         }
         @if (puedeConfirmar()) {
-          <button type="button" class="btn-brand" [disabled]="procesando()" (click)="ejecucion('CONFIRMADA')"><app-icon name="check" size="w-4 h-4" /> Confirmar salida</button>
+          <button type="button" class="btn-brand" [disabled]="procesando()" (click)="ejecucion('GARANTIZADA')"><app-icon name="check" size="w-4 h-4" /> Garantizar salida</button>
         }
         @if (puedeTerminar()) {
           <button type="button" class="btn-dark" [disabled]="procesando()" (click)="ejecucion('COMPLETADA')"><app-icon name="flag" size="w-4 h-4" /> Marcar terminada</button>

@@ -151,7 +151,8 @@
           <div><label class="label">Proveedor</label>
             <select class="field" [ngModel]="proveedorSel" (ngModelChange)="cambioProveedor($event)">
               <option [ngValue]="null">Sin asignar (se elige después)</option>
-              @for (p of store.proveedores(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}{{ p.esPropio ? ' (propio)' : '' }} · {{ etiqueta(p.estado) }}</option> }
+              <option [ngValue]="0">Kampu Tours (propio)</option>
+              @for (p of store.proveedores(); track p.proveedorId) { @if (p.ofreceTransporte) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }} · {{ etiqueta(p.estado) }}</option> } }
             </select>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">

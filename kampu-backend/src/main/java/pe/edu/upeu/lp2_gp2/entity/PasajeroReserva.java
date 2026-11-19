@@ -2,9 +2,11 @@ package pe.edu.upeu.lp2_gp2.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import org.hibernate.annotations.DynamicUpdate;
 
-// Pasajeros de un detalle de reserva (cantidad = número de pasajeros, lo controla ReservaServiceImpl)
+// PASAJEROS_RESERVA (v10): cuelgan de la reserva; TRG_PASAJEROS_VALIDAR no deja pasar de cantidad_pasajeros
 @Entity
+@DynamicUpdate
 @Table(name = "PASAJEROS_RESERVA")
 public class PasajeroReserva {
     @Id
@@ -12,19 +14,19 @@ public class PasajeroReserva {
     @Column(name = "pasajero_id")
     private Long pasajeroId;
 
-    @Column(name = "detalle_id", nullable = false)
-    private Long detalleId;
+    @Column(name = "reserva_id", updatable = false)
+    private Long reservaId;
 
-    @Column(name = "nombre_completo", nullable = false, length = 150)
+    @Column(name = "nombre_completo")
     private String nombreCompleto;
 
-    @Column(name = "tipo_documento", nullable = false, length = 20)
+    @Column(name = "tipo_documento")
     private String tipoDocumento;
 
-    @Column(name = "numero_documento", nullable = false, length = 20)
+    @Column(name = "numero_documento")
     private String numeroDocumento;
 
-    @Column(name = "nacionalidad", length = 50)
+    @Column(name = "nacionalidad")
     private String nacionalidad;
 
     @Column(name = "fecha_nacimiento")
@@ -41,12 +43,12 @@ public class PasajeroReserva {
         this.pasajeroId = pasajeroId;
     }
 
-    public Long getDetalleId() {
-        return detalleId;
+    public Long getReservaId() {
+        return reservaId;
     }
 
-    public void setDetalleId(Long detalleId) {
-        this.detalleId = detalleId;
+    public void setReservaId(Long reservaId) {
+        this.reservaId = reservaId;
     }
 
     public String getNombreCompleto() {

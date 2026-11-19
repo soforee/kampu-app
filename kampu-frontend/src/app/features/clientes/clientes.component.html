@@ -60,6 +60,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div><label class="label req">Correo</label><input type="email" class="field" maxlength="100" [(ngModel)]="form.email" placeholder="correo@ejemplo.com" (blur)="v.tocar('email')" [class.field-invalid]="v.error('email')" inputmode="email" autocomplete="email">@if (v.error('email'); as e) { <p class="field-error">{{ e }}</p> }</div>
           <div><label class="label req" for="cliente-telefono">Teléfono</label><app-telefono-input idCampo="cliente-telefono" [(valor)]="form.telefono" [invalido]="!!v.error('telefono')" (tocado)="v.tocar('telefono')" />@if (v.error('telefono'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label">Nacionalidad <span class="opt">Opcional</span></label><input class="field" maxlength="50" [(ngModel)]="form.nacionalidad" (blur)="v.tocar('nacionalidad')" [class.field-invalid]="v.error('nacionalidad')">@if (v.error('nacionalidad'); as e) { <p class="field-error">{{ e }}</p> }</div>
         </div>
       </div>
       <div class="form-actions">

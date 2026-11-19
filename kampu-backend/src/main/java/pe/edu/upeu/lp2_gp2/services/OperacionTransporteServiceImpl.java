@@ -22,13 +22,13 @@ import java.util.stream.Collectors;
 /**
  * Tráfico de transporte (v4: reglas en el backend).
  *  - Transiciones de estado: EstadoOperacion.
- *  - Recursos: vehículo y conductor del MISMO proveedor (propio o tercero), proveedor ACTIVO,
+ *  - Recursos: vehículo y conductor del MISMO proveedor (o ambos propios: proveedor_id NULL), proveedor ACTIVO,
  *    vehículo OPERATIVO con capacidad y sin mantenimiento antes de la llegada, conductor
  *    DISPONIBLE con licencia vigente, sin cruces de horario (30 min de margen) y con
  *    máximo 10 h de conducción por día.
  *  - Embarque: el tramo debe tener asientos para todos los pasajeros de la salida.
- *  - Salida CONFIRMADA: no se le puede quitar transporte que haga falta.
- *  - Cada cambio de estado queda en HISTORIAL_OPERACIONES con el usuario de la sesión.
+ *  - kampu_tours_v10.sql (TRG_OPERACIONES_VALIDAR) genera el código KMP-###, vuelve a validar recursos,
+ *    transiciones y cruces, exige el manifiesto completo para embarcar y escribe HISTORIAL_OPERACIONES.
  */
 @Service
 public class OperacionTransporteServiceImpl implements IOperacionTransporteService {
@@ -45,13 +45,16 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     private final ProveedorRepository proveedorRepository;
     private final CapacidadTransporte capacidad;
     private final DuracionRutaService duracion;
+    private final Recursos recursos;
+    private final jakarta.persistence.EntityManager em;
 
     public OperacionTransporteServiceImpl(OperacionTransporteRepository operacionRepository,
                                           HistorialOperacionRepository historialRepository,
                                           SalidaProgramadaRepository salidaRepository, LugarRepository lugarRepository,
                                           VehiculoRepository vehiculoRepository, PersonalRepository personalRepository,
                                           ProveedorRepository proveedorRepository, CapacidadTransporte capacidad,
-                                          DuracionRutaService duracion) {
+                                          DuracionRutaService duracion, Recursos recursos,
+                                          jakarta.persistence.EntityManager em) {
         this.operacionRepository = operacionRepository;
         this.historialRepository = historialRepository;
         this.salidaRepository = salidaRepository;
@@ -61,6 +64,8 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         this.proveedorRepository = proveedorRepository;
         this.capacidad = capacidad;
         this.duracion = duracion;
+        this.recursos = recursos;
+        this.em = em;
     }
 
     // ---------- Consultas ----------
@@ -86,11 +91,9 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     public List<HistorialOperacionDTO> historial(Long id) {
         obtener(id);
         List<HistorialOperacionDTO> lista = new ArrayList<>();
-        String anterior = null;
         for (HistorialOperacion h : historialRepository.findByOperacionIdOrderByHistorialIdAsc(id)) {
-            lista.add(new HistorialOperacionDTO(h.getHistorialId(), h.getOperacionId(), anterior, h.getEstadoNuevo(),
+            lista.add(new HistorialOperacionDTO(h.getHistorialId(), h.getOperacionId(), h.getEstadoAnterior(), h.getEstadoNuevo(),
                     h.getFechaCambio(), h.getUsuario(), h.getObservacion() == null ? "" : h.getObservacion()));
-            anterior = h.getEstadoNuevo();
         }
         return lista;
     }
@@ -117,16 +120,16 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         Map<Long, Proveedor> proveedores = proveedores();
         List<RecursoCandidatoDTO> lista = new ArrayList<>();
         for (Vehiculo v : vehiculoRepository.findAllByOrderByVehiculoIdAsc()) {
-            Proveedor p = proveedores.get(v.getProveedorId());
-            lista.add(new RecursoCandidatoDTO("VEHICULO", v.getVehiculoId(), p.getProveedorId(), p.getNombreComercial(),
-                    esPropio(p), v.getPlaca() + " · " + (v.getMarcaModelo() == null ? v.getTipoVehiculo() : v.getMarcaModelo()),
+            Proveedor p = v.getProveedorId() == null ? null : proveedores.get(v.getProveedorId());
+            lista.add(new RecursoCandidatoDTO("VEHICULO", v.getVehiculoId(), v.getProveedorId(), Recursos.nombreProveedor(p),
+                    Recursos.esPropio(v.getProveedorId()), v.getPlaca() + " · " + (v.getMarcaModelo() == null ? v.getTipoVehiculo() : v.getMarcaModelo()),
                     v.getCapacidadPax(), null, motivoVehiculo(v, p, o)));
         }
         for (Personal c : personalRepository.findAllByOrderByPersonalIdAsc()) {
-            if ("GUIA".equals(c.getRol())) continue;
-            Proveedor p = proveedores.get(c.getProveedorId());
-            lista.add(new RecursoCandidatoDTO("CONDUCTOR", c.getPersonalId(), p.getProveedorId(), p.getNombreComercial(),
-                    esPropio(p), c.getNombreCompleto() + " (" + c.getCatLicencia() + ")", null,
+            if (!recursos.esConductor(c)) continue;
+            Proveedor p = c.getProveedorId() == null ? null : proveedores.get(c.getProveedorId());
+            lista.add(new RecursoCandidatoDTO("CONDUCTOR", c.getPersonalId(), c.getProveedorId(), Recursos.nombreProveedor(p),
+                    Recursos.esPropio(c.getProveedorId()), c.getNombreCompleto() + " (" + c.getCatLicencia() + ")", null,
                     BigDecimal.valueOf(horasDelDia(c.getPersonalId(), o)).setScale(1, RoundingMode.HALF_UP),
                     motivoConductor(c, p, o)));
         }
@@ -144,12 +147,12 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     public OperacionDTO crear(OperacionRequestDTO dto) {
         OperacionTransporte o = new OperacionTransporte();
         copiar(dto, o);
-        o.setCodigoOperacion(String.format("KMP-%03d", operacionRepository.siguienteCodigo()));
+        // El código KMP-### lo genera TRG_OPERACIONES_VALIDAR
         EstadoOperacion estado = o.getVehiculoId() != null ? EstadoOperacion.ASIGNADO : EstadoOperacion.PROGRAMADO;
         o.setEstado(estado.name());
         if (o.getVehiculoId() != null) validarRecursos(o);
         OperacionTransporte guardada = operacionRepository.saveAndFlush(o);
-        registrar(guardada, null);
+        em.refresh(guardada);   // código generado por la BD
         return dto(guardada, contexto());
     }
 
@@ -170,8 +173,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         if (conRecursos) validarRecursos(o);
         o.setEstado(nuevo.name());
         operacionRepository.saveAndFlush(o);
-        validarSalidaConfirmada(o.getSalidaId());
-        if (nuevo != actual) registrar(o, "Cambio por edición de la operación");
         return dto(o, contexto());
     }
 
@@ -193,14 +194,14 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
             throw new BusinessException("El estado " + nuevo.name() + " requiere vehículo y conductor asignados.");
         }
         o.setEstado(nuevo.name());
+        // TRG_OPERACIONES_VALIDAR guarda la observación del cambio en HISTORIAL_OPERACIONES
+        if (dto.observacion() != null && !dto.observacion().isBlank()) o.setObservaciones(dto.observacion().trim());
         operacionRepository.saveAndFlush(o);
         if (nuevo == EstadoOperacion.EMBARQUE && o.getSalidaId() != null) {
             SalidaProgramada s = salidaRepository.findById(o.getSalidaId()).orElseThrow();
             String falta = capacidad.faltante(s.getSalidaId(), s.getCuposMaximos() - s.getCuposDisponibles(), o);
             if (falta != null) throw new BusinessException(o.getCodigoOperacion() + " no puede embarcar: " + falta);
         }
-        validarSalidaConfirmada(o.getSalidaId());
-        registrar(o, dto.observacion());
         return dto(o, contexto());
     }
 
@@ -217,14 +218,14 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         record Par(Long vehiculoId, Long conductorId, double puntaje) { }
         List<Par> pares = new ArrayList<>();
         List<Personal> conductores = personalRepository.findAllByOrderByPersonalIdAsc().stream()
-                .filter(c -> !"GUIA".equals(c.getRol()))
-                .filter(c -> motivoConductor(c, proveedores.get(c.getProveedorId()), o) == null).toList();
+                .filter(recursos::esConductor)
+                .filter(c -> motivoConductor(c, c.getProveedorId() == null ? null : proveedores.get(c.getProveedorId()), o) == null).toList();
         for (Vehiculo v : vehiculoRepository.findAllByOrderByVehiculoIdAsc()) {
-            Proveedor p = proveedores.get(v.getProveedorId());
+            Proveedor p = v.getProveedorId() == null ? null : proveedores.get(v.getProveedorId());
             if (motivoVehiculo(v, p, o) != null) continue;
             for (Personal c : conductores) {
-                if (!c.getProveedorId().equals(v.getProveedorId())) continue;
-                double puntaje = (esPropio(p) ? 0 : 100_000) + (v.getCapacidadPax() - o.getPaxProgramados()) * 100
+                if (!Objects.equals(c.getProveedorId(), v.getProveedorId())) continue;
+                double puntaje = (Recursos.esPropio(v.getProveedorId()) ? 0 : 100_000) + (v.getCapacidadPax() - o.getPaxProgramados()) * 100
                         + horasDelDia(c.getPersonalId(), o);
                 pares.add(new Par(v.getVehiculoId(), c.getPersonalId(), puntaje));
             }
@@ -242,7 +243,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         o.setConductorId(elegido.conductorId());
         o.setEstado(EstadoOperacion.ASIGNADO.name());
         operacionRepository.saveAndFlush(o);
-        registrar(o, "Asignación automática");
         return dto(o, contexto());
     }
 
@@ -259,7 +259,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         validarRecursos(o);
         o.setEstado(EstadoOperacion.ASIGNADO.name());
         operacionRepository.saveAndFlush(o);
-        registrar(o, null);
         return dto(o, contexto());
     }
 
@@ -316,7 +315,7 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                 conductorId == null ? sinId : conductorId, proveedorId == null ? sinId : proveedorId, LocalDateTime.now())) {
             Vehiculo v = vehiculoRepository.findById(o.getVehiculoId()).orElseThrow();
             Personal c = personalRepository.findById(o.getConductorId()).orElseThrow();
-            Proveedor p = proveedorRepository.findById(v.getProveedorId()).orElseThrow();
+            Proveedor p = v.getProveedorId() == null ? null : proveedorRepository.findById(v.getProveedorId()).orElse(null);
             String motivo = motivoVehiculo(v, p, o);
             if (motivo == null) motivo = motivoConductor(c, p, o);
             if (motivo != null) {
@@ -331,10 +330,10 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                 .orElseThrow(() -> new BusinessException("El vehículo seleccionado no existe."));
         Personal c = personalRepository.findByIdParaActualizar(conductorId)
                 .orElseThrow(() -> new BusinessException("El conductor seleccionado no existe."));
-        if (!v.getProveedorId().equals(c.getProveedorId())) {
-            return "El vehículo " + v.getPlaca() + " y el conductor " + c.getNombreCompleto() + " deben ser del mismo proveedor.";
+        if (!Objects.equals(v.getProveedorId(), c.getProveedorId())) {
+            return "El vehículo " + v.getPlaca() + " y el conductor " + c.getNombreCompleto() + " deben ser del mismo proveedor (o ambos propios).";
         }
-        Proveedor p = proveedorRepository.findById(v.getProveedorId()).orElseThrow();
+        Proveedor p = v.getProveedorId() == null ? null : proveedorRepository.findById(v.getProveedorId()).orElse(null);
         String motivo = motivoVehiculo(v, p, o);
         if (motivo != null) return etiqueta(o) + " - vehículo: " + motivo;
         motivo = motivoConductor(c, p, o);
@@ -343,7 +342,7 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
 
     // null si el vehículo puede atender la operación
     private String motivoVehiculo(Vehiculo v, Proveedor p, OperacionTransporte o) {
-        if (!"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
+        if (p != null && !"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
         if (!"OPERATIVO".equals(v.getEstado())) return "vehículo en " + v.getEstado();
         if (o.getPaxProgramados() > v.getCapacidadPax()) {
             return "capacidad insuficiente (" + v.getCapacidadPax() + " < " + o.getPaxProgramados() + " pax)";
@@ -358,8 +357,8 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
 
     // null si la persona puede conducir la operación
     private String motivoConductor(Personal c, Proveedor p, OperacionTransporte o) {
-        if ("GUIA".equals(c.getRol())) return "no es conductor (rol GUIA)";
-        if (!"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
+        if (!recursos.esConductor(c)) return "no es conductor (cargo " + c.getCargo() + ")";
+        if (p != null && !"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
         if (!"DISPONIBLE".equals(c.getEstado())) return "conductor " + c.getEstado();
         LocalDate llegada = o.getHoraLlegada().toLocalDate();
         if (c.getVencLicencia() == null || c.getVencLicencia().isBefore(llegada)) {
@@ -381,28 +380,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                 .mapToDouble(x -> minutos(x) / 60.0).sum();
     }
 
-    // Una salida CONFIRMADA no puede quedarse sin el transporte que necesita
-    private void validarSalidaConfirmada(Long salidaId) {
-        if (salidaId == null) return;
-        SalidaProgramada s = salidaRepository.findById(salidaId).orElse(null);
-        if (s == null || !"CONFIRMADA".equals(s.getEstado())) return;
-        String falta = capacidad.faltante(salidaId, s.getCuposMaximos() - s.getCuposDisponibles(), null);
-        if (falta != null) {
-            throw new BusinessException("La salida confirmada " + salidaId + " quedaría sin transporte suficiente: " + falta
-                    + ". Para reemplazar un vehículo, asigna primero el nuevo y luego cancela el otro.");
-        }
-    }
-
-    private void registrar(OperacionTransporte o, String observacion) {
-        HistorialOperacion h = new HistorialOperacion();
-        h.setOperacionId(o.getOperacionId());
-        h.setEstadoNuevo(o.getEstado());
-        h.setFechaCambio(LocalDateTime.now());
-        h.setUsuario(SesionActual.usuario());
-        h.setObservacion(observacion == null || observacion.isBlank() ? null : observacion.trim());
-        historialRepository.save(h);
-    }
-
     private static long minutos(OperacionTransporte o) {
         return Duration.between(o.getHoraSalida(), o.getHoraLlegada()).toMinutes();
     }
@@ -413,10 +390,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
 
     private static String etiqueta(OperacionTransporte o) {
         return o.getCodigoOperacion() == null ? "Operación" : o.getCodigoOperacion();
-    }
-
-    private static boolean esPropio(Proveedor p) {
-        return p != null && Integer.valueOf(1).equals(p.getEsPropio());
     }
 
     private OperacionTransporte obtener(Long id) {
@@ -446,7 +419,7 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     private OperacionDTO dto(OperacionTransporte o, Contexto ctx) {
         Vehiculo v = o.getVehiculoId() == null ? null : ctx.vehiculos().get(o.getVehiculoId());
         Personal c = o.getConductorId() == null ? null : ctx.personal().get(o.getConductorId());
-        Proveedor p = v != null ? ctx.proveedores().get(v.getProveedorId()) : null;
+        Proveedor p = v != null && v.getProveedorId() != null ? ctx.proveedores().get(v.getProveedorId()) : null;
         LocalDateTime realSalida = null, realLlegada = null;
         for (HistorialOperacion h : ctx.historial().getOrDefault(o.getOperacionId(), List.of())) {
             if ("EN_RUTA".equals(h.getEstadoNuevo()) && realSalida == null) realSalida = h.getFechaCambio();
@@ -458,7 +431,8 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                 o.getVehiculoId(), o.getConductorId(), o.getPaxProgramados(), o.getHoraSalida(), o.getHoraLlegada(),
                 o.getEstado(), o.getObservaciones() == null ? "" : o.getObservaciones(),
                 origen == null ? "" : origen.getNombre(), destino == null ? "" : destino.getNombre(),
-                p == null ? null : p.getProveedorId(), p == null ? null : p.getNombreComercial(), esPropio(p),
+                v == null ? null : v.getProveedorId(), v == null ? null : Recursos.nombreProveedor(p),
+                v != null && Recursos.esPropio(v.getProveedorId()),
                 v == null ? null : v.getPlaca(), c == null ? null : c.getNombreCompleto(), e.nombre(), e.orden(),
                 realSalida, realLlegada,
                 realSalida == null ? null : (int) Duration.between(o.getHoraSalida(), realSalida).toMinutes(),

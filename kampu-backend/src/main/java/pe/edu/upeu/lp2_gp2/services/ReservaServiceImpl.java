@@ -1,6 +1,7 @@
 package pe.edu.upeu.lp2_gp2.services;
 
-import org.springframework.context.ApplicationEventPublisher;
+import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.lp2_gp2.dto.*;
@@ -10,269 +11,282 @@ import pe.edu.upeu.lp2_gp2.exception.ResourceNotFoundException;
 import pe.edu.upeu.lp2_gp2.repository.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.sql.CallableStatement;
+import java.sql.Date;
+import java.sql.Types;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * Reservas v4: cabecera (RESERVAS) + detalle por salida (DETALLE_RESERVA) + pasajeros.
- * Cupos, precio y monto_total los calcula el backend con la salida bloqueada
- * (SELECT ... FOR UPDATE), así dos ventas simultáneas no sobrevenden.
- * Los cambios de estado quedan en AUDITORIA (TRG_AUDITORIA_ESTADO_PAQUETE).
+ * Reservas según kampu_tours_v10.sql:
+ *  - Venta: PKG_RESERVAS.reservar(cliente, paquete, fecha, cantidad...). La BD busca la salida de ese
+ *    paquete en esa fecha o la crea; TRG_RESERVAS_BIU toma los cupos sin sobreventa, congela el precio,
+ *    genera el código KR-AAAA-NNNNNN y marca la salida GARANTIZADA al llegar al mínimo.
+ *  - Confirmación: automática al aprobarse el primer pago (PKG_RESERVAS.recalcular, desde PAGOS).
+ *  - Completada: automática al completarse la salida (TRG_SALIDAS_VALIDAR).
+ *  - Anulación: PKG_RESERVAS.anular (reembolsa pagos, devuelve cupos y cierra la solicitud del portal).
+ *  - Pasajeros: se registran con la reserva o después, hasta la cantidad reservada (TRG_PASAJEROS_VALIDAR).
  */
 @Service
 public class ReservaServiceImpl implements IReservaService {
     private final ReservaRepository reservaRepository;
-    private final DetalleReservaRepository detalleRepository;
     private final PasajeroReservaRepository pasajeroRepository;
     private final SalidaProgramadaRepository salidaRepository;
     private final PaqueteTourRepository paqueteRepository;
     private final ClienteRepository clienteRepository;
     private final IClienteService clienteService;
     private final UsuarioSistemaRepository usuarioRepository;
-    private final PagoRepository pagoRepository;
-    private final CapacidadTransporte capacidad;
-    private final ApplicationEventPublisher eventos;
+    private final LugarRepository lugarRepository;
+    private final SolicitudAnulacionRepository solicitudRepository;
+    private final JdbcTemplate jdbc;
+    private final EntityManager em;
 
-    public ReservaServiceImpl(ReservaRepository reservaRepository, DetalleReservaRepository detalleRepository,
-                              PasajeroReservaRepository pasajeroRepository, SalidaProgramadaRepository salidaRepository,
-                              PaqueteTourRepository paqueteRepository, ClienteRepository clienteRepository,
-                              IClienteService clienteService, UsuarioSistemaRepository usuarioRepository,
-                              PagoRepository pagoRepository, CapacidadTransporte capacidad, ApplicationEventPublisher eventos) {
+    public ReservaServiceImpl(ReservaRepository reservaRepository, PasajeroReservaRepository pasajeroRepository,
+                              SalidaProgramadaRepository salidaRepository, PaqueteTourRepository paqueteRepository,
+                              ClienteRepository clienteRepository, IClienteService clienteService,
+                              UsuarioSistemaRepository usuarioRepository, LugarRepository lugarRepository,
+                              SolicitudAnulacionRepository solicitudRepository, JdbcTemplate jdbc, EntityManager em) {
         this.reservaRepository = reservaRepository;
-        this.detalleRepository = detalleRepository;
         this.pasajeroRepository = pasajeroRepository;
         this.salidaRepository = salidaRepository;
         this.paqueteRepository = paqueteRepository;
         this.clienteRepository = clienteRepository;
         this.clienteService = clienteService;
         this.usuarioRepository = usuarioRepository;
-        this.pagoRepository = pagoRepository;
-        this.capacidad = capacidad;
-        this.eventos = eventos;
+        this.lugarRepository = lugarRepository;
+        this.solicitudRepository = solicitudRepository;
+        this.jdbc = jdbc;
+        this.em = em;
     }
+
+    // ---------- Consultas ----------
 
     @Override
     @Transactional(readOnly = true)
     public List<ReservaDTO> listarTodo() {
-        Map<Long, DetalleReserva> detalles = new HashMap<>();
-        for (DetalleReserva d : detalleRepository.findAllByOrderByDetalleIdAsc()) detalles.putIfAbsent(d.getReservaId(), d);
-        Map<Long, String> usuarios = new HashMap<>();
-        usuarioRepository.findAll().forEach(u -> usuarios.put(u.getUsuarioId(), u.getUsername()));
-        return reservaRepository.findAllByOrderByReservaIdAsc().stream()
-                .map(r -> ReservaDTO.desde(r, detalles.get(r.getReservaId()),
-                        r.getUsuarioAnulaId() == null ? null : usuarios.get(r.getUsuarioAnulaId()))).toList();
+        Contexto ctx = contexto();
+        return reservaRepository.findAllByOrderByReservaIdAsc().stream().map(r -> dto(r, ctx)).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public ReservaDTO buscarPorId(Long id) {
-        return dto(obtener(id));
+        return dto(obtener(id), contexto());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PasajeroReservaDTO> listarPasajeros(Long reservaId) {
+        List<PasajeroReserva> lista = reservaId == null
+                ? pasajeroRepository.findAllByOrderByPasajeroIdAsc()
+                : pasajeroRepository.findByReservaIdOrderByPasajeroIdAsc(reservaId);
+        return lista.stream().map(PasajeroReservaDTO::desde).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<SolicitudAnulacionDTO> listarSolicitudes() {
+        Map<Long, String> usuarios = usuarios();
+        List<SolicitudAnulacionDTO> lista = new ArrayList<>();
+        for (SolicitudAnulacion s : solicitudRepository.findAllByOrderBySolicitudIdDesc()) {
+            Reserva r = reservaRepository.findById(s.getReservaId()).orElse(null);
+            if (r == null) continue;
+            Cliente c = clienteRepository.findById(r.getClienteId()).orElse(null);
+            SalidaProgramada sal = salidaRepository.findById(r.getSalidaId()).orElse(null);
+            String paquete = sal == null ? null : paqueteRepository.findById(sal.getPaqueteId()).map(PaqueteTour::getNombre).orElse(null);
+            lista.add(new SolicitudAnulacionDTO(s.getSolicitudId(), r.getReservaId(), r.getCodigoReserva(), r.getClienteId(),
+                    c == null ? null : c.getNombreCompleto(), paquete, sal == null ? null : sal.getFechaInicio(),
+                    r.getMontoPagado(), s.getMotivo(), s.getEstado(), s.getFechaSolicitud(),
+                    s.getAtendidaPorId() == null ? null : usuarios.get(s.getAtendidaPorId()), s.getFechaAtencion(),
+                    s.getRespuesta()));
+        }
+        return lista;
+    }
+
+    // ---------- Venta ----------
 
     @Override
     @Transactional
     public ReservaDTO crear(ReservaRequestDTO dto) {
-        for (PasajeroRequestDTO p : dto.pasajeros()) {
-            if (!Reglas.documentoValido(p.tipoDocumento(), p.numeroDocumento())) throw new BusinessException(Reglas.MSG_DOCUMENTO);
-            if (p.fechaNacimiento() != null && p.fechaNacimiento().isBefore(Reglas.FECHA_MINIMA)) {
-                throw new BusinessException("La fecha de nacimiento no puede ser anterior a 1900.");
-            }
+        List<PasajeroRequestDTO> pasajeros = dto.pasajeros() == null ? List.of() : dto.pasajeros();
+        if (pasajeros.size() > dto.cantidad()) {
+            throw new BusinessException("La reserva es para " + dto.cantidad() + " pasajero(s): registraste " + pasajeros.size() + ".");
         }
+        validarPasajeros(pasajeros);
         if (dto.clienteId() != null && dto.contacto() != null) {
             throw new BusinessException("Elige un cliente registrado o ingresa los datos del cliente nuevo, no ambos.");
         }
         if (dto.clienteId() == null && dto.contacto() == null) throw new BusinessException("Selecciona un cliente o registra uno nuevo.");
         if (dto.clienteId() != null && !clienteRepository.existsById(dto.clienteId())) throw new BusinessException("El cliente seleccionado no existe.");
 
-        // Bloquea la salida: cupos consistentes aunque vendan dos personas a la vez
-        SalidaProgramada salida = salidaRepository.findByIdParaActualizar(dto.salidaId())
-                .orElseThrow(() -> new BusinessException("Selecciona una salida."));
-        if (!"PROGRAMADA".equals(salida.getEstado()) && !"CONFIRMADA".equals(salida.getEstado())) {
-            throw new BusinessException("La salida está " + salida.getEstado() + " y no acepta reservas.");
-        }
-        LocalDate hoy = LocalDate.now();
-        if (salida.getFechaInicio().isBefore(hoy)) throw new BusinessException("La salida ya inició.");
-        PaqueteTour paquete = paqueteRepository.findById(salida.getPaqueteId()).orElseThrow();
-        if (!"ACTIVO".equals(paquete.getEstado())) {
-            throw new BusinessException("El paquete " + paquete.getNombre() + " ya no está a la venta.");
-        }
-        int n = dto.pasajeros().size();
-        if (n > salida.getCuposDisponibles()) {
-            throw new BusinessException("Solo quedan " + salida.getCuposDisponibles() + " cupo(s) en esta salida.");
-        }
-        // Salida ya confirmada: solo se vende lo que el transporte asignado puede llevar
-        if ("CONFIRMADA".equals(salida.getEstado())) {
-            int vendidos = salida.getCuposMaximos() - salida.getCuposDisponibles();
-            String falta = capacidad.faltante(salida.getSalidaId(), vendidos + n, null);
-            if (falta != null) throw new BusinessException("Sin transporte suficiente para vender " + n + " cupo(s) más: " + falta);
-        }
-        Set<String> documentos = new HashSet<>();
-        for (PasajeroRequestDTO p : dto.pasajeros()) {
-            if (p.fechaNacimiento() != null && !p.fechaNacimiento().isBefore(hoy)) {
-                throw new BusinessException("La fecha de nacimiento de " + p.nombreCompleto().trim() + " debe ser anterior a hoy.");
-            }
-            if (!documentos.add(p.tipoDocumento() + ":" + p.numeroDocumento().trim().toUpperCase())) {
-                throw new BusinessException("El documento " + p.numeroDocumento().trim() + " está repetido en la reserva.");
-            }
-            if (pasajeroRepository.contarEnSalida(salida.getSalidaId(), p.tipoDocumento(), p.numeroDocumento().trim()) > 0) {
-                throw new BusinessException("El pasajero " + p.nombreCompleto().trim() + " (" + p.tipoDocumento() + " "
-                        + p.numeroDocumento().trim() + ") ya tiene una reserva activa en esta salida.");
-            }
-        }
-
-        // Cliente nuevo (v4: toda reserva tiene cliente; podrá activar su cuenta con "Registrarse")
+        // Invitado: se crea en CLIENTES sin cuenta web (podrá activarla con "Registrarse")
         Long clienteId = dto.clienteId();
         if (clienteId == null) {
             ContactoReservaDTO c = dto.contacto();
             clienteId = clienteService.crear(new ClienteRequestDTO(c.nombre(), c.tipoDocumento(), c.numeroDocumento(),
-                    c.email(), c.telefono())).clienteId();
+                    c.email(), c.telefono(), null)).clienteId();
         }
 
-        BigDecimal total = paquete.getPrecioBase().multiply(BigDecimal.valueOf(n));
-        Reserva r = new Reserva();
-        r.setClienteId(clienteId);
-        r.setFechaReserva(LocalDateTime.now());
-        r.setMontoTotal(total);
-        r.setMontoPagado(BigDecimal.ZERO);
-        r.setEstadoReserva("PENDIENTE");
-        r.setEstadoPago("PENDIENTE");
-        r.setObservaciones(dto.observaciones() == null || dto.observaciones().isBlank() ? null : dto.observaciones().trim());
-        Reserva guardada = reservaRepository.saveAndFlush(r);
-
-        DetalleReserva d = new DetalleReserva();
-        d.setReservaId(guardada.getReservaId());
-        d.setSalidaId(salida.getSalidaId());
-        d.setCantidad(n);
-        d.setPrecioUnitario(paquete.getPrecioBase());   // precio congelado al momento de la venta
-        d.setDescuento(BigDecimal.ZERO);
-        DetalleReserva detalle = detalleRepository.saveAndFlush(d);
-
-        for (PasajeroRequestDTO p : dto.pasajeros()) {
-            PasajeroReserva pr = new PasajeroReserva();
-            pr.setDetalleId(detalle.getDetalleId());
-            pr.setNombreCompleto(p.nombreCompleto().trim());
-            pr.setTipoDocumento(p.tipoDocumento());
-            pr.setNumeroDocumento(p.numeroDocumento().trim());
-            pr.setNacionalidad(p.nacionalidad() == null || p.nacionalidad().isBlank() ? null : p.nacionalidad().trim());
-            pr.setFechaNacimiento(p.fechaNacimiento());
-            pasajeroRepository.save(pr);
-        }
-        salida.setCuposDisponibles(salida.getCuposDisponibles() - n);
-        salidaRepository.save(salida);
+        Long reservaId = reservar(clienteId, dto);
+        Reserva r = obtener(reservaId);
+        for (PasajeroRequestDTO p : pasajeros) guardarPasajero(r, p);
         pasajeroRepository.flush();
-        return ReservaDTO.desde(guardada, detalle);
+        return dto(r, contexto());
+    }
+
+    // PKG_RESERVAS.reservar: única puerta de entrada para vender cupos
+    private Long reservar(Long clienteId, ReservaRequestDTO dto) {
+        Long id = jdbc.execute((java.sql.Connection con) -> {
+            try (CallableStatement cs = con.prepareCall("{call PKG_RESERVAS.reservar(?, ?, ?, ?, ?, ?, ?, ?, ?)}")) {
+                cs.setLong(1, clienteId);
+                cs.setLong(2, dto.paqueteId());
+                cs.setDate(3, Date.valueOf(dto.fecha()));
+                cs.setInt(4, dto.cantidad());
+                cs.registerOutParameter(5, Types.NUMERIC);
+                cs.setString(6, dto.canal() == null || dto.canal().isBlank() ? "PRESENCIAL" : dto.canal());
+                cs.setBigDecimal(7, dto.descuento() == null ? BigDecimal.ZERO : dto.descuento());
+                cs.setString(8, dto.observaciones() == null || dto.observaciones().isBlank() ? null : dto.observaciones().trim());
+                if (dto.lugarRecojoId() == null) cs.setNull(9, Types.NUMERIC);
+                else cs.setLong(9, dto.lugarRecojoId());
+                cs.execute();
+                return cs.getLong(5);
+            }
+        });
+        return Objects.requireNonNull(id);
+    }
+
+    // ---------- Pasajeros ----------
+
+    @Override
+    @Transactional
+    public PasajeroReservaDTO agregarPasajero(Long reservaId, PasajeroRequestDTO dto) {
+        Reserva r = obtener(reservaId);
+        validarPasajeros(List.of(dto));
+        PasajeroReserva p = guardarPasajero(r, dto);
+        pasajeroRepository.flush();
+        return PasajeroReservaDTO.desde(p);
     }
 
     @Override
     @Transactional
-    public ReservaDTO confirmar(Long id) {
-        // Bloqueo de la fila: si alguien anula a la vez, uno espera al otro y no se pisan los estados
-        Reserva r = obtenerParaActualizar(id);
-        if (!"PENDIENTE".equals(r.getEstadoReserva())) throw new BusinessException("Solo se confirman reservas pendientes.");
-        // El cupo se asegura con dinero: sin adelanto aprobado la reserva sigue pendiente
-        if (r.getMontoPagado() == null || r.getMontoPagado().signum() <= 0) {
-            throw new BusinessException("Registra un pago aprobado (adelanto) antes de confirmar la reserva.");
+    public void eliminarPasajero(Long pasajeroId) {
+        PasajeroReserva p = pasajeroRepository.findById(pasajeroId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pasajero no encontrado con Id: " + pasajeroId));
+        // TRG_PASAJEROS_VALIDAR: no se borra el manifiesto de una reserva cerrada
+        pasajeroRepository.delete(p);
+        pasajeroRepository.flush();
+    }
+
+    private PasajeroReserva guardarPasajero(Reserva r, PasajeroRequestDTO p) {
+        String numero = p.numeroDocumento().trim();
+        if (pasajeroRepository.contarEnSalida(r.getSalidaId(), p.tipoDocumento(), numero) > 0) {
+            throw new BusinessException("El pasajero " + p.nombreCompleto().trim() + " (" + p.tipoDocumento() + " "
+                    + numero + ") ya tiene una reserva activa en esta salida.");
         }
-        r.setEstadoReserva("CONFIRMADA");
-        reservaRepository.saveAndFlush(r);
-        eventos.publishEvent(new BoletaEvento(id, "reserva confirmada"));
-        return dto(r);
+        PasajeroReserva pr = new PasajeroReserva();
+        pr.setReservaId(r.getReservaId());
+        pr.setNombreCompleto(p.nombreCompleto().trim());
+        pr.setTipoDocumento(p.tipoDocumento());
+        pr.setNumeroDocumento(numero.toUpperCase());
+        pr.setNacionalidad(p.nacionalidad() == null || p.nacionalidad().isBlank() ? null : p.nacionalidad().trim());
+        pr.setFechaNacimiento(p.fechaNacimiento());
+        return pasajeroRepository.save(pr);
+    }
+
+    private void validarPasajeros(List<PasajeroRequestDTO> pasajeros) {
+        Set<String> documentos = new HashSet<>();
+        for (PasajeroRequestDTO p : pasajeros) {
+            if (!Reglas.documentoValido(p.tipoDocumento(), p.numeroDocumento())) throw new BusinessException(Reglas.MSG_DOCUMENTO);
+            if (p.fechaNacimiento() != null && p.fechaNacimiento().isBefore(Reglas.FECHA_MINIMA)) {
+                throw new BusinessException("La fecha de nacimiento no puede ser anterior a 1900.");
+            }
+            if (!documentos.add(p.tipoDocumento() + ":" + p.numeroDocumento().trim().toUpperCase())) {
+                throw new BusinessException("El documento " + p.numeroDocumento().trim() + " está repetido en la reserva.");
+            }
+        }
+    }
+
+    // ---------- Anulación, recojo y solicitudes ----------
+
+    @Override
+    @Transactional
+    public ReservaDTO anular(Long id, String motivo, String formaReembolso) {
+        obtener(id);
+        jdbc.update("BEGIN PKG_RESERVAS.anular(?, ?, ?); END;", id, motivo.trim(),
+                formaReembolso == null || formaReembolso.isBlank() ? null : formaReembolso);
+        return recargar(id);
     }
 
     @Override
     @Transactional
-    public ReservaDTO completar(Long id) {
-        Reserva r = obtenerParaActualizar(id);
-        if (!"CONFIRMADA".equals(r.getEstadoReserva())) throw new BusinessException("Solo se completan reservas confirmadas.");
-        for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
-            SalidaProgramada salida = salidaRepository.findById(d.getSalidaId()).orElse(null);
-            if (salida != null && salida.getFechaInicio().isAfter(LocalDate.now())) {
-                throw new BusinessException("El viaje aún no empieza (" + salida.getFechaInicio() + "): la reserva no puede completarse.");
-            }
+    public ReservaDTO cambiarRecojo(Long id, Long lugarRecojoId) {
+        Reserva r = obtener(id);
+        Long destino = lugarRecojoId;
+        if (destino == null) {
+            // Sin punto elegido: la oficina (punto de encuentro por defecto, como al reservar)
+            destino = lugarRepository.findAll().stream().filter(l -> "OFICINA".equals(l.getTipoLugar()))
+                    .map(Lugar::getLugarId).findFirst().orElse(null);
         }
-        r.setEstadoReserva("COMPLETADA");
+        r.setLugarRecojoId(destino);   // TRG_RESERVAS_BIU valida que sea punto de recojo y que la reserva siga abierta
         reservaRepository.saveAndFlush(r);
-        return dto(r);
+        return recargar(id);
     }
 
     @Override
     @Transactional
-    public ReservaDTO anular(Long id, Long usuarioId, String formaReembolso) {
-        Reserva r = obtenerParaActualizar(id);
-        if (!"PENDIENTE".equals(r.getEstadoReserva()) && !"CONFIRMADA".equals(r.getEstadoReserva())) {
-            throw new BusinessException("Solo se anulan reservas pendientes o confirmadas.");
-        }
-        // Quien anula es el usuario que inició sesión (cabecera X-Usuario-Id)
-        var sesion = pe.edu.upeu.lp2_gp2.seguridad.SesionActual.get();
-        if (sesion != null && sesion.usuarioId() != null) usuarioId = sesion.usuarioId();
-        if (usuarioId == null) throw new BusinessException("Indica el usuario que anula la reserva (inicia sesión de nuevo).");
-        if (!usuarioRepository.existsById(usuarioId)) throw new BusinessException("El usuario que anula no existe.");
-        // Una vez iniciado el viaje los cupos y pagos ya se usaron: solo el administrador puede anular
-        if (sesion == null || !"ADMIN".equals(sesion.rol())) {
-            for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
-                SalidaProgramada salida = salidaRepository.findById(d.getSalidaId()).orElse(null);
-                if (salida != null && !salida.getFechaInicio().isAfter(LocalDate.now())) {
-                    throw new BusinessException("La salida ya inició (" + salida.getFechaInicio()
-                            + "): solo un administrador puede anular esta reserva.");
-                }
-            }
-        }
-        boolean hayReembolso = r.getMontoPagado() != null && r.getMontoPagado().signum() > 0;
-        String forma = formaReembolso == null || formaReembolso.isBlank() ? null : formaReembolso.trim();
-        if (hayReembolso && forma == null) throw new BusinessException("Indica la forma de reembolso.");
-
-        for (Pago p : pagoRepository.findByReservaIdOrderByPagoId(id)) {
-            if ("APROBADO".equals(p.getEstadoTransaccion())) p.setEstadoTransaccion("REEMBOLSADO");
-            else if ("PENDIENTE".equals(p.getEstadoTransaccion())) p.setEstadoTransaccion("RECHAZADO");
-            else continue;
-            pagoRepository.save(p);
-        }
-        pagoRepository.flush();
-        // Devuelve los cupos a cada salida reservada
-        for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(id)) {
-            salidaRepository.findByIdParaActualizar(d.getSalidaId()).ifPresent(s -> {
-                s.setCuposDisponibles(Math.min(s.getCuposMaximos(), s.getCuposDisponibles() + d.getCantidad()));
-                salidaRepository.save(s);
-            });
-        }
-        r.setEstadoReserva("ANULADA");
-        r.setMontoPagado(BigDecimal.ZERO);
-        r.setEstadoPago(hayReembolso ? "REEMBOLSADO" : "PENDIENTE");
-        r.setFormaReembolso(hayReembolso ? forma : null);
-        r.setUsuarioAnulaId(usuarioId);
-        reservaRepository.saveAndFlush(r);
-        return dto(r);
+    public SolicitudAnulacionDTO atenderSolicitud(Long solicitudId, AtencionSolicitudRequestDTO dto) {
+        SolicitudAnulacion s = solicitudRepository.findById(solicitudId)
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada con Id: " + solicitudId));
+        jdbc.update("BEGIN PKG_RESERVAS.atender_solicitud(?, ?, ?, ?); END;", solicitudId, Boolean.TRUE.equals(dto.aprobar()) ? 1 : 0,
+                dto.formaReembolso() == null || dto.formaReembolso().isBlank() ? null : dto.formaReembolso(),
+                dto.respuesta() == null || dto.respuesta().isBlank() ? null : dto.respuesta().trim());
+        em.flush();
+        em.clear();
+        Long reservaId = s.getReservaId();
+        return listarSolicitudes().stream().filter(x -> x.solicitudId().equals(solicitudId)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada para la reserva " + reservaId));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<PasajeroReservaDTO> listarPasajeros(Long reservaId) {
-        Map<Long, Long> reservaDeDetalle = new HashMap<>();
-        List<PasajeroReserva> lista;
-        if (reservaId == null) {
-            for (DetalleReserva d : detalleRepository.findAll()) reservaDeDetalle.put(d.getDetalleId(), d.getReservaId());
-            lista = pasajeroRepository.findAllByOrderByPasajeroIdAsc();
-        } else {
-            for (DetalleReserva d : detalleRepository.findByReservaIdOrderByDetalleIdAsc(reservaId)) {
-                reservaDeDetalle.put(d.getDetalleId(), d.getReservaId());
-            }
-            lista = reservaDeDetalle.isEmpty() ? List.of()
-                    : pasajeroRepository.findByDetalleIdInOrderByPasajeroIdAsc(reservaDeDetalle.keySet());
+    // ---------- Apoyo ----------
+
+    private ReservaDTO recargar(Long id) {
+        em.flush();
+        em.clear();   // la BD cambió estados y montos por PL/SQL
+        return dto(obtener(id), contexto());
+    }
+
+    private record Contexto(Map<Long, String> usuarios, Map<Long, SalidaProgramada> salidas, Map<Long, Lugar> lugares,
+                            Map<Long, Long> pasajeros, Map<Long, Long> solicitudes) {
+    }
+
+    private Contexto contexto() {
+        Map<Long, Long> pasajeros = pasajeroRepository.findAll().stream()
+                .collect(Collectors.groupingBy(PasajeroReserva::getReservaId, Collectors.counting()));
+        Map<Long, Long> solicitudes = new HashMap<>();
+        for (SolicitudAnulacion s : solicitudRepository.findAll()) {
+            if ("PENDIENTE".equals(s.getEstado())) solicitudes.put(s.getReservaId(), s.getSolicitudId());
         }
-        return lista.stream().map(p -> PasajeroReservaDTO.desde(p, reservaDeDetalle.get(p.getDetalleId()))).toList();
+        return new Contexto(usuarios(),
+                salidaRepository.findAll().stream().collect(Collectors.toMap(SalidaProgramada::getSalidaId, Function.identity())),
+                lugarRepository.findAll().stream().collect(Collectors.toMap(Lugar::getLugarId, Function.identity())),
+                pasajeros, solicitudes);
     }
 
-    private ReservaDTO dto(Reserva r) {
-        List<DetalleReserva> detalles = detalleRepository.findByReservaIdOrderByDetalleIdAsc(r.getReservaId());
-        String anula = r.getUsuarioAnulaId() == null ? null
-                : usuarioRepository.findById(r.getUsuarioAnulaId()).map(u -> u.getUsername()).orElse(null);
-        return ReservaDTO.desde(r, detalles.isEmpty() ? null : detalles.get(0), anula);
+    private Map<Long, String> usuarios() {
+        Map<Long, String> usuarios = new HashMap<>();
+        usuarioRepository.findAll().forEach(u -> usuarios.put(u.getUsuarioId(), u.getUsername()));
+        return usuarios;
     }
 
-    private Reserva obtenerParaActualizar(Long id) {
-        return reservaRepository.findByIdParaActualizar(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con Id: " + id));
+    private ReservaDTO dto(Reserva r, Contexto ctx) {
+        SalidaProgramada s = ctx.salidas().get(r.getSalidaId());
+        Lugar recojo = r.getLugarRecojoId() == null ? null : ctx.lugares().get(r.getLugarRecojoId());
+        return ReservaDTO.desde(r, s == null ? null : s.getPaqueteId(),
+                ctx.pasajeros().getOrDefault(r.getReservaId(), 0L).intValue(),
+                r.getUsuarioAnulaId() == null ? null : ctx.usuarios().get(r.getUsuarioAnulaId()),
+                r.getUsuarioRegistraId() == null ? null : ctx.usuarios().get(r.getUsuarioRegistraId()),
+                recojo == null ? null : recojo.getNombre(), ctx.solicitudes().get(r.getReservaId()));
     }
 
     private Reserva obtener(Long id) {

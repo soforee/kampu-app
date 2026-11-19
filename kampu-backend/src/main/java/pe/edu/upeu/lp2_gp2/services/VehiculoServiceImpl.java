@@ -54,7 +54,7 @@ public class VehiculoServiceImpl implements IVehiculoService {
     @Transactional
     public VehiculoDTO actualizar(Long id, VehiculoRequestDTO dto) {
         Vehiculo v = obtener(id);
-        if (!v.getProveedorId().equals(dto.proveedorId()) && operacionRepository.existsByVehiculoId(id)) {
+        if (!java.util.Objects.equals(v.getProveedorId(), dto.proveedorId()) && operacionRepository.existsByVehiculoId(id)) {
             throw new BusinessException("El vehículo tiene operaciones registradas: no puede cambiar de proveedor.");
         }
         copiar(dto, v, id);
@@ -66,11 +66,12 @@ public class VehiculoServiceImpl implements IVehiculoService {
     @Override
     @Transactional
     public void eliminar(Long id) {
+        // kampu_tours_v10.sql no otorga DELETE sobre VEHICULOS: la baja es lógica (estado INACTIVO)
         Vehiculo v = obtener(id);
-        if (operacionRepository.existsByVehiculoId(id)) {
-            throw new BusinessException("El vehículo tiene operaciones registradas. Puedes marcarlo como INACTIVO.");
-        }
-        vehiculoRepository.delete(v);
+        if ("INACTIVO".equals(v.getEstado())) throw new BusinessException("El vehículo ya está INACTIVO.");
+        v.setEstado("INACTIVO");
+        vehiculoRepository.saveAndFlush(v);
+        operaciones.verificarAsignacionesPendientes(id, null, null);
     }
 
     private Vehiculo obtener(Long id) {
@@ -79,7 +80,13 @@ public class VehiculoServiceImpl implements IVehiculoService {
     }
 
     private void copiar(VehiculoRequestDTO dto, Vehiculo v, Long id) {
-        if (!proveedorRepository.existsById(dto.proveedorId())) throw new BusinessException("El proveedor seleccionado no existe.");
+        // proveedorId null = flota propia; si es de un tercero, TRG_VEHICULOS_VALIDAR exige que brinde transporte
+        if (dto.proveedorId() != null) {
+            var p = proveedorRepository.findById(dto.proveedorId()).orElseThrow(() -> new BusinessException("El proveedor seleccionado no existe."));
+            if (!Integer.valueOf(1).equals(p.getOfreceTransporte())) {
+                throw new BusinessException("El proveedor " + p.getNombreComercial() + " no brinda transporte.");
+            }
+        }
         String placa = dto.placa().trim().toUpperCase();
         Optional<Vehiculo> mismo = vehiculoRepository.findByPlacaIgnoreCase(placa);
         if (mismo.isPresent() && !mismo.get().getVehiculoId().equals(id)) {

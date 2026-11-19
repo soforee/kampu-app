@@ -17,12 +17,18 @@ public record PagoDTO(
         LocalDateTime fechaPago,
         String estadoTransaccion,
         // ADMIN / VENDEDOR / CLIENTE (informado desde el portal)
-        String registradoPor
+        String registradoPor,
+        // (v10) quién lo registró y quién lo validó (usuarios internos), y cuándo
+        Long usuarioRegistraId,
+        Long usuarioValidaId,
+        LocalDateTime fechaValidacion,
+        String observaciones
 ) {
     public static PagoDTO desde(Pago p) {
         return new PagoDTO(p.getPagoId(), p.getReservaId(), p.getMonto(), p.getMoneda(), p.getTipoCambio(), p.getMontoPen(),
                 p.getMetodoPago() == null ? "" : p.getMetodoPago(),
                 p.getCodigoTransaccion() == null ? "" : p.getCodigoTransaccion(), p.getFechaPago(), p.getEstadoTransaccion(),
-                p.getRegistradoPor());
+                p.getRegistradoPor(), p.getUsuarioRegistraId(), p.getUsuarioValidaId(), p.getFechaValidacion(),
+                p.getObservaciones() == null ? "" : p.getObservaciones());
     }
 }
