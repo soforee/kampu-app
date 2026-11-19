@@ -34,14 +34,19 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
     private static final Map<String, String> NOMBRES = Map.ofEntries(
             Map.entry("RESERVAS", "RESERVA"), Map.entry("PAGOS", "PAGO"), Map.entry("CLIENTES", "CLIENTE"),
             Map.entry("PAQUETES_TOUR", "PAQUETE"), Map.entry("SALIDAS_PROGRAMADAS", "SALIDA"),
-            Map.entry("DETALLE_RESERVA", "DETALLE_RESERVA"), Map.entry("PASAJEROS_RESERVA", "PASAJERO"),
+            Map.entry("PASAJEROS_RESERVA", "PASAJERO"), Map.entry("PAQUETE_ITINERARIO", "ITINERARIO"),
             Map.entry("PROVEEDORES", "PROVEEDOR"), Map.entry("PERSONAL", "PERSONAL"), Map.entry("VEHICULOS", "VEHICULO"),
             Map.entry("LUGARES", "LUGAR"), Map.entry("OPERACIONES_TRANSPORTE", "OPERACION"),
             Map.entry("USUARIOS_SISTEMA", "USUARIO"));
 
     // Ya auditados por Oracle o que son bitácoras en sí mismas
     private static final Set<Class<?>> EXCLUIDAS = Set.of(Auditoria.class, HistorialOperacion.class);
-    private static final Set<String> CAMPOS_TRIGGER = Set.of("RESERVA.ESTADO_RESERVA", "RESERVA.ESTADO_PAGO");
+    // Campos que ya audita kampu_tours_v10.sql (TRG_AUDITORIA_ESTADO_PAQUETE, TRG_VALIDAR_PAGO_PAQUETE,
+    // TRG_USUARIOS_AUDITORIA) y datos técnicos del login que no son cambios de negocio
+    private static final Set<String> CAMPOS_TRIGGER = Set.of("RESERVA.ESTADO_RESERVA", "RESERVA.ESTADO_PAGO",
+            "PAGO.ESTADO_TRANSACCION", "USUARIO.ROL", "USUARIO.ESTADO", "USUARIO.INTENTOS_FALLIDOS", "USUARIO.ULTIMO_ACCESO");
+    // Altas que ya registra la base de datos
+    private static final Set<String> ALTAS_TRIGGER = Set.of("PAGO", "USUARIO");
     private static final Set<String> SECRETOS = Set.of("PASSWORD_HASH");
 
     private final EntityManagerFactory emf;
@@ -61,7 +66,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
 
     @Override
     public void onPostInsert(PostInsertEvent e) {
-        if (excluida(e.getEntity())) return;
+        if (excluida(e.getEntity()) || ALTAS_TRIGGER.contains(entidad(e.getPersister()))) return;
         guardar(e.getSession(), "CREAR", e.getPersister(), e.getId(), null, null, null,
                 "Alta: " + resumen(e.getPersister(), e.getState()));
     }
@@ -108,7 +113,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
             AuditoriaService.insertar(sesion.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection(), r);
         } catch (SQLException ex) {
             // Sin bitácora no se confirma el cambio (falla la transacción completa)
-            throw new IllegalStateException("No se pudo registrar la auditoría (¿ejecutaste 01_schema.sql actualizado?): "
+            throw new IllegalStateException("No se pudo registrar la auditoría (¿ejecutaste kampu_tours_v10.sql?): "
                     + ex.getMessage(), ex);
         }
     }
@@ -119,6 +124,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
 
     private static String entidad(EntityPersister p) {
         String tabla = p instanceof AbstractEntityPersister a ? a.getTableName().toUpperCase() : p.getEntityName();
+        tabla = tabla.substring(tabla.lastIndexOf('.') + 1);   // sin el esquema (hibernate.default_schema = KAMPU)
         return NOMBRES.getOrDefault(tabla, tabla);
     }
 

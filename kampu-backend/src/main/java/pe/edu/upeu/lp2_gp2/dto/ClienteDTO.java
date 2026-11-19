@@ -14,11 +14,13 @@ public record ClienteDTO(
         // true si el cliente ya se registró en el portal web (tiene contraseña)
         boolean cuentaWeb,
         String estadoCuenta,
-        LocalDateTime fechaRegistro
+        LocalDateTime fechaRegistro,
+        String nacionalidad
 ) {
     public static ClienteDTO desde(Cliente c) {
         return new ClienteDTO(c.getClienteId(), c.getNombreCompleto(), c.getTipoDocumento(), c.getNumeroDocumento(),
                 c.getEmail() == null ? "" : c.getEmail(), c.getTelefono() == null ? "" : c.getTelefono(),
-                c.getPasswordHash() != null, c.getEstadoCuenta(), c.getFechaRegistro());
+                c.getPasswordHash() != null, c.getEstadoCuenta(), c.getFechaRegistro(),
+                c.getNacionalidad() == null ? "" : c.getNacionalidad());
     }
 }

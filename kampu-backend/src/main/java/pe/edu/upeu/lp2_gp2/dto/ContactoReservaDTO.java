@@ -13,7 +13,7 @@ public record ContactoReservaDTO(
         @Pattern(regexp = Reglas.NOMBRE_PERSONA, message = "El nombre " + Reglas.MSG_NOMBRE_PERSONA)
         String nombre,
         @NotNull(message = "El tipo de documento del cliente es obligatorio.")
-        @Pattern(regexp = "DNI|CE|PASAPORTE", message = "El tipo de documento debe ser DNI, CE o PASAPORTE.")
+        @Pattern(regexp = "DNI|CE|PASAPORTE|RUC", message = "El tipo de documento debe ser DNI, CE, PASAPORTE o RUC.")
         String tipoDocumento,
         @NotBlank(message = "Ingresa el número de documento del cliente.")
         @Size(max = 20, message = "El documento admite máximo 20 caracteres.")

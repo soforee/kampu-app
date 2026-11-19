@@ -44,11 +44,11 @@ export class RecursosComponent {
   ];
   categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
   estadosProveedor: EstadoProveedor[] = ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'];
-  roles: RolPersonal[] = ['GUIA', 'CONDUCTOR', 'AMBOS'];
+  // Cargos del catálogo CARGOS (v10): store.cargos()
   estadosPersonal: EstadoPersonal[] = ['DISPONIBLE', 'OCUPADO', 'INACTIVO'];
   tiposVehiculo: TipoVehiculo[] = ['AUTO', 'CAMIONETA_4X4', 'VAN', 'MINIBUS', 'BUS'];
   estadosVehiculo: EstadoVehiculo[] = ['OPERATIVO', 'MANTENIMIENTO', 'INACTIVO'];
-  tiposLugar: TipoLugar[] = ['AEROPUERTO', 'TERMINAL', 'HOTEL', 'ATRACTIVO', 'CIUDAD', 'OTRO'];
+  tiposLugar: TipoLugar[] = ['AEROPUERTO', 'TERMINAL', 'HOTEL', 'ATRACTIVO', 'CIUDAD', 'OFICINA', 'OTRO'];
   etiqueta = etiqueta;
   iconoLugar = iconoLugar;
   hoy = hoy();
@@ -60,14 +60,13 @@ export class RecursosComponent {
     const t = inject(ActivatedRoute).snapshot.queryParamMap.get('tab');
     return t === 'personal' || t === 'vehiculos' || t === 'lugares' ? t : 'proveedores';
   }
+  // null = todos · 0 = propio de Kampu Tours (v10: proveedor_id NULL) · n = un proveedor tercero
   filtroProveedor = signal<number | null>(null);
-  filtroRol = signal<'' | RolPersonal>('');
+  // '' = todos · GUIA = función GUIADO · CONDUCTOR = función TRANSPORTE
+  filtroRol = signal<'' | 'GUIA' | 'CONDUCTOR'>('');
   abierto = signal(false);
   editId: number | null = null;
 
-  // Debe declararse ANTES de los formularios: personaVacia() y vehiculoVacio() lo usan al inicializarse.
-  // (Declarado después, el componente fallaba con "this.propio is not a function" y Logística quedaba en blanco.)
-  propio = computed(() => this.store.proveedores().find(p => p.esPropio));
 
   proveedor: ProveedorForm = this.proveedorVacio();
   persona: PersonalForm = this.personaVacia();
@@ -87,16 +86,26 @@ export class RecursosComponent {
           pTelefono: V.telefono(p.telefono)
             ?? (telefonoRepetido(p.telefono, this.store.proveedores(), x => x.telefono, x => x.proveedorId === this.editId)
               ? 'Ese teléfono ya está registrado para otro proveedor.' : null),
-          pPropio: p.esPropio && this.store.proveedores().some(x => x.esPropio && x.proveedorId !== this.editId)
-            ? 'Ya existe el proveedor propio (Kampu Tours).' : null
+          pEmail: p.email.trim() ? V.email(p.email) : null,
+          // chk_prov_servicio: todo proveedor brinda al menos un soporte
+          pServicio: p.ofreceTransporte || p.ofreceGuiado || p.ofreceHospedaje || p.ofreceAlimentacion
+            ? null : 'Marca al menos un soporte que brinda.'
         };
       }
       case 'personal': {
         const p = this.persona;
-        const conduce = p.rol !== 'GUIA';
+        const conduce = this.requiereLicencia;
         const lic = p.numLicencia.trim();
+        const prov = this.store.getProveedor(p.proveedorId);
+        const funcion = this.store.getCargo(p.cargo)?.funcion;
         return {
-          rProveedor: p.proveedorId ? null : 'Selecciona el proveedor.',
+          // proveedorId null = personal propio; un tercero debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
+          rProveedor: !prov ? null
+            : funcion === 'TRANSPORTE' && !prov.ofreceTransporte ? 'Ese proveedor no brinda transporte.'
+            : funcion === 'GUIADO' && !prov.ofreceGuiado ? 'Ese proveedor no brinda guiado.' : null,
+          rCargo: p.cargo ? null : 'Elige el cargo.',
+          rDocumento: !p.numeroDocumento.trim() || /^[A-Za-z0-9]{6,20}$/.test(p.numeroDocumento.trim()) ? null
+            : 'El documento solo admite letras y números (6 a 20 caracteres).',
           rNombre: V.nombrePersona(p.nombreCompleto),
           rTelefono: V.telefono(p.telefono)
             ?? (telefonoRepetido(p.telefono, this.store.personal(), x => x.telefono, x => x.personalId === this.editId)
@@ -105,14 +114,16 @@ export class RecursosComponent {
             : (!lic ? 'Quien conduce necesita número de licencia.'
               : (/^[A-Za-z0-9]{6,20}$/.test(lic) ? null : 'La licencia solo admite letras y números (6 a 20 caracteres).')),
           rCategoria: conduce && !p.catLicencia ? 'Elige la categoría de la licencia.' : null,
-          rVencimiento: conduce ? V.fecha(p.vencLicencia, 'La fecha de vencimiento') : null
+          rVencimiento: conduce ? (V.fecha(p.vencLicencia, 'La fecha de vencimiento')
+            ?? (p.vencLicencia < hoy() ? 'La licencia está vencida.' : null)) : null
         };
       }
       case 'vehiculos': return {
-        vProveedor: this.vehiculo.proveedorId ? null : 'Selecciona el proveedor.',
+        vProveedor: this.vehiculo.proveedorId && !this.store.getProveedor(this.vehiculo.proveedorId)?.ofreceTransporte
+          ? 'Ese proveedor no brinda transporte.' : null,
         vPlaca: V.placa(this.vehiculo.placa),
         vMarca: V.texto(this.vehiculo.marcaModelo, 'La marca/modelo', 100),
-        vCapacidad: V.entero(this.vehiculo.capacidadPax, 'La capacidad', 1, 999),
+        vCapacidad: V.entero(this.vehiculo.capacidadPax, 'La capacidad', 1, 80),
         vMantenimiento: V.fecha(this.vehiculo.proxMantenimiento, 'La fecha del próximo mantenimiento', false)
       };
       case 'lugares': {
@@ -122,6 +133,8 @@ export class RecursosComponent {
         return {
           lNombre: V.texto(l.nombre, 'El nombre', 150, true),
           lCiudad: V.texto(l.ciudad, 'La ciudad', 100, true),
+          lDireccion: V.texto(l.direccion, 'La dirección', 200),
+          lMinutos: l.esPuntoRecojo || l.tipoLugar === 'OFICINA' ? V.entero(l.minutosAntesRecojo, 'Los minutos', 0, 240) : null,
           lLatitud: vacioLat ? (vacioLon ? null : 'Indica también la latitud.') : (l.latitud! < -90 || l.latitud! > 90 ? 'La latitud va de -90 a 90.' : null),
           lLongitud: vacioLon ? (vacioLat ? null : 'Indica también la longitud.') : (l.longitud! < -180 || l.longitud! > 180 ? 'La longitud va de -180 a 180.' : null)
         };
@@ -132,11 +145,12 @@ export class RecursosComponent {
   personalFiltrado = computed(() => {
     const p = this.filtroProveedor();
     const r = this.filtroRol();
-    return this.store.personal().filter(x => (!p || x.proveedorId === p) && (!r || x.rol === r || (x.rol === 'AMBOS' && r !== 'AMBOS')));
+    const funcion = r === 'GUIA' ? 'GUIADO' : r === 'CONDUCTOR' ? 'TRANSPORTE' : '';
+    return this.store.personal().filter(x => (p === null || (x.proveedorId ?? 0) === p) && (!funcion || x.funcion === funcion));
   });
   vehiculosFiltrados = computed(() => {
     const p = this.filtroProveedor();
-    return this.store.vehiculos().filter(v => !p || v.proveedorId === p);
+    return this.store.vehiculos().filter(v => p === null || (v.proveedorId ?? 0) === p);
   });
   lugaresPorCiudad = computed(() => {
     const grupos: { ciudad: string; lugares: Lugar[] }[] = [];
@@ -152,16 +166,25 @@ export class RecursosComponent {
   get actual() { return this.tabs.find(t => t.id === this.tab())!; }
 
   // ---------- Formularios ----------
-  private proveedorVacio(): ProveedorForm { return { nombreComercial: '', ruc: '', telefono: '', esPropio: false, estado: 'ACTIVO' }; }
+  private proveedorVacio(): ProveedorForm {
+    return { nombreComercial: '', ruc: '', telefono: '', email: '', ofreceTransporte: true, ofreceGuiado: false,
+      ofreceHospedaje: false, ofreceAlimentacion: false, estado: 'ACTIVO' };
+  }
+  // proveedorId null = propio de Kampu Tours (v10)
+  private proveedorFiltro(): number | null { const p = this.filtroProveedor(); return p ? p : null; }
   private personaVacia(): PersonalForm {
-    return { proveedorId: this.filtroProveedor() ?? this.propio()?.proveedorId ?? null, nombreCompleto: '', rol: 'GUIA', telefono: '',
+    return { proveedorId: this.proveedorFiltro(), numeroDocumento: '', nombreCompleto: '', cargo: 'GUIA', telefono: '',
       numLicencia: '', catLicencia: '', vencLicencia: '', estado: 'DISPONIBLE' };
   }
   private vehiculoVacio(): VehiculoForm {
-    return { proveedorId: this.filtroProveedor() ?? this.propio()?.proveedorId ?? null, placa: '', tipoVehiculo: 'VAN', marcaModelo: '',
+    return { proveedorId: this.proveedorFiltro(), placa: '', tipoVehiculo: 'VAN', marcaModelo: '',
       capacidadPax: 12, proxMantenimiento: addDays(hoy(), 180), estado: 'OPERATIVO' };
   }
-  private lugarVacio(): LugarForm { return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null }; }
+  private lugarVacio(): LugarForm {
+    return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0 };
+  }
+  // Licencia: la exige el cargo (CARGOS.requiere_licencia)
+  get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
 
   private abrir() { this.v.reiniciar(); this.abierto.set(true); }
 
@@ -177,13 +200,15 @@ export class RecursosComponent {
   editarProveedor(id: number) {
     const p = this.store.getProveedor(id)!;
     this.editId = id;
-    this.proveedor = { nombreComercial: p.nombreComercial, ruc: p.ruc, telefono: p.telefono, esPropio: p.esPropio, estado: p.estado };
+    this.proveedor = { nombreComercial: p.nombreComercial, ruc: p.ruc, telefono: p.telefono, email: p.email,
+      ofreceTransporte: p.ofreceTransporte, ofreceGuiado: p.ofreceGuiado, ofreceHospedaje: p.ofreceHospedaje,
+      ofreceAlimentacion: p.ofreceAlimentacion, estado: p.estado };
     this.abrir();
   }
   editarPersona(id: number) {
     const p = this.store.getPersonal(id)!;
     this.editId = id;
-    this.persona = { proveedorId: p.proveedorId, nombreCompleto: p.nombreCompleto, rol: p.rol, telefono: p.telefono,
+    this.persona = { proveedorId: p.proveedorId, numeroDocumento: p.numeroDocumento, nombreCompleto: p.nombreCompleto, cargo: p.cargo, telefono: p.telefono,
       numLicencia: p.numLicencia ?? '', catLicencia: p.catLicencia ?? '', vencLicencia: p.vencLicencia ?? '', estado: p.estado };
     this.abrir();
   }
@@ -197,7 +222,8 @@ export class RecursosComponent {
   editarLugar(id: number) {
     const l = this.store.getLugar(id)!;
     this.editId = id;
-    this.lugar = { nombre: l.nombre, tipoLugar: l.tipoLugar, ciudad: l.ciudad, latitud: l.latitud, longitud: l.longitud };
+    this.lugar = { nombre: l.nombre, tipoLugar: l.tipoLugar, ciudad: l.ciudad, latitud: l.latitud, longitud: l.longitud,
+      direccion: l.direccion, esPuntoRecojo: l.esPuntoRecojo, minutosAntesRecojo: l.minutosAntesRecojo };
     this.abrir();
   }
 
@@ -210,14 +236,16 @@ export class RecursosComponent {
     switch (this.tab()) {
       case 'proveedores': {
         const p = this.proveedor;
-        peticion = this.store.guardarProveedor({ ...p, nombreComercial: t(p.nombreComercial), ruc: t(p.ruc), telefono: t(p.telefono) }, this.editId);
+        peticion = this.store.guardarProveedor({ ...p, nombreComercial: t(p.nombreComercial), ruc: t(p.ruc), telefono: t(p.telefono),
+          email: t(p.email).toLowerCase() }, this.editId);
         break;
       }
       case 'personal': {
         const p = this.persona;
-        const conduce = p.rol !== 'GUIA';
+        const conduce = this.requiereLicencia;
         const lic = t(p.numLicencia).toUpperCase();
         peticion = this.store.guardarPersonal({ ...p, nombreCompleto: t(p.nombreCompleto), telefono: t(p.telefono),
+          numeroDocumento: t(p.numeroDocumento).toUpperCase(),
           numLicencia: conduce || lic ? lic : '', catLicencia: conduce || lic ? p.catLicencia : '',
           vencLicencia: conduce || lic ? p.vencLicencia : '' }, this.editId);
         break;
@@ -230,7 +258,9 @@ export class RecursosComponent {
       }
       default: {
         const l = this.lugar;
-        peticion = this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad), latitud: num(l.latitud), longitud: num(l.longitud) }, this.editId);
+        const recojo = l.esPuntoRecojo || l.tipoLugar === 'OFICINA';
+        peticion = this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad), latitud: num(l.latitud), longitud: num(l.longitud),
+          direccion: t(l.direccion), esPuntoRecojo: recojo, minutosAntesRecojo: recojo ? num(l.minutosAntesRecojo) ?? 0 : 0 }, this.editId);
       }
     }
     this.store.ocupado.set(true);
@@ -251,14 +281,16 @@ export class RecursosComponent {
   // La flota y el personal cambian los totales de cada proveedor
   private recargar() {
     if (this.tab() === 'lugares') { this.store.cargarLugares(); return; }
-    if (this.tab() === 'personal') this.store.cargarPersonal();
+    if (this.tab() === 'personal') { this.store.cargarPersonal(); this.store.cargarVehiculos(); }
     if (this.tab() === 'vehiculos') this.store.cargarVehiculos();
     this.store.cargarProveedores();
   }
 
   async eliminar(id: number) {
     const tab = this.tab();
-    if (!(await this.alerts.confirm('Esta acción no se puede deshacer.', 'Eliminar ' + this.actual.singular))) return;
+    // v10 no otorga DELETE sobre proveedores, personal ni vehículos: la baja los deja INACTIVOS (el historial se conserva)
+    const texto = tab === 'lugares' ? 'Esta acción no se puede deshacer.' : 'Quedará INACTIVO: no se borra para conservar su historial.';
+    if (!(await this.alerts.confirm(texto, (tab === 'lugares' ? 'Eliminar ' : 'Dar de baja ') + this.actual.singular))) return;
     const peticiones: { [t in Tab]: () => Observable<void> } = {
       proveedores: () => this.store.eliminarProveedor(id),
       personal: () => this.store.eliminarPersonal(id),
@@ -266,7 +298,7 @@ export class RecursosComponent {
       lugares: () => this.store.eliminarLugar(id)
     };
     peticiones[tab]().subscribe({
-      next: () => { this.recargar(); this.alerts.toast('Eliminado'); },
+      next: () => { this.recargar(); this.alerts.toast(tab === 'lugares' ? 'Eliminado' : 'Dado de baja'); },
       error: (err) => this.alerts.error(this.store.error(err))
     });
   }

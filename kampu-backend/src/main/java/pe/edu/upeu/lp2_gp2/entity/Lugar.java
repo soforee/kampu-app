@@ -2,9 +2,11 @@ package pe.edu.upeu.lp2_gp2.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import org.hibernate.annotations.DynamicUpdate;
 
-// Orígenes y destinos de las operaciones (aeropuertos, hoteles, atractivos...)
+// LUGARES (v10): origenes, destinos y puntos de recojo. La OFICINA es el punto de encuentro por defecto.
 @Entity
+@DynamicUpdate
 @Table(name = "LUGARES")
 public class Lugar {
     @Id
@@ -12,21 +14,29 @@ public class Lugar {
     @Column(name = "lugar_id")
     private Long lugarId;
 
-    @Column(name = "nombre", nullable = false, length = 150)
+    @Column(name = "nombre")
     private String nombre;
 
-    @Column(name = "tipo_lugar", nullable = false, length = 20)
+    @Column(name = "tipo_lugar")
     private String tipoLugar;
 
-    @Column(name = "ciudad", nullable = false, length = 100)
+    @Column(name = "ciudad")
     private String ciudad;
 
-    // Coordenadas reales (WGS84): se usan para calcular la duración de las rutas
-    @Column(name = "latitud", precision = 9, scale = 6)
+    @Column(name = "direccion")
+    private String direccion;
+
+    @Column(name = "latitud")
     private BigDecimal latitud;
 
-    @Column(name = "longitud", precision = 9, scale = 6)
+    @Column(name = "longitud")
     private BigDecimal longitud;
+
+    @Column(name = "es_punto_recojo")
+    private Integer esPuntoRecojo;
+
+    @Column(name = "minutos_antes_recojo")
+    private Integer minutosAntesRecojo;
 
     public Lugar() {
     }
@@ -63,6 +73,14 @@ public class Lugar {
         this.ciudad = ciudad;
     }
 
+    public String getDireccion() {
+        return direccion;
+    }
+
+    public void setDireccion(String direccion) {
+        this.direccion = direccion;
+    }
+
     public BigDecimal getLatitud() {
         return latitud;
     }
@@ -77,5 +95,21 @@ public class Lugar {
 
     public void setLongitud(BigDecimal longitud) {
         this.longitud = longitud;
+    }
+
+    public Integer getEsPuntoRecojo() {
+        return esPuntoRecojo;
+    }
+
+    public void setEsPuntoRecojo(Integer esPuntoRecojo) {
+        this.esPuntoRecojo = esPuntoRecojo;
+    }
+
+    public Integer getMinutosAntesRecojo() {
+        return minutosAntesRecojo;
+    }
+
+    public void setMinutosAntesRecojo(Integer minutosAntesRecojo) {
+        this.minutosAntesRecojo = minutosAntesRecojo;
     }
 }

@@ -175,7 +175,7 @@
             </div>
             <div class="flex shrink-0 items-center gap-2">
               @if (puedeIniciar(r)) {
-                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'CONFIRMADA')"><app-icon name="check" size="w-3.5 h-3.5" /> Confirmar</button>
+                <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'GARANTIZADA')"><app-icon name="check" size="w-3.5 h-3.5" /> Garantizar</button>
               }
               @if (puedeTerminar(r)) {
                 <button type="button" class="btn-light btn-sm" [disabled]="procesando() === r.salidaId" (click)="cambiar(r, 'COMPLETADA')" data-testid="marcar-terminada"><app-icon name="flag" size="w-3.5 h-3.5" /> Terminar</button>

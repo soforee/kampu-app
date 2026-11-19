@@ -5,7 +5,15 @@ export const ETIQUETAS: { [codigo: string]: string } = {
   OPERATIVO: 'Operativo', MANTENIMIENTO: 'En mantenimiento',
   GUIA: 'Guía', CONDUCTOR: 'Conductor', AMBOS: 'Guía y conductor',
   // Lugares
-  AEROPUERTO: 'Aeropuerto', TERMINAL: 'Terminal', HOTEL: 'Hotel', ATRACTIVO: 'Atractivo', CIUDAD: 'Ciudad', OTRO: 'Otro',
+  AEROPUERTO: 'Aeropuerto', TERMINAL: 'Terminal', HOTEL: 'Hotel', ATRACTIVO: 'Atractivo', CIUDAD: 'Ciudad', OFICINA: 'Oficina', OTRO: 'Otro',
+  // Salidas (v10) y su origen
+  GARANTIZADA: 'Garantizada', SIN_SALIDA: 'Sin salida', MANUAL: 'Manual', RESERVA: 'Por reserva',
+  // Canales de venta, métodos de pago y formas de reembolso (v10)
+  WEB: 'Web', PRESENCIAL: 'Presencial', TELEFONO: 'Teléfono', WHATSAPP: 'WhatsApp',
+  EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', DEPOSITO: 'Depósito', YAPE: 'Yape', PLIN: 'Plin', TARJETA: 'Tarjeta',
+  PASARELA: 'Pasarela de pago', NOTA_CREDITO: 'Nota de crédito',
+  // Funciones de los cargos y solicitudes de anulación
+  GUIADO: 'Guiado', TRANSPORTE: 'Transporte', APOYO: 'Apoyo', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada',
   // Tipos de vehículo
   AUTO: 'Auto', CAMIONETA_4X4: 'Camioneta 4x4', VAN: 'Van', MINIBUS: 'Minibús', BUS: 'Bus',
   // Operaciones de transporte (EstadoOperacion del backend)
@@ -32,5 +40,11 @@ export function duracion(minutos?: number | null): string {
 
 // Ícono de cada tipo de lugar (chk_lug_tipo)
 export function iconoLugar(tipo?: string | null): string {
-  return ({ AEROPUERTO: 'plane', TERMINAL: 'train', HOTEL: 'bed', ATRACTIVO: 'mountain', CIUDAD: 'building' } as { [t: string]: string })[tipo ?? ''] ?? 'map-pin';
+  return ({ AEROPUERTO: 'plane', TERMINAL: 'train', HOTEL: 'bed', ATRACTIVO: 'mountain', CIUDAD: 'building', OFICINA: 'building' } as { [t: string]: string })[tipo ?? ''] ?? 'map-pin';
 }
+
+// Listas de los CHECK de kampu_tours_v10.sql
+export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'YAPE', 'PLIN', 'TARJETA', 'PASARELA'] as const;
+export const FORMAS_REEMBOLSO = ['EFECTIVO', 'TRANSFERENCIA', 'YAPE', 'PLIN', 'TARJETA', 'NOTA_CREDITO'] as const;
+export const CANALES_VENTA = ['PRESENCIAL', 'TELEFONO', 'WHATSAPP'] as const;
+export const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'] as const;

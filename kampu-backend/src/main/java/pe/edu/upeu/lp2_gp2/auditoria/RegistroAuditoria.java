@@ -38,8 +38,27 @@ public record RegistroAuditoria(
         };
     }
 
-    static String corta(String texto, int max) {
+    // Las columnas VARCHAR2 de AUDITORIA en kampu_tours_v10.sql miden BYTES (AL32UTF8): una tilde ocupa 2.
+    // Se recorta por bytes para que la fila siempre quepa (si no, ORA-12899 y falla la operación auditada).
+    static String corta(String texto, int maxBytes) {
         if (texto == null) return null;
-        return texto.length() <= max ? texto : texto.substring(0, max - 1) + "…";
+        if (bytes(texto) <= maxBytes) return texto;
+        String sufijo = "...";
+        StringBuilder sb = new StringBuilder();
+        int usados = bytes(sufijo);
+        for (int i = 0; i < texto.length(); ) {
+            int cp = texto.codePointAt(i);
+            String c = new String(Character.toChars(cp));
+            int n = bytes(c);
+            if (usados + n > maxBytes) break;
+            sb.append(c);
+            usados += n;
+            i += Character.charCount(cp);
+        }
+        return sb + sufijo;
+    }
+
+    private static int bytes(String s) {
+        return s.getBytes(java.nio.charset.StandardCharsets.UTF_8).length;
     }
 }

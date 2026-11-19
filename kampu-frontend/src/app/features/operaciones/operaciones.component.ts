@@ -122,7 +122,7 @@ export class OperacionesComponent {
   });
 
   salidasActivas = computed(() => this.store.salidas()
-    .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA')
+    .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA')
     .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio)));
 
   nombreSalida(id?: number | null): string {
@@ -141,10 +141,11 @@ export class OperacionesComponent {
   }
 
   // Recursos del proveedor elegido (Kampu Tours u otro): vehículo y conductor deben ser del mismo
+  // 0 = flota propia de Kampu Tours (v10: proveedor_id NULL); null = sin elegir
   proveedorSel: number | null = null;
   estimacion = signal<EstimacionDuracion | null>(null);
-  get vehiculosProveedor() { return this.store.vehiculos().filter(x => x.proveedorId === this.proveedorSel); }
-  get conductoresProveedor() { return this.store.conductores().filter(c => c.proveedorId === this.proveedorSel); }
+  get vehiculosProveedor() { return this.store.vehiculos().filter(x => (x.proveedorId ?? 0) === this.proveedorSel); }
+  get conductoresProveedor() { return this.store.conductores().filter(c => (c.proveedorId ?? 0) === this.proveedorSel); }
 
   cambioRuta() { this.estimacion.set(null); }
   cambioProveedor(id: number | null) {
@@ -178,7 +179,7 @@ export class OperacionesComponent {
 
   nueva() {
     this.editId = null;
-    this.proveedorSel = this.store.proveedores().find(p => p.esPropio)?.proveedorId ?? null;
+    this.proveedorSel = 0;   // flota propia primero
     this.estimacion.set(null);
     this.form = this.vacio();
     this.cambioSalida();
@@ -188,7 +189,7 @@ export class OperacionesComponent {
 
   editar(o: Operacion) {
     this.editId = o.operacionId;
-    this.proveedorSel = o.proveedorId;
+    this.proveedorSel = o.vehiculoId ? (o.proveedorId ?? 0) : null;
     this.estimacion.set(null);
     this.form = {
       salidaId: o.salidaId, origenId: o.origenId, destinoId: o.destinoId, vehiculoId: o.vehiculoId,

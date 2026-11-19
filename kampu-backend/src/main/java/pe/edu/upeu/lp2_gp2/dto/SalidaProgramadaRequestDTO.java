@@ -4,8 +4,8 @@ import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
-// La fecha fin no se envía: el backend la calcula con los días del paquete.
-// El transporte no va en la salida: se asigna por tramo en OPERACIONES_TRANSPORTE.
+// Salida creada a mano (origen MANUAL). La fecha fin y los cupos disponibles los calcula la BD
+// (TRG_SALIDAS_VALIDAR). El estado solo se elige al crearla: PROGRAMADA o GARANTIZADA.
 public record SalidaProgramadaRequestDTO(
         @NotNull(message = "Selecciona un paquete.")
         Long paqueteId,
@@ -16,8 +16,7 @@ public record SalidaProgramadaRequestDTO(
         @Max(value = 999, message = "Los cupos máximos deben estar entre 1 y 999.")
         Integer cuposMaximos,
         Long guiaId,
-        @NotNull(message = "El estado es obligatorio.")
-        @Pattern(regexp = "PROGRAMADA|CONFIRMADA|COMPLETADA|CANCELADA", message = "Estado de salida no válido.")
+        @Pattern(regexp = "PROGRAMADA|GARANTIZADA|COMPLETADA|CANCELADA", message = "Estado de salida no válido.")
         String estado
 ) {
 }

@@ -23,6 +23,9 @@ public record ClienteRequestDTO(
         @NotBlank(message = "El teléfono es obligatorio.")
         @Size(max = 20, message = "El teléfono admite máximo 20 caracteres.")
         @Pattern(regexp = Reglas.TELEFONO_PAIS, message = Reglas.MSG_TELEFONO_PAIS)
-        String telefono
+        String telefono,
+        @Size(max = 50, message = "La nacionalidad admite máximo 50 caracteres.")
+        @Pattern(regexp = Reglas.NACIONALIDAD, message = "La nacionalidad solo admite letras y espacios.")
+        String nacionalidad
 ) {
 }

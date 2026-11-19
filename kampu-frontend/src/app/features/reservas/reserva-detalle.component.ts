@@ -1,12 +1,13 @@
 import { AuthService } from '../../core/services/auth.service';
 import { CurrencyPipe, DatePipe } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
-import { EstadoTransaccion, Moneda } from '../../core/models';
+import { EstadoTransaccion, FormaReembolso, MetodoPago, Moneda, PasajeroDraft, PuntoRecojo, TipoDocumento } from '../../core/models';
+import { etiqueta, FORMAS_REEMBOLSO, METODOS_PAGO } from '../../core/utils/etiquetas';
 import { aPEN, TASAS } from '../../core/utils/moneda';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -32,12 +33,14 @@ export class ReservaDetalleComponent {
   private id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
   monedas: Moneda[] = ['PEN', 'USD', 'EUR'];
-  metodos = ['Efectivo', 'Tarjeta', 'Transferencia', 'Yape', 'Plin'];
-  formasReembolso = ['Transferencia', 'Efectivo', 'Tarjeta', 'Yape', 'Plin', 'Nota de crédito'];
+  // chk_pag_metodo y chk_res_reembolso (v10)
+  metodos = METODOS_PAGO;
+  etiqueta = etiqueta;
+  tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
 
   monto: number | null = null;
   moneda: Moneda = 'PEN';
-  metodo = 'Efectivo';
+  metodo: MetodoPago = 'EFECTIVO';
   codigo = '';
   estadoTx: EstadoTransaccion = 'APROBADO';
   v = new FormValidacion(() => ({
@@ -72,10 +75,35 @@ export class ReservaDetalleComponent {
     return !!r && (r.estadoReserva === 'PENDIENTE' || r.estadoReserva === 'CONFIRMADA') && this.saldo() > 0;
   });
   usuarioAnula = computed(() => this.reserva()?.usuarioAnula ?? 'usuario #' + this.reserva()?.usuarioAnulaId);
+  abierta = computed(() => { const e = this.reserva()?.estadoReserva; return e === 'PENDIENTE' || e === 'CONFIRMADA'; });
+  // Solicitud de anulación del portal pendiente de atender (Ventas)
+  solicitud = computed(() => {
+    const id = this.reserva()?.solicitudPendienteId;
+    return id ? this.store.solicitudes().find(s => s.solicitudId === id) ?? null : null;
+  });
+
+  // Pasajeros: hasta la cantidad reservada (TRG_PASAJEROS_VALIDAR)
+  faltanPasajeros = computed(() => Math.max((this.reserva()?.numeroViajeros ?? 0) - this.pasajeros().length, 0));
+  nuevoPasajero: PasajeroDraft = this.pasajeroVacio();
+  agregando = signal(false);
+  private pasajeroVacio(): PasajeroDraft {
+    return { nombreCompleto: '', tipoDocumento: 'DNI', numeroDocumento: '', nacionalidad: 'Peruana', fechaNacimiento: '' };
+  }
+  vp = new FormValidacion(() => ({
+    nombre: V.nombrePersona(this.nuevoPasajero.nombreCompleto, 'El nombre del pasajero'),
+    documento: V.documento(this.nuevoPasajero.tipoDocumento, this.nuevoPasajero.numeroDocumento),
+    nacionalidad: V.nacionalidad(this.nuevoPasajero.nacionalidad)
+  }));
+
+  // Puntos de recojo del paquete (v10)
+  puntos = signal<PuntoRecojo[]>([]);
+  recojoSel: number | null = null;
+  private puntosCargados = false;
 
   constructor() {
     this.store.cargar(false, error => {
-      if (!error && !this.store.getReserva(this.id)) this.router.navigate(['/reservas']);
+      if (!error && !this.store.getReserva(this.id)) { this.router.navigate(['/reservas']); return; }
+      this.cargarPuntos();
     });
   }
 
@@ -94,6 +122,8 @@ export class ReservaDetalleComponent {
         this.store.cargarReservas();
         this.store.cargarPagos();
         this.store.cargarSalidas();
+        this.store.cargarPasajeros();
+        this.store.cargarSolicitudes();
         this.alerts.toast(mensaje);
         if (alTerminar) alTerminar();
       },
@@ -104,29 +134,71 @@ export class ReservaDetalleComponent {
     });
   }
 
-  async confirmar() {
-    if (await this.alerts.confirm('La reserva pasará a CONFIRMADA.', 'Confirmar reserva'))
-      this.ejecutar(this.store.confirmarReserva(this.id), 'Reserva confirmada');
-  }
-
-  async completar() {
-    if (await this.alerts.confirm('La reserva pasará a COMPLETADA.', 'Completar reserva'))
-      this.ejecutar(this.store.completarReserva(this.id), 'Reserva completada');
-  }
-
+  // v10: la confirmación es automática (primer pago aprobado) y la reserva se completa con su salida.
+  // Anular (PKG_RESERVAS.anular): motivo obligatorio; con pagos aprobados, forma de reembolso.
   async anular() {
     const r = this.reserva();
     if (!r) return;
-    let forma: string | null = null;
-    if (r.montoPagado > 0) {
-      const sel = await this.alerts.select('Anular reserva',
-        `Se reembolsarán S/ ${r.montoPagado.toFixed(2)} ya pagados. ¿Cómo se devolverá el dinero?`, this.formasReembolso);
-      if (!sel) return;
-      forma = sel;
-    } else if (!(await this.alerts.confirm('Se liberarán los cupos de la salida.', 'Anular reserva', 'Anular'))) {
-      return;
+    const conDinero = r.montoPagado > 0;
+    const datos = await this.alerts.anulacion('Anular reserva',
+      conDinero ? `Se reembolsarán S/ ${r.montoPagado.toFixed(2)} ya pagados y se liberarán los cupos.` : 'Se liberarán los cupos de la salida.',
+      conDinero ? this.formas() : null, 'Anular reserva');
+    if (!datos) return;
+    this.ejecutar(this.store.anularReserva(this.id, datos.motivo, datos.formaReembolso as FormaReembolso | null), 'Reserva anulada');
+  }
+
+  private formas(): [string, string][] { return FORMAS_REEMBOLSO.map(f => [f, etiqueta(f)] as [string, string]); }
+
+  // Solicitud del portal: aprobar (anula y reembolsa) o rechazar (con respuesta al cliente)
+  async atenderSolicitud(aprobar: boolean) {
+    const s = this.solicitud();
+    const r = this.reserva();
+    if (!s || !r) return;
+    if (aprobar) {
+      const datos = await this.alerts.anulacion('Aprobar anulación',
+        `El cliente pidió anular: "${s.motivo}". Se reembolsarán S/ ${r.montoPagado.toFixed(2)}.`,
+        r.montoPagado > 0 ? this.formas() : null, 'Aprobar y anular');
+      if (!datos) return;
+      this.ejecutar(this.store.atenderSolicitud(s.solicitudId, true, datos.formaReembolso as FormaReembolso | null, datos.motivo),
+        'Solicitud aprobada: reserva anulada');
+    } else {
+      const respuesta = await this.alerts.texto('Rechazar solicitud', 'Indica al cliente por qué no se anula.', 'Respuesta al cliente', 'Rechazar', true);
+      if (!respuesta) return;
+      this.ejecutar(this.store.atenderSolicitud(s.solicitudId, false, null, respuesta), 'Solicitud rechazada');
     }
-    this.ejecutar(this.store.anularReserva(this.id, forma), 'Reserva anulada');
+  }
+
+  // ---------- Pasajeros ----------
+  agregarPasajero() {
+    if (this.store.ocupado()) return;
+    if (!this.vp.valido()) { this.alerts.toast('Revisa los campos marcados en rojo', 'error'); return; }
+    const p = this.nuevoPasajero;
+    const datos: PasajeroDraft = { nombreCompleto: p.nombreCompleto.trim(), tipoDocumento: p.tipoDocumento,
+      numeroDocumento: p.numeroDocumento.trim(), nacionalidad: p.nacionalidad.trim(), fechaNacimiento: p.fechaNacimiento };
+    this.ejecutar(this.store.agregarPasajero(this.id, datos), 'Pasajero registrado', () => {
+      this.nuevoPasajero = this.pasajeroVacio();
+      this.vp.reiniciar();
+      this.agregando.set(false);
+    });
+  }
+
+  async quitarPasajero(pasajeroId: number, nombre: string) {
+    if (!(await this.alerts.confirm(`${nombre} dejará de figurar en el manifiesto.`, 'Quitar pasajero', 'Quitar'))) return;
+    this.ejecutar(this.store.eliminarPasajero(pasajeroId), 'Pasajero quitado');
+  }
+
+  // ---------- Punto de recojo ----------
+  private cargarPuntos() {
+    const paqueteId = this.reserva()?.paqueteId;
+    if (!paqueteId || this.puntosCargados) return;
+    this.puntosCargados = true;
+    this.recojoSel = this.reserva()?.lugarRecojoId ?? null;
+    this.store.puntosRecojo(paqueteId).subscribe({ next: p => this.puntos.set(p) });
+  }
+
+  cambiarRecojo() {
+    if (this.store.ocupado() || this.recojoSel === (this.reserva()?.lugarRecojoId ?? null)) return;
+    this.ejecutar(this.store.cambiarRecojo(this.id, this.recojoSel), 'Punto de recojo actualizado');
   }
 
   // La boleta se pide con el token de la sesión y se abre en una pestaña nueva
@@ -170,6 +242,7 @@ export class ReservaDetalleComponent {
       this.monto = null;
       this.codigo = '';
       this.estadoTx = 'APROBADO';
+      this.store.cargarPagos();
       this.v.reiniciar();
     });
   }

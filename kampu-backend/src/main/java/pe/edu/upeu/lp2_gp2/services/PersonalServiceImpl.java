@@ -1,5 +1,8 @@
 package pe.edu.upeu.lp2_gp2.services;
 
+import pe.edu.upeu.lp2_gp2.entity.Cargo;
+import pe.edu.upeu.lp2_gp2.repository.CargoRepository;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.lp2_gp2.dto.PersonalDTO;
@@ -25,10 +28,14 @@ public class PersonalServiceImpl implements IPersonalService {
     private final SalidaProgramadaRepository salidaRepository;
     private final OperacionTransporteRepository operacionRepository;
     private final IOperacionTransporteService operaciones;
+    private final CargoRepository cargoRepository;
+    private final Recursos recursos;
 
     public PersonalServiceImpl(PersonalRepository personalRepository, ProveedorRepository proveedorRepository,
                                SalidaProgramadaRepository salidaRepository, OperacionTransporteRepository operacionRepository,
-                               IOperacionTransporteService operaciones) {
+                               IOperacionTransporteService operaciones, CargoRepository cargoRepository, Recursos recursos) {
+        this.cargoRepository = cargoRepository;
+        this.recursos = recursos;
         this.personalRepository = personalRepository;
         this.proveedorRepository = proveedorRepository;
         this.salidaRepository = salidaRepository;
@@ -39,13 +46,15 @@ public class PersonalServiceImpl implements IPersonalService {
     @Override
     @Transactional(readOnly = true)
     public List<PersonalDTO> listarTodo() {
-        return personalRepository.findAllByOrderByPersonalIdAsc().stream().map(PersonalDTO::desde).toList();
+        var cargos = recursos.cargos();
+        return personalRepository.findAllByOrderByPersonalIdAsc().stream()
+                .map(p -> PersonalDTO.desde(p, cargos.containsKey(p.getCargo()) ? cargos.get(p.getCargo()).getFuncion() : null)).toList();
     }
 
     @Override
     @Transactional(readOnly = true)
     public PersonalDTO buscarPorId(Long id) {
-        return PersonalDTO.desde(obtener(id));
+        return dto(obtener(id));
     }
 
     @Override
@@ -53,33 +62,39 @@ public class PersonalServiceImpl implements IPersonalService {
     public PersonalDTO crear(PersonalRequestDTO dto) {
         Personal p = new Personal();
         copiar(dto, p, null);
-        return PersonalDTO.desde(personalRepository.saveAndFlush(p));
+        return dto(personalRepository.saveAndFlush(p));
     }
 
     @Override
     @Transactional
     public PersonalDTO actualizar(Long id, PersonalRequestDTO dto) {
         Personal p = obtener(id);
-        if ("CONDUCTOR".equals(dto.rol()) && salidaRepository.existsByGuiaId(id)) {
-            throw new BusinessException("Es guía de salidas programadas: su rol debe incluir GUIA (GUIA o AMBOS).");
-        }
-        if ("GUIA".equals(dto.rol()) && operacionRepository.existsByConductorId(id)) {
-            throw new BusinessException("Conduce operaciones de transporte: su rol debe incluir CONDUCTOR (CONDUCTOR o AMBOS).");
-        }
+        // Cambio de cargo con trabajo pendiente: lo valida TRG_PERSONAL_VALIDAR (ORA-20525)
         copiar(dto, p, id);
         Personal guardado = personalRepository.saveAndFlush(p);
         operaciones.verificarAsignacionesPendientes(null, id, null);
-        return PersonalDTO.desde(guardado);
+        return dto(guardado);
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
+        // kampu_tours_v10.sql no otorga DELETE sobre PERSONAL: la baja es lógica (estado INACTIVO)
         Personal p = obtener(id);
-        if (salidaRepository.existsByGuiaId(id) || operacionRepository.existsByConductorId(id)) {
-            throw new BusinessException("Está asignado a salidas u operaciones. Puedes marcarlo como INACTIVO.");
-        }
-        personalRepository.delete(p);
+        if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("La persona ya está INACTIVA.");
+        p.setEstado("INACTIVO");
+        personalRepository.saveAndFlush(p);
+        operaciones.verificarAsignacionesPendientes(null, id, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public java.util.List<pe.edu.upeu.lp2_gp2.dto.CargoDTO> cargos() {
+        return cargoRepository.findAllByOrderByCodigoAsc().stream().map(pe.edu.upeu.lp2_gp2.dto.CargoDTO::desde).toList();
+    }
+
+    private PersonalDTO dto(Personal p) {
+        return PersonalDTO.desde(p, recursos.funcion(p));
     }
 
     private Personal obtener(Long id) {
@@ -88,17 +103,22 @@ public class PersonalServiceImpl implements IPersonalService {
     }
 
     private void copiar(PersonalRequestDTO dto, Personal p, Long id) {
-        if (!proveedorRepository.existsById(dto.proveedorId())) throw new BusinessException("El proveedor seleccionado no existe.");
+        // proveedorId null = personal propio. El proveedor debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
+        if (dto.proveedorId() != null && !proveedorRepository.existsById(dto.proveedorId())) {
+            throw new BusinessException("El proveedor seleccionado no existe.");
+        }
+        Cargo cargo = cargoRepository.findById(dto.cargo()).orElseThrow(() -> new BusinessException("El cargo " + dto.cargo() + " no existe."));
+        String documento = dto.numeroDocumento() == null || dto.numeroDocumento().isBlank() ? null : dto.numeroDocumento().trim().toUpperCase();
         if (!Reglas.telefonoValido(dto.telefono())) throw new BusinessException(Reglas.MSG_TELEFONO);
         if (dto.telefono() != null && !dto.telefono().isBlank()
                 && personalRepository.contarTelefono(Reglas.digitos(dto.telefono()), Reglas.idOMenosUno(id)) > 0) {
             throw new DuplicateResourceException("El teléfono " + dto.telefono().trim() + " ya está registrado para otra persona.");
         }
-        boolean conduce = !"GUIA".equals(dto.rol());
+        boolean conduce = Integer.valueOf(1).equals(cargo.getRequiereLicencia());
         String licencia = dto.numLicencia() == null || dto.numLicencia().isBlank() ? null : dto.numLicencia().trim().toUpperCase();
         String categoria = dto.catLicencia() == null || dto.catLicencia().isBlank() ? null : dto.catLicencia();
         if (conduce && (licencia == null || categoria == null || dto.vencLicencia() == null)) {
-            throw new BusinessException("Quien conduce necesita número, categoría y vencimiento de licencia.");
+            throw new BusinessException("El cargo " + cargo.getNombre() + " requiere número, categoría y vencimiento de licencia.");
         }
         if (licencia != null) {
             Optional<Personal> mismo = personalRepository.findByNumLicenciaIgnoreCase(licencia);
@@ -108,7 +128,8 @@ public class PersonalServiceImpl implements IPersonalService {
         }
         p.setProveedorId(dto.proveedorId());
         p.setNombreCompleto(dto.nombreCompleto().trim());
-        p.setRol(dto.rol());
+        p.setCargo(cargo.getCodigo());
+        p.setNumeroDocumento(documento);
         p.setTelefono(dto.telefono() == null || dto.telefono().isBlank() ? null : dto.telefono().trim());
         p.setNumLicencia(licencia);
         p.setCatLicencia(licencia == null ? null : categoria);

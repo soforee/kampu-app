@@ -256,7 +256,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   // Cifras reales para la presentación: salidas abiertas con cupos desde hoy y sus cupos libres
   private salidasAbiertas = computed(() => {
     const hoyStr = hoy();
-    return this.salidas().filter(x => (x.estado === 'PROGRAMADA' || x.estado === 'CONFIRMADA') && x.fechaInicio >= hoyStr && x.cuposDisponibles > 0);
+    return this.salidas().filter(x => (x.estado === 'PROGRAMADA' || x.estado === 'GARANTIZADA') && x.fechaInicio >= hoyStr && x.cuposDisponibles > 0);
   });
   totalSalidas = computed(() => this.salidasAbiertas().length);
   totalCupos = computed(() => this.salidasAbiertas().reduce((a, x) => a + x.cuposDisponibles, 0));
@@ -285,7 +285,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     const inicio = desde && desde > hoyStr ? desde : hoyStr;
     const fechas = this.salidas()
       .filter(s => s.paqueteId === paqueteId && s.cuposDisponibles > 0)
-      .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA')
+      .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA')
       .filter(s => s.fechaInicio >= inicio)
       .map(s => s.fechaInicio)
       .sort();

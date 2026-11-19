@@ -1,11 +1,11 @@
 package pe.edu.upeu.lp2_gp2.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import org.hibernate.annotations.Immutable;
 
-// Vista VW_RESUMEN_PAQUETES_POR_ROL: filas y montos según el rol de la sesión
+// VW_RESUMEN_PAQUETES_POR_ROL (v10): filas y montos segun el rol de la sesion
 @Entity
 @Immutable
 @Table(name = "VW_RESUMEN_PAQUETES_POR_ROL")
@@ -29,6 +29,9 @@ public class VistaResumenPaquete {
     @Column(name = "estado_salida")
     private String estadoSalida;
 
+    @Column(name = "origen_salida")
+    private String origenSalida;
+
     @Column(name = "estado_ejecucion")
     private String estadoEjecucion;
 
@@ -40,6 +43,12 @@ public class VistaResumenPaquete {
 
     @Column(name = "pasajeros")
     private Integer pasajeros;
+
+    @Column(name = "minimo_pasajeros")
+    private Integer minimoPasajeros;
+
+    @Column(name = "faltan_para_garantizar")
+    private Integer faltanParaGarantizar;
 
     @Column(name = "reservas_activas")
     private Integer reservasActivas;
@@ -107,6 +116,14 @@ public class VistaResumenPaquete {
         this.estadoSalida = estadoSalida;
     }
 
+    public String getOrigenSalida() {
+        return origenSalida;
+    }
+
+    public void setOrigenSalida(String origenSalida) {
+        this.origenSalida = origenSalida;
+    }
+
     public String getEstadoEjecucion() {
         return estadoEjecucion;
     }
@@ -137,6 +154,22 @@ public class VistaResumenPaquete {
 
     public void setPasajeros(Integer pasajeros) {
         this.pasajeros = pasajeros;
+    }
+
+    public Integer getMinimoPasajeros() {
+        return minimoPasajeros;
+    }
+
+    public void setMinimoPasajeros(Integer minimoPasajeros) {
+        this.minimoPasajeros = minimoPasajeros;
+    }
+
+    public Integer getFaltanParaGarantizar() {
+        return faltanParaGarantizar;
+    }
+
+    public void setFaltanParaGarantizar(Integer faltanParaGarantizar) {
+        this.faltanParaGarantizar = faltanParaGarantizar;
     }
 
     public Integer getReservasActivas() {

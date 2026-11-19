@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.services;
 
+import jakarta.persistence.EntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.lp2_gp2.dto.ManifiestoDTO;
@@ -9,68 +11,56 @@ import pe.edu.upeu.lp2_gp2.entity.*;
 import pe.edu.upeu.lp2_gp2.exception.BusinessException;
 import pe.edu.upeu.lp2_gp2.exception.ResourceNotFoundException;
 import pe.edu.upeu.lp2_gp2.repository.*;
-import pe.edu.upeu.lp2_gp2.seguridad.SesionActual;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.Period;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
- * Salidas programadas: reglas del tour manager.
- *  - fecha_fin = inicio + días del paquete - 1; cupos_disponibles = máximos - vendidos.
- *  - Estados: PROGRAMADA -> CONFIRMADA -> COMPLETADA, con CANCELADA desde las dos primeras.
- *    COMPLETADA y CANCELADA son finales: la salida ya no se modifica.
- *  - Confirmar exige guía, al menos un pasajero y transporte suficiente en cada tramo.
- *  - Terminar exige que el viaje haya empezado, sin reservas pendientes ni traslados abiertos.
- *  - Cancelar exige que no queden reservas activas y cancela los traslados que no han salido.
- *  - El guía es PERSONAL con rol GUIA o AMBOS, sin cruce de fechas con otra salida.
+ * Salidas programadas según kampu_tours_v10.sql (TRG_SALIDAS_VALIDAR y PKG_RESERVAS):
+ *  - Una salida es un paquete en una fecha. La crea la BD al reservar una fecha nueva (origen RESERVA)
+ *    o Ventas/Operaciones a mano (origen MANUAL). fecha_fin y cupos_disponibles los calcula la BD.
+ *  - Estados: PROGRAMADA -> GARANTIZADA (llegó al mínimo de pasajeros; la BD lo hace sola al reservar)
+ *    -> COMPLETADA (sus reservas confirmadas pasan solas a COMPLETADA), o CANCELADA.
+ *  - Cancelar: PKG_RESERVAS.cancelar_salida anula y reembolsa sus reservas y cancela sus traslados.
+ *  - El guía es personal con cargo de función GUIADO, sin otra salida cruzada.
  */
 @Service
 public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     private static final String PROGRAMADA = "PROGRAMADA";
-    private static final String CONFIRMADA = "CONFIRMADA";
-    private static final String COMPLETADA = "COMPLETADA";
-    private static final String CANCELADA = "CANCELADA";
-
-    // Transiciones permitidas desde cada estado
-    private static final Map<String, Set<String>> TRANSICIONES = Map.of(
-            PROGRAMADA, Set.of(CONFIRMADA, CANCELADA),
-            CONFIRMADA, Set.of(PROGRAMADA, COMPLETADA, CANCELADA),   // PROGRAMADA = reabrir
-            COMPLETADA, Set.of(),
-            CANCELADA, Set.of());
+    private static final String GARANTIZADA = "GARANTIZADA";
 
     private final SalidaProgramadaRepository salidaRepository;
     private final PaqueteTourRepository paqueteRepository;
     private final PersonalRepository personalRepository;
-    private final DetalleReservaRepository detalleRepository;
     private final ReservaRepository reservaRepository;
     private final PasajeroReservaRepository pasajeroRepository;
     private final ClienteRepository clienteRepository;
     private final OperacionTransporteRepository operacionRepository;
-    private final HistorialOperacionRepository historialRepository;
     private final CapacidadTransporte capacidad;
+    private final Recursos recursos;
+    private final JdbcTemplate jdbc;
+    private final EntityManager em;
 
     public SalidaProgramadaServiceImpl(SalidaProgramadaRepository salidaRepository, PaqueteTourRepository paqueteRepository,
-                                       PersonalRepository personalRepository, DetalleReservaRepository detalleRepository,
-                                       ReservaRepository reservaRepository, PasajeroReservaRepository pasajeroRepository,
-                                       ClienteRepository clienteRepository, OperacionTransporteRepository operacionRepository,
-                                       HistorialOperacionRepository historialRepository, CapacidadTransporte capacidad) {
+                                       PersonalRepository personalRepository, ReservaRepository reservaRepository,
+                                       PasajeroReservaRepository pasajeroRepository, ClienteRepository clienteRepository,
+                                       OperacionTransporteRepository operacionRepository, CapacidadTransporte capacidad,
+                                       Recursos recursos, JdbcTemplate jdbc, EntityManager em) {
         this.salidaRepository = salidaRepository;
         this.paqueteRepository = paqueteRepository;
         this.personalRepository = personalRepository;
-        this.detalleRepository = detalleRepository;
         this.reservaRepository = reservaRepository;
         this.pasajeroRepository = pasajeroRepository;
         this.clienteRepository = clienteRepository;
         this.operacionRepository = operacionRepository;
-        this.historialRepository = historialRepository;
         this.capacidad = capacidad;
+        this.recursos = recursos;
+        this.jdbc = jdbc;
+        this.em = em;
     }
 
     @Override
@@ -80,8 +70,11 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
         for (OperacionTransporte o : operacionRepository.findAll()) {
             if (o.getSalidaId() != null && !"CANCELADO".equals(o.getEstado())) operaciones.merge(o.getSalidaId(), 1, Integer::sum);
         }
+        Map<Long, PaqueteTour> paquetes = paqueteRepository.findAll().stream()
+                .collect(Collectors.toMap(PaqueteTour::getPaqueteId, Function.identity()));
         return salidaRepository.findAllByOrderBySalidaIdAsc().stream()
-                .map(s -> SalidaProgramadaDTO.desde(s, operaciones.get(s.getSalidaId()), faltante(s))).toList();
+                .map(s -> SalidaProgramadaDTO.desde(s, minimo(paquetes.get(s.getPaqueteId())),
+                        operaciones.get(s.getSalidaId()), faltante(s))).toList();
     }
 
     @Override
@@ -93,46 +86,48 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     @Override
     @Transactional
     public SalidaProgramadaDTO crear(SalidaProgramadaRequestDTO dto) {
-        if (!PROGRAMADA.equals(dto.estado())) {
-            throw new BusinessException("Una salida nueva empieza como PROGRAMADA; se confirma cuando tiene guía, pasajeros y transporte.");
+        String estado = dto.estado() == null ? PROGRAMADA : dto.estado();
+        if (!PROGRAMADA.equals(estado) && !GARANTIZADA.equals(estado)) {
+            throw new BusinessException("Una salida nueva solo puede estar PROGRAMADA o GARANTIZADA.");
         }
-        PaqueteTour paquete = validar(dto, null);
+        PaqueteTour paquete = paqueteRepository.findById(dto.paqueteId()).orElseThrow(() -> new BusinessException("Selecciona un paquete."));
         if (!"ACTIVO".equals(paquete.getEstado())) {
             throw new BusinessException("El paquete " + paquete.getNombre() + " está inactivo: actívalo antes de programar salidas.");
         }
         if (dto.fechaInicio().isBefore(LocalDate.now())) throw new BusinessException("La fecha de inicio no puede ser anterior a hoy.");
+        validarGuia(dto.guiaId());
         SalidaProgramada s = new SalidaProgramada();
-        copiar(dto, s, paquete);
-        s.setEstado(PROGRAMADA);
-        s.setCuposDisponibles(dto.cuposMaximos());   // salida nueva = sin reservas
-        return dto(salidaRepository.saveAndFlush(s));
+        s.setPaqueteId(dto.paqueteId());
+        s.setFechaInicio(dto.fechaInicio());
+        s.setCuposMaximos(dto.cuposMaximos());
+        s.setGuiaId(dto.guiaId());
+        s.setEstado(estado);
+        s.setOrigen("MANUAL");
+        SalidaProgramada guardada = salidaRepository.saveAndFlush(s);   // uq_sal_paquete_fecha: una salida por paquete y fecha
+        em.refresh(guardada);   // fecha_fin y cupos_disponibles los calcula la BD
+        return dto(guardada);
     }
 
     @Override
     @Transactional
     public SalidaProgramadaDTO actualizar(Long id, SalidaProgramadaRequestDTO dto) {
         SalidaProgramada s = bloquear(id);
-        if (TRANSICIONES.get(s.getEstado()).isEmpty()) {
+        if (!PROGRAMADA.equals(s.getEstado()) && !GARANTIZADA.equals(s.getEstado())) {
             throw new BusinessException("La salida está " + s.getEstado() + " y ya no se puede modificar.");
-        }
-        PaqueteTour paquete = validar(dto, id);
-        int vendidos = vendidos(s);
-        if (dto.cuposMaximos() < vendidos) {
-            throw new BusinessException("Ya hay " + vendidos + " viajeros reservados; los cupos no pueden ser menores.");
-        }
-        if (vendidos > 0 && !s.getPaqueteId().equals(dto.paqueteId())) {
-            throw new BusinessException("La salida ya tiene reservas: no se puede cambiar el paquete que compraron los clientes.");
         }
         if (!s.getFechaInicio().equals(dto.fechaInicio()) && dto.fechaInicio().isBefore(LocalDate.now())) {
             throw new BusinessException("No se puede reprogramar la salida a una fecha anterior a hoy.");
         }
-        String nuevoEstado = dto.estado();
-        String estadoAnterior = s.getEstado();
-        copiar(dto, s, paquete);
-        s.setEstado(estadoAnterior);
-        s.setCuposDisponibles(dto.cuposMaximos() - vendidos);
+        validarGuia(dto.guiaId());
+        // TRG_SALIDAS_VALIDAR: no cambia de paquete con reservas, cupo no menor a lo vendido,
+        // no cambia de fecha con traslados programados, guía sin salidas cruzadas
+        s.setPaqueteId(dto.paqueteId());
+        s.setFechaInicio(dto.fechaInicio());
+        s.setCuposMaximos(dto.cuposMaximos());
+        s.setGuiaId(dto.guiaId());
         salidaRepository.saveAndFlush(s);
-        if (!estadoAnterior.equals(nuevoEstado)) cambiarEstado(s, nuevoEstado);
+        em.refresh(s);
+        if (dto.estado() != null && !dto.estado().equals(s.getEstado())) return actualizarEjecucion(id, dto.estado());
         return dto(s);
     }
 
@@ -141,21 +136,32 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     public SalidaProgramadaDTO actualizarEjecucion(Long id, String estado) {
         SalidaProgramada s = bloquear(id);
         if (s.getEstado().equals(estado)) throw new BusinessException("La salida ya está " + estado + ".");
-        cambiarEstado(s, estado);
-        return dto(s);
+        if ("CANCELADA".equals(estado)) {
+            throw new BusinessException("Para cancelar la salida indica el motivo: anula y reembolsa sus reservas.");
+        }
+        if ("COMPLETADA".equals(estado)) {
+            long abiertas = operacionRepository.findBySalidaIdOrderByHoraSalidaAscOperacionIdAsc(id).stream()
+                    .filter(o -> !EstadoOperacion.de(o.getEstado()).esFinal()).count();
+            if (abiertas > 0) {
+                throw new BusinessException("Hay " + abiertas + " traslado(s) sin cerrar: finalízalos o cancélalos en Tráfico antes de completar la salida.");
+            }
+        }
+        // TRG_SALIDAS_VALIDAR: PROGRAMADA -> GARANTIZADA -> COMPLETADA; al completarse, sus reservas
+        // CONFIRMADAS pasan a COMPLETADA
+        s.setEstado(estado);
+        salidaRepository.saveAndFlush(s);
+        em.clear();
+        return dto(obtener(id));
     }
 
     @Override
     @Transactional
-    public void eliminar(Long id) {
-        SalidaProgramada s = obtener(id);
-        if (detalleRepository.existsBySalidaId(id)) {
-            throw new BusinessException("La salida tiene reservas asociadas. Puedes marcarla como CANCELADA.");
-        }
-        if (operacionRepository.existsBySalidaId(id)) {
-            throw new BusinessException("La salida tiene operaciones de transporte. Cancélalas o márcala como CANCELADA.");
-        }
-        salidaRepository.delete(s);
+    public SalidaProgramadaDTO cancelar(Long id, String motivo, String formaReembolso) {
+        obtener(id);
+        jdbc.update("BEGIN PKG_RESERVAS.cancelar_salida(?, ?, ?); END;", id, motivo.trim(),
+                formaReembolso == null || formaReembolso.isBlank() ? null : formaReembolso);
+        em.clear();
+        return dto(obtener(id));
     }
 
     @Override
@@ -168,14 +174,13 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
         List<ManifiestoDTO.Pasajero> pasajeros = new ArrayList<>();
         int confirmados = 0;
         int pendientes = 0;
-        for (DetalleReserva d : detalleRepository.findBySalidaId(id)) {
-            Reserva r = reservaRepository.findById(d.getReservaId()).orElse(null);
-            if (r == null || "ANULADA".equals(r.getEstadoReserva())) continue;
-            if ("PENDIENTE".equals(r.getEstadoReserva())) pendientes += d.getCantidad();
-            else confirmados += d.getCantidad();
+        for (Reserva r : reservaRepository.findBySalidaIdOrderByReservaIdAsc(id)) {
+            if ("ANULADA".equals(r.getEstadoReserva())) continue;
+            if ("PENDIENTE".equals(r.getEstadoReserva())) pendientes += r.getCantidadPasajeros();
+            else confirmados += r.getCantidadPasajeros();
             Cliente titular = clienteRepository.findById(r.getClienteId()).orElse(null);
             BigDecimal saldo = r.getMontoTotal().subtract(r.getMontoPagado() == null ? BigDecimal.ZERO : r.getMontoPagado()).max(BigDecimal.ZERO);
-            for (PasajeroReserva p : pasajeroRepository.findByDetalleIdInOrderByPasajeroIdAsc(List.of(d.getDetalleId()))) {
+            for (PasajeroReserva p : pasajeroRepository.findByReservaIdOrderByPasajeroIdAsc(r.getReservaId())) {
                 Integer edad = p.getFechaNacimiento() == null ? null : Period.between(p.getFechaNacimiento(), hoy).getYears();
                 pasajeros.add(new ManifiestoDTO.Pasajero(p.getPasajeroId(), p.getNombreCompleto(), p.getTipoDocumento(),
                         p.getNumeroDocumento(), p.getNacionalidad(), edad, r.getReservaId(), r.getEstadoReserva(),
@@ -188,108 +193,28 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
                 s.getCuposMaximos(), confirmados, pendientes, pasajeros);
     }
 
-    // ---------- Máquina de estados ----------
-
-    private void cambiarEstado(SalidaProgramada s, String nuevo) {
-        String actual = s.getEstado();
-        if (!TRANSICIONES.getOrDefault(actual, Set.of()).contains(nuevo)) {
-            throw new BusinessException("Una salida " + actual + " no puede pasar a " + nuevo + ".");
-        }
-        switch (nuevo) {
-            case CONFIRMADA -> exigirListaParaConfirmar(s);
-            case COMPLETADA -> exigirListaParaTerminar(s);
-            case CANCELADA -> exigirCancelable(s);
-            default -> { }   // PROGRAMADA: se reabre para seguir ajustándola
-        }
-        s.setEstado(nuevo);
-        salidaRepository.saveAndFlush(s);
-        if (COMPLETADA.equals(nuevo)) completarReservas(s.getSalidaId());
-        if (CANCELADA.equals(nuevo)) cancelarOperaciones(s.getSalidaId());
-    }
-
-    private void exigirListaParaConfirmar(SalidaProgramada s) {
-        int pasajeros = vendidos(s);
-        if (s.getGuiaId() == null) throw new BusinessException("Asigna un guía antes de confirmar la salida.");
-        if (pasajeros == 0) throw new BusinessException("La salida aún no tiene pasajeros: no hay nada que confirmar.");
-        String falta = capacidad.faltante(s.getSalidaId(), pasajeros, null);
-        if (falta != null) throw new BusinessException("No se puede confirmar la salida: falta transporte en el " + falta + ".");
-    }
-
-    private void exigirListaParaTerminar(SalidaProgramada s) {
-        if (s.getFechaInicio().isAfter(LocalDate.now())) {
-            throw new BusinessException("La salida aún no empieza (" + s.getFechaInicio() + "): no puede marcarse como terminada.");
-        }
-        int pendientes = 0;
-        for (DetalleReserva d : detalleRepository.findBySalidaId(s.getSalidaId())) {
-            Reserva r = reservaRepository.findById(d.getReservaId()).orElse(null);
-            if (r != null && "PENDIENTE".equals(r.getEstadoReserva())) pendientes++;
-        }
-        if (pendientes > 0) {
-            throw new BusinessException("Hay " + pendientes + " reserva(s) pendiente(s) en esta salida: confírmalas o anúlalas antes de terminarla.");
-        }
-        long abiertas = operacionRepository.findBySalidaIdOrderByHoraSalidaAscOperacionIdAsc(s.getSalidaId()).stream()
-                .filter(o -> !EstadoOperacion.de(o.getEstado()).esFinal()).count();
-        if (abiertas > 0) {
-            throw new BusinessException("Hay " + abiertas + " traslado(s) sin cerrar: finalízalos o cancélalos en Tráfico antes de terminar la salida.");
-        }
-    }
-
-    private void exigirCancelable(SalidaProgramada s) {
-        if (vendidos(s) > 0) throw new BusinessException("No puedes cancelar una salida con reservas activas. Anúlalas primero.");
-        for (OperacionTransporte o : operacionRepository.findBySalidaIdOrderByHoraSalidaAscOperacionIdAsc(s.getSalidaId())) {
-            EstadoOperacion estado = EstadoOperacion.de(o.getEstado());
-            if (!estado.esFinal() && !estado.puedePasarA(EstadoOperacion.CANCELADO)) {
-                throw new BusinessException("El traslado " + o.getCodigoOperacion() + " ya está en ruta: finalízalo antes de cancelar la salida.");
-            }
-        }
-    }
-
-    // Al terminar el viaje, las reservas confirmadas quedan COMPLETADAS (queda en AUDITORIA)
-    private void completarReservas(Long salidaId) {
-        for (DetalleReserva d : detalleRepository.findBySalidaId(salidaId)) {
-            // Con bloqueo: una anulación simultánea no puede quedar pisada por COMPLETADA
-            reservaRepository.findByIdParaActualizar(d.getReservaId()).ifPresent(r -> {
-                if (CONFIRMADA.equals(r.getEstadoReserva())) {
-                    r.setEstadoReserva(COMPLETADA);
-                    reservaRepository.save(r);
-                }
-            });
-        }
-        reservaRepository.flush();
-    }
-
-    // Una salida cancelada no deja traslados reservando vehículos y conductores
-    private void cancelarOperaciones(Long salidaId) {
-        for (OperacionTransporte o : operacionRepository.findBySalidaIdOrderByHoraSalidaAscOperacionIdAsc(salidaId)) {
-            if (EstadoOperacion.de(o.getEstado()).esFinal()) continue;
-            o.setEstado(EstadoOperacion.CANCELADO.name());
-            operacionRepository.save(o);
-            HistorialOperacion h = new HistorialOperacion();
-            h.setOperacionId(o.getOperacionId());
-            h.setEstadoNuevo(o.getEstado());
-            h.setFechaCambio(LocalDateTime.now());
-            h.setUsuario(SesionActual.usuario());
-            h.setObservacion("Salida cancelada");
-            historialRepository.save(h);
-        }
-        operacionRepository.flush();
-    }
-
     // ---------- Apoyo ----------
 
-    private int vendidos(SalidaProgramada s) {
-        return s.getCuposMaximos() - s.getCuposDisponibles();
+    private void validarGuia(Long guiaId) {
+        if (guiaId == null) return;
+        Personal g = personalRepository.findById(guiaId).orElseThrow(() -> new BusinessException("El guía seleccionado no existe."));
+        if (!recursos.esGuia(g)) throw new BusinessException(g.getNombreCompleto() + " no tiene un cargo de guía.");
+        if ("INACTIVO".equals(g.getEstado())) throw new BusinessException("El guía " + g.getNombreCompleto() + " está inactivo.");
+    }
+
+    private Integer minimo(PaqueteTour p) {
+        return p == null ? null : p.getMinimoPasajeros();
     }
 
     private String faltante(SalidaProgramada s) {
-        boolean activa = PROGRAMADA.equals(s.getEstado()) || CONFIRMADA.equals(s.getEstado());
-        return activa ? capacidad.faltante(s.getSalidaId(), vendidos(s), null) : null;
+        boolean activa = PROGRAMADA.equals(s.getEstado()) || GARANTIZADA.equals(s.getEstado());
+        return activa ? capacidad.faltante(s.getSalidaId(), s.getCuposMaximos() - s.getCuposDisponibles(), null) : null;
     }
 
     private SalidaProgramadaDTO dto(SalidaProgramada s) {
         int operaciones = (int) operacionRepository.findBySalidaIdOrderByHoraSalidaAscOperacionIdAsc(s.getSalidaId()).stream()
                 .filter(o -> !"CANCELADO".equals(o.getEstado())).count();
-        return SalidaProgramadaDTO.desde(s, operaciones, faltante(s));
+        return SalidaProgramadaDTO.desde(s, minimo(paqueteRepository.findById(s.getPaqueteId()).orElse(null)), operaciones, faltante(s));
     }
 
     private SalidaProgramada obtener(Long id) {
@@ -299,34 +224,5 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     private SalidaProgramada bloquear(Long id) {
         return salidaRepository.findByIdParaActualizar(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Salida no encontrada con Id: " + id));
-    }
-
-    private PaqueteTour validar(SalidaProgramadaRequestDTO d, Long id) {
-        PaqueteTour paquete = paqueteRepository.findById(d.paqueteId()).orElseThrow(() -> new BusinessException("Selecciona un paquete."));
-        if (d.guiaId() != null) {
-            Personal g = personalRepository.findById(d.guiaId()).orElseThrow(() -> new BusinessException("El guía seleccionado no existe."));
-            if ("CONDUCTOR".equals(g.getRol())) throw new BusinessException(g.getNombreCompleto() + " es conductor, no guía.");
-            if ("INACTIVO".equals(g.getEstado())) throw new BusinessException("El guía " + g.getNombreCompleto() + " está inactivo.");
-            boolean activa = PROGRAMADA.equals(d.estado()) || CONFIRMADA.equals(d.estado());
-            if (activa) {
-                LocalDate fin = d.fechaInicio().plusDays(paquete.getDias() - 1L);
-                for (SalidaProgramada s : salidaRepository.findByGuiaIdAndEstadoInAndFechaInicioLessThanEqualAndFechaFinGreaterThanEqual(
-                        d.guiaId(), List.of(PROGRAMADA, CONFIRMADA), fin, d.fechaInicio())) {
-                    if (id == null || !s.getSalidaId().equals(id)) {
-                        throw new BusinessException(g.getNombreCompleto() + " ya guía otra salida en esas fechas.");
-                    }
-                }
-            }
-        }
-        return paquete;
-    }
-
-    private void copiar(SalidaProgramadaRequestDTO d, SalidaProgramada s, PaqueteTour paquete) {
-        s.setPaqueteId(d.paqueteId());
-        s.setFechaInicio(d.fechaInicio());
-        s.setFechaFin(d.fechaInicio().plusDays(paquete.getDias() - 1L));
-        s.setCuposMaximos(d.cuposMaximos());
-        s.setGuiaId(d.guiaId());
-        s.setEstado(d.estado());
     }
 }

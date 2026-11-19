@@ -20,23 +20,26 @@ public class UsuarioInicialConfig {
     public void crearUsuariosIniciales() {
         verificarEsquema();
         if (repo.count() > 0) return;
-        repo.save(nuevo("admin", "admin123", "ADMIN"));
-        // Roles permitidos por chk_usu_rol: ADMIN, VENDEDOR, OPERADOR
-        repo.save(nuevo("ventas", "ventas123", "VENDEDOR"));
-        repo.save(nuevo("operador", "operador123", "OPERADOR"));
-        System.out.println("USUARIOS_SISTEMA vacía: se crearon los usuarios admin, ventas y operador.");
+        // Mismos usuarios que la semilla de kampu_tours_v10.sql (clave Kampu2026*, BCrypt por chk_usu_hash).
+        // Roles permitidos por chk_usu_rol: ADMIN, VENDEDOR, OPERADOR (ROL es NOT NULL)
+        repo.save(nuevo("kadmin", "Administrador", "ADMIN"));
+        repo.save(nuevo("kventas", "Ventas", "VENDEDOR"));
+        repo.save(nuevo("koperador", "Operaciones", "OPERADOR"));
+        System.out.println("USUARIOS_SISTEMA vacía: se crearon kadmin, kventas y koperador (clave Kampu2026*).");
     }
 
-    private UsuarioSistema nuevo(String username, String password, String rol) {
+    private UsuarioSistema nuevo(String username, String nombre, String rol) {
         UsuarioSistema u = new UsuarioSistema();
         u.setUsername(username);
-        u.setPasswordHash(password);
+        u.setNombreCompleto(nombre);
+        u.setPasswordHash(pe.edu.upeu.lp2_gp2.services.Claves.cifrar("Kampu2026*"));
+        u.setIntentosFallidos(0);
         u.setRol(rol);
         u.setEstado("ACTIVO");
         return u;
     }
 
-    // Antes de usar las tablas: si el esquema de trabajo (CURRENT_SCHEMA, p. ej. KAMPU_BD cuando la app entra
+    // Antes de usar las tablas: si el esquema de trabajo (CURRENT_SCHEMA, p. ej. KAMPU cuando la app entra
     // como KAMPU_APP) no tiene el script instalado, se detiene con un mensaje claro en lugar de un ORA-00942.
     private void verificarEsquema() {
         var datos = jdbc.queryForMap("SELECT USER AS usuario, SYS_CONTEXT('USERENV', 'CURRENT_SCHEMA') AS esquema, "
@@ -53,7 +56,7 @@ public class UsuarioInicialConfig {
                 + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
         String mensaje = "La base de datos a la que se conectó la aplicación (" + donde + ") no tiene "
                 + (tablas ? "el paquete PKG_SEGURIDAD_ROLES válido" : "las tablas del sistema") + ". "
-                + "Ejecuta db/kampu_tours_v11.sql como SYSTEM en la PDB (crea KAMPU_BD y KAMPU_APP), "
+                + "Ejecuta db/kampu_tours_v10.sql como SYSTEM en la PDB (crea KAMPU, KAMPU_APP y KAMPU_WEB), "
                 + "o revisa DB_URL, DB_USERNAME y DB_SCHEMA "
                 + "(Oracle XE 21c: jdbc:oracle:thin:@localhost:1521/XEPDB1 · Oracle 23 Free: .../FREEPDB1)."
                 + ("CDB$ROOT".equals(datos.get("CONTENEDOR")) ? " Ojo: estás en el contenedor raíz (CDB$ROOT); los scripts van en la PDB." : "");

@@ -1,14 +1,13 @@
 package pe.edu.upeu.lp2_gp2.dto;
 
-import pe.edu.upeu.lp2_gp2.entity.VistaPaqueteCliente;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-// Fila de VW_PAQUETES_CLIENTE: paquete del cliente con estado de ejecución y de pago
+// Fila de VW_PAQUETES_CLIENTE (v10): reserva del cliente con estado de ejecución, de pago y recojo
 public record PortalPaqueteDTO(
         Long reservaId,
+        String codigoReserva,
         Long salidaId,
         Long paqueteId,
         String paqueteNombre,
@@ -17,7 +16,11 @@ public record PortalPaqueteDTO(
         Integer noches,
         LocalDate fechaInicio,
         LocalDate fechaFin,
+        String estadoSalida,
+        boolean salidaGarantizada,
         Integer pasajeros,
+        BigDecimal precioUnitario,
+        BigDecimal descuento,
         LocalDateTime fechaReserva,
         String estadoReserva,
         // POR_EMPEZAR / EN_CURSO / TERMINADO (CANCELADO)
@@ -27,12 +30,9 @@ public record PortalPaqueteDTO(
         BigDecimal montoTotal,
         BigDecimal montoPagado,
         BigDecimal saldo,
-        BigDecimal montoPorValidar
+        BigDecimal montoPorValidar,
+        String puntoRecojo,
+        String direccionRecojo,
+        LocalDateTime horaRecojo
 ) {
-    public static PortalPaqueteDTO desde(VistaPaqueteCliente v) {
-        return new PortalPaqueteDTO(v.getReservaId(), v.getSalidaId(), v.getPaqueteId(), v.getPaqueteNombre(),
-                v.getImagen() == null ? "" : v.getImagen(), v.getDias(), v.getNoches(), v.getFechaInicio(), v.getFechaFin(),
-                v.getPasajeros(), v.getFechaReserva(), v.getEstadoReserva(), v.getEstadoEjecucion(), v.getEstadoPago(),
-                v.getMontoTotal(), v.getMontoPagado(), v.getSaldo(), v.getMontoPorValidar());
-    }
 }

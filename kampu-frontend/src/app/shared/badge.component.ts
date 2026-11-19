@@ -13,7 +13,7 @@ export class BadgeComponent {
   //   correcto -> oliva del logo (#4B5B1D) · en curso -> oliva medio · intermedio -> oliva claro
   //   aviso -> lima de la hoja (#C4BD45) · error -> terracota · el resto (completado, inactivo...) -> neutro
   private tonos: { [estado: string]: string } = {
-    CONFIRMADA: 'correcto', APROBADO: 'correcto', PAGADO: 'correcto', ACTIVO: 'correcto', DISPONIBLE: 'correcto', OPERATIVO: 'correcto',
+    CONFIRMADA: 'correcto', GARANTIZADA: 'correcto', APROBADO: 'correcto', PAGADO: 'correcto', ACTIVO: 'correcto', DISPONIBLE: 'correcto', OPERATIVO: 'correcto',
     FINALIZADO: 'correcto', PAGADO_COMPLETO: 'correcto', CREAR: 'correcto',
     EN_RUTA: 'curso', EN_CURSO: 'curso', EMBARQUE: 'curso', REGISTRO: 'curso',
     PARCIAL: 'intermedio', PROGRAMADA: 'intermedio', ASIGNADO: 'intermedio', POR_EMPEZAR: 'intermedio', ACTUALIZAR: 'intermedio',

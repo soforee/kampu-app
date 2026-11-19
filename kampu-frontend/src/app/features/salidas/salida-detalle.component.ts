@@ -1,7 +1,8 @@
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { EstadoSalida, Manifiesto, SalidaForm } from '../../core/models';
+import { EstadoSalida, FormaReembolso, Manifiesto } from '../../core/models';
+import { etiqueta, FORMAS_REEMBOLSO } from '../../core/utils/etiquetas';
 import { AlertService } from '../../core/services/alert.service';
 import { AuthService } from '../../core/services/auth.service';
 import { TourStore } from '../../core/services/tour-store.service';
@@ -119,19 +120,20 @@ export class SalidaDetalleComponent {
   });
   listos = computed(() => this.pasos().filter(p => p.ok).length);
 
+  // Ciclo v10 (TRG_SALIDAS_VALIDAR): PROGRAMADA -> GARANTIZADA -> COMPLETADA. No se vuelve atrás.
   puedeConfirmar = computed(() => this.ejecuta && this.salida()?.estado === 'PROGRAMADA');
   puedeTerminar = computed(() => {
     const s = this.salida();
-    return this.ejecuta && !!s && s.estado === 'CONFIRMADA' && diasHasta(s.fechaInicio) <= 0;
+    return this.ejecuta && !!s && s.estado === 'GARANTIZADA' && diasHasta(s.fechaInicio) <= 0;
   });
-  puedeReabrir = computed(() => this.gestiona && this.salida()?.estado === 'CONFIRMADA' && diasHasta(this.salida()!.fechaInicio) > 0);
+  puedeReabrir = computed(() => false);
   puedeCancelar = computed(() => {
     const e = this.salida()?.estado;
-    return this.gestiona && (e === 'PROGRAMADA' || e === 'CONFIRMADA');
+    return this.gestiona && (e === 'PROGRAMADA' || e === 'GARANTIZADA');
   });
   puedeVender = computed(() => {
     const s = this.salida();
-    return this.vende && !!s && (s.estado === 'PROGRAMADA' || s.estado === 'CONFIRMADA') && s.cuposDisponibles > 0 && diasHasta(s.fechaInicio) >= 0;
+    return this.vende && !!s && (s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA') && s.cuposDisponibles > 0 && diasHasta(s.fechaInicio) >= 0;
   });
 
   constructor() {
@@ -155,32 +157,32 @@ export class SalidaDetalleComponent {
     this.cargarManifiesto();
   }
 
-  async ejecucion(estado: 'CONFIRMADA' | 'COMPLETADA') {
-    const texto = estado === 'CONFIRMADA'
-      ? 'El grupo queda confirmado: guía, pasajeros y transporte deben estar listos.'
+  async ejecucion(estado: 'GARANTIZADA' | 'COMPLETADA') {
+    const texto = estado === 'GARANTIZADA'
+      ? 'La salida queda garantizada: se opera aunque no llegue al mínimo de pasajeros. No vuelve a programada.'
       : 'Las reservas confirmadas pasarán a COMPLETADA y la salida ya no podrá modificarse.';
-    const titulo = estado === 'CONFIRMADA' ? 'Confirmar salida' : 'Marcar como terminada';
+    const titulo = estado === 'GARANTIZADA' ? 'Garantizar salida' : 'Marcar como terminada';
     if (!(await this.alerts.confirm(texto, titulo, 'Continuar'))) return;
     this.procesando.set(true);
     this.store.marcarEjecucion(this.id, estado).subscribe({
-      next: () => { this.procesando.set(false); this.recargar(); this.alerts.toast(estado === 'CONFIRMADA' ? 'Salida confirmada' : 'Salida terminada'); },
+      next: () => { this.procesando.set(false); this.recargar(); this.alerts.toast(estado === 'GARANTIZADA' ? 'Salida garantizada' : 'Salida terminada'); },
       error: e => { this.procesando.set(false); this.alerts.error(this.store.error(e)); }
     });
   }
 
-  // Reabrir y cancelar pasan por la edición de la salida (GESTIONAR_CATALOGO)
+  // Cancelar (PKG_RESERVAS.cancelar_salida): anula y reembolsa sus reservas activas y cancela sus traslados
   async cambiar(estado: EstadoSalida) {
     const s = this.salida();
-    if (!s) return;
-    const cancelar = estado === 'CANCELADA';
-    const texto = cancelar
-      ? 'La salida se cierra y sus traslados pendientes se cancelan. No se puede deshacer.'
-      : 'Vuelve a PROGRAMADA para poder ajustar guía, cupos o transporte.';
-    if (!(await this.alerts.confirm(texto, cancelar ? 'Cancelar salida' : 'Reabrir salida', cancelar ? 'Cancelar salida' : 'Reabrir'))) return;
-    const datos: SalidaForm = { paqueteId: s.paqueteId, fechaInicio: s.fechaInicio, cuposMaximos: s.cuposMaximos, guiaId: s.guiaId ?? null, estado: estado };
+    if (!s || estado !== 'CANCELADA') return;
+    const cobrado = this.store.reservas().some(r => r.salidaId === s.salidaId && r.montoPagado > 0
+      && (r.estadoReserva === 'PENDIENTE' || r.estadoReserva === 'CONFIRMADA'));
+    const datos = await this.alerts.anulacion('Cancelar salida',
+      'Se anularán sus reservas activas (con reembolso de lo cobrado) y se cancelarán sus traslados. No se puede deshacer.',
+      cobrado ? FORMAS_REEMBOLSO.map(f => [f, etiqueta(f)] as [string, string]) : null, 'Cancelar salida');
+    if (!datos) return;
     this.procesando.set(true);
-    this.store.guardarSalida(datos, s.salidaId).subscribe({
-      next: () => { this.procesando.set(false); this.recargar(); this.alerts.toast(cancelar ? 'Salida cancelada' : 'Salida reabierta'); },
+    this.store.cancelarSalida(s.salidaId, datos.motivo, datos.formaReembolso as FormaReembolso | null).subscribe({
+      next: () => { this.procesando.set(false); this.recargar(); this.alerts.toast('Salida cancelada'); },
       error: e => { this.procesando.set(false); this.alerts.error(this.store.error(e)); }
     });
   }
