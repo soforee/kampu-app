@@ -62,9 +62,9 @@
 
    USUARIOS DE BASE DE DATOS QUE CREA (cambia las claves fuera de clase)
      KAMPU_BD       dueno de tablas, vistas y PL/SQL (no lo uses desde la app)
-     KAMPU_APP   conexion del backend Spring Boot (personal interno)
-     KAMPU_WEB   conexion del portal de clientes (solo ROL_CLIENTE)
-     KADMIN / KVENTAS / KOPERADOR   usuarios nominales SOLO para probar roles
+     KAMPU_APP   conexion del backend Spring Boot (personal interno y portal de clientes)
+   ROLES (el acceso se da solo por roles, sin usuarios de prueba)
+     ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE   -> otorgados a KAMPU_APP
 
    USUARIOS DE LA APLICACION (datos semilla)
      kadmin (ADMIN) - kventas (VENDEDOR) - koperador (OPERADOR)
@@ -127,13 +127,13 @@ BEGIN
        || 'TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS', -1920);
     crear('CREATE USER KAMPU_APP IDENTIFIED BY "Kampu_App_2026" DEFAULT TABLESPACE USERS '
        || 'TEMPORARY TABLESPACE TEMP PROFILE PRF_KAMPU_SERVICIO', -1920);
-    crear('CREATE USER KAMPU_WEB IDENTIFIED BY "Kampu_Web_2026" DEFAULT TABLESPACE USERS '
-       || 'TEMPORARY TABLESPACE TEMP PROFILE PRF_KAMPU_SERVICIO', -1920);
 
-    -- Usuarios nominales solo para probar los roles desde SQL Developer
-    crear('CREATE USER KADMIN IDENTIFIED BY "Prueba_Admin_2026" DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP', -1920);
-    crear('CREATE USER KVENTAS IDENTIFIED BY "Prueba_Ventas_2026" DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP', -1920);
-    crear('CREATE USER KOPERADOR IDENTIFIED BY "Prueba_Opera_2026" DEFAULT TABLESPACE USERS TEMPORARY TABLESPACE TEMP', -1920);
+    -- (adaptado) Solo roles: si quedaron usuarios de una instalacion anterior
+    -- (KAMPU_WEB y los de prueba KADMIN/KVENTAS/KOPERADOR), se eliminan. No son duenos de objetos.
+    crear('DROP USER KAMPU_WEB CASCADE', -1918);
+    crear('DROP USER KADMIN CASCADE', -1918);
+    crear('DROP USER KVENTAS CASCADE', -1918);
+    crear('DROP USER KOPERADOR CASCADE', -1918);
 
     -- Roles locales del PDB (ROL_VENTAS = rol de aplicacion VENDEDOR)
     crear('CREATE ROLE ROL_ADMIN', -1921);
@@ -145,7 +145,7 @@ END;
 
 ALTER USER KAMPU_BD QUOTA UNLIMITED ON USERS;
 GRANT CREATE SESSION, CREATE TABLE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE, CREATE TRIGGER TO KAMPU_BD;
-GRANT CREATE SESSION TO KAMPU_APP, KAMPU_WEB, KADMIN, KVENTAS, KOPERADOR;
+GRANT CREATE SESSION TO KAMPU_APP;
 
 -- A partir de aqui todos los objetos se crean en el esquema del dueno
 ALTER SESSION SET CURRENT_SCHEMA = KAMPU_BD;
@@ -784,7 +784,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
      || 'VER_PAQUETES_PROPIOS,INFORMAR_PAGO';
 
     -- Usuarios de BD en los que se confia para fijar la identidad de personal interno
-    -- (pool del backend y mantenimiento). Un usuario nominal solo puede ser el mismo.
+    -- (pool del backend y mantenimiento). Cualquier otro usuario de BD solo puede ser el mismo.
     c_sesiones_confiables CONSTANT VARCHAR2(100) := ',KAMPU_BD,KAMPU_APP,SYS,SYSTEM,';
 
     PROCEDURE iniciar_sesion (p_usuario VARCHAR2, p_rol VARCHAR2, p_cliente_id NUMBER DEFAULT NULL) IS
@@ -1431,7 +1431,7 @@ END PKG_RESERVAS;
 
 -- ============================================================================
 -- 8. PKG_GESTION_PAQUETES_CLIENTE
---    Lo unico que puede invocar el portal de clientes (KAMPU_WEB / ROL_CLIENTE).
+--    Lo unico que puede invocar el portal de clientes (ROL_CLIENTE).
 --    El cliente solo opera sobre SU cuenta. v7: ve el calendario de fechas y
 --    reserva eligiendo paquete + fecha + cantidad (PKG_RESERVAS.reservar).
 -- ============================================================================
@@ -1440,7 +1440,7 @@ CREATE OR REPLACE PACKAGE PKG_GESTION_PAQUETES_CLIENTE AS
     FUNCTION estado_ejecucion (p_fecha_inicio DATE, p_fecha_fin DATE, p_estado_salida VARCHAR2) RETURN VARCHAR2;
 
     -- Login del portal: hash BCrypt de una cuenta web activa (NULL si no existe).
-    -- El backend verifica la clave; asi KAMPU_WEB no necesita SELECT sobre CLIENTES.
+    -- El backend verifica la clave; asi ROL_CLIENTE no necesita SELECT sobre CLIENTES.
     FUNCTION hash_credencial (p_email VARCHAR2) RETURN VARCHAR2;
     -- Tras verificar la clave: fija la identidad del cliente en la sesion de BD
     PROCEDURE iniciar_sesion_cliente (p_email VARCHAR2, p_cliente_id OUT NUMBER);
@@ -3071,11 +3071,9 @@ GRANT EXECUTE ON KAMPU_BD.PKG_GESTION_PAQUETES_CLIENTE TO ROL_ADMIN, ROL_VENTAS,
 GRANT EXECUTE ON KAMPU_BD.SP_REGISTRAR_CLIENTE_EXTERNO TO ROL_CLIENTE;
 
 -- Roles a usuarios de base de datos
-GRANT ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR TO KAMPU_APP;
-GRANT ROL_CLIENTE  TO KAMPU_WEB;
-GRANT ROL_ADMIN    TO KADMIN;
-GRANT ROL_VENTAS   TO KVENTAS;
-GRANT ROL_OPERADOR TO KOPERADOR;
+-- (adaptado) Solo roles: la conexion del backend recibe los cuatro; el nivel de cada
+-- peticion lo fija PKG_SEGURIDAD_ROLES (personal) o PKG_GESTION_PAQUETES_CLIENTE (cliente).
+GRANT ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE TO KAMPU_APP;
 
 -- ============================================================================
 -- 13. DATOS SEMILLA

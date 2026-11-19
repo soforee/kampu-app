@@ -28,8 +28,8 @@ import java.util.Optional;
  *    intentos_fallidos y a los 5 la cuenta queda BLOQUEADA; un ingreso correcto los reinicia y
  *    guarda ultimo_acceso.
  *  - Clientes del portal (por correo o documento): el hash se obtiene con
- *    PKG_GESTION_PAQUETES_CLIENTE.hash_credencial por la conexión KAMPU_WEB y se verifica aquí.
- *  - Registro: SP_REGISTRAR_CLIENTE_EXTERNO (KAMPU_WEB) con la clave ya cifrada con BCrypt.
+ *    PKG_GESTION_PAQUETES_CLIENTE.hash_credencial y se verifica aquí.
+ *  - Registro: SP_REGISTRAR_CLIENTE_EXTERNO (ROL_CLIENTE) con la clave ya cifrada con BCrypt.
  */
 @Service
 public class AuthServiceImpl implements IAuthService {
@@ -121,7 +121,7 @@ public class AuthServiceImpl implements IAuthService {
         if (errorTelefono != null) throw new BusinessException(errorTelefono);
 
         String hash = Claves.cifrar(dto.password());
-        // SP_REGISTRAR_CLIENTE_EXTERNO (solo ROL_CLIENTE: conexión KAMPU_WEB): valida, guarda y audita
+        // SP_REGISTRAR_CLIENTE_EXTERNO (solo ROL_CLIENTE): valida, guarda y audita
         Long clienteId = portal.ejecutar(con -> {
             try (CallableStatement cs = con.prepareCall("{call SP_REGISTRAR_CLIENTE_EXTERNO(?, ?, ?, ?, ?, ?, ?)}")) {
                 cs.setString(1, dto.nombreCompleto().trim());
