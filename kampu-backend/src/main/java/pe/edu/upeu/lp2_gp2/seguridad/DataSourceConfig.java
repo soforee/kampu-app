@@ -1,8 +1,6 @@
 package pe.edu.upeu.lp2_gp2.seguridad;
 
 import com.zaxxer.hikari.HikariDataSource;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -13,11 +11,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import javax.sql.DataSource;
 
 /**
- * Dos conexiones, como define kampu_tours_v10.sql:
- *  - KAMPU_APP (principal, JPA): personal interno con ROL_ADMIN, ROL_VENTAS y ROL_OPERADOR.
- *  - KAMPU_WEB (portal): solo ROL_CLIENTE. Entra por PKG_GESTION_PAQUETES_CLIENTE, lee
- *    VW_PAQUETES_CLIENTE y registra clientes con SP_REGISTRAR_CLIENTE_EXTERNO.
- * Las dos trabajan sobre el esquema dueño KAMPU_BD (ALTER SESSION SET CURRENT_SCHEMA).
+ * Una sola conexión, KAMPU_APP, con los cuatro roles de kampu_tours_v10.sql
+ * (ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR y ROL_CLIENTE). Trabaja sobre el esquema
+ * dueño KAMPU_BD (ALTER SESSION SET CURRENT_SCHEMA). El nivel de cada petición lo
+ * fija PKG_SEGURIDAD_ROLES (SesionOracleDataSource) y, en el portal,
+ * PKG_GESTION_PAQUETES_CLIENTE (PortalSesionDataSource).
  */
 @Configuration
 public class DataSourceConfig {
@@ -40,31 +38,5 @@ public class DataSourceConfig {
     @Primary
     public JdbcTemplate jdbcTemplate(DataSource dataSource) {
         return new JdbcTemplate(dataSource);
-    }
-
-    /**
-     * Pool del portal (KAMPU_WEB). Usa la misma URL y el mismo esquema que la conexión principal;
-     * solo cambian usuario y clave (variables DB_WEB_USERNAME y DB_WEB_PASSWORD).
-     */
-    @Bean
-    public HikariDataSource portalHikari(DataSourceProperties principal,
-                                         @Value("${DB_WEB_USERNAME:KAMPU_WEB}") String usuario,
-                                         @Value("${DB_WEB_PASSWORD:Kampu_Web_2026}") String clave,
-                                         @Value("${DB_SCHEMA:KAMPU_BD}") String esquema) {
-        HikariDataSource ds = new HikariDataSource();
-        ds.setJdbcUrl(principal.getUrl());
-        ds.setDriverClassName(principal.getDriverClassName());
-        ds.setUsername(usuario);
-        ds.setPassword(clave);
-        ds.setMaximumPoolSize(5);
-        ds.setConnectionInitSql("ALTER SESSION SET CURRENT_SCHEMA=" + esquema);
-        ds.setPoolName("portal-kampu-web");
-        return ds;
-    }
-
-    /** Conexión del portal: cada vez que se toma, fija (o limpia) la identidad del cliente de la petición */
-    @Bean
-    public PortalSesionDataSource portalDataSource(@Qualifier("portalHikari") HikariDataSource hikari) {
-        return new PortalSesionDataSource(hikari);
     }
 }

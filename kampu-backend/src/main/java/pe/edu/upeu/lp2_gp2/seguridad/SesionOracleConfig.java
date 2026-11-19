@@ -14,9 +14,7 @@ public class SesionOracleConfig {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String nombre) {
-                // El pool del portal (KAMPU_WEB) tiene su propia sesión: PortalSesionDataSource
-                if (bean instanceof DataSource ds && !(bean instanceof org.springframework.jdbc.datasource.DelegatingDataSource)
-                        && !"portalHikari".equals(nombre)) {
+                if (bean instanceof DataSource ds && !(bean instanceof org.springframework.jdbc.datasource.DelegatingDataSource)) {
                     return new SesionOracleDataSource(ds);
                 }
                 return bean;
