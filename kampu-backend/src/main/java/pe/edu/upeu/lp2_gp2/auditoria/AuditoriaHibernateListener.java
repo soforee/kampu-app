@@ -124,7 +124,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
 
     private static String entidad(EntityPersister p) {
         String tabla = p instanceof AbstractEntityPersister a ? a.getTableName().toUpperCase() : p.getEntityName();
-        tabla = tabla.substring(tabla.lastIndexOf('.') + 1);   // sin el esquema (hibernate.default_schema = KAMPU)
+        tabla = tabla.substring(tabla.lastIndexOf('.') + 1);   // sin el esquema (hibernate.default_schema = KAMPU_BD)
         return NOMBRES.getOrDefault(tabla, tabla);
     }
 

@@ -5,7 +5,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Datos de contacto de la agencia (kampu.contacto en application.yaml). Público: lo usa la página principal. */
+/**
+ * Datos de contacto de la agencia. Público: lo usa la página principal.
+ * Valores por defecto de demostración; se cambian con las variables de entorno
+ * KAMPU_CONTACTO_EMAIL, KAMPU_CONTACTO_TELEFONO, KAMPU_CONTACTO_CIUDAD,
+ * KAMPU_CONTACTO_INSTAGRAM y KAMPU_CONTACTO_FACEBOOK (sin redes no aparece su botón).
+ */
 @RestController
 @RequestMapping("/api/v1/contacto")
 public class ContactoController {
@@ -13,11 +18,11 @@ public class ContactoController {
 
     private final ContactoDTO contacto;
 
-    public ContactoController(@Value("${kampu.contacto.email}") String email,
-                              @Value("${kampu.contacto.telefono}") String telefono,
-                              @Value("${kampu.contacto.ciudad}") String ciudad,
-                              @Value("${kampu.contacto.instagram:}") String instagram,
-                              @Value("${kampu.contacto.facebook:}") String facebook) {
+    public ContactoController(@Value("${KAMPU_CONTACTO_EMAIL:reservas@kampu.pe}") String email,
+                              @Value("${KAMPU_CONTACTO_TELEFONO:+51 984 000 000}") String telefono,
+                              @Value("${KAMPU_CONTACTO_CIUDAD:Cusco, Perú}") String ciudad,
+                              @Value("${KAMPU_CONTACTO_INSTAGRAM:}") String instagram,
+                              @Value("${KAMPU_CONTACTO_FACEBOOK:}") String facebook) {
         this.contacto = new ContactoDTO(email, telefono, ciudad, instagram, facebook);
     }
 
