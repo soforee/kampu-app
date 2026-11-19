@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// Tráfico: transiciones de estado y validaciones en OperacionTransporteServiceImpl
+// OPERACIONES_TRANSPORTE (v10): TRG_OPERACIONES_VALIDAR genera el codigo KMP-###, valida recursos,
+// transiciones y cruces de horario, y escribe HISTORIAL_OPERACIONES.
 @Entity
 @DynamicUpdate
 @Table(name = "OPERACIONES_TRANSPORTE")
@@ -14,38 +15,37 @@ public class OperacionTransporte {
     @Column(name = "operacion_id")
     private Long operacionId;
 
-    @Column(name = "codigo_operacion", nullable = false, length = 20)
+    @Column(name = "codigo_operacion", insertable = false, updatable = false)
     private String codigoOperacion;
 
     @Column(name = "salida_id")
     private Long salidaId;
 
-    @Column(name = "origen_id", nullable = false)
+    @Column(name = "origen_id")
     private Long origenId;
 
-    @Column(name = "destino_id", nullable = false)
+    @Column(name = "destino_id")
     private Long destinoId;
 
     @Column(name = "vehiculo_id")
     private Long vehiculoId;
 
-    // PERSONAL con rol CONDUCTOR o AMBOS
     @Column(name = "conductor_id")
     private Long conductorId;
 
-    @Column(name = "pax_programados", nullable = false)
+    @Column(name = "pax_programados")
     private Integer paxProgramados;
 
-    @Column(name = "hora_salida", nullable = false)
+    @Column(name = "hora_salida")
     private LocalDateTime horaSalida;
 
-    @Column(name = "hora_llegada", nullable = false)
+    @Column(name = "hora_llegada")
     private LocalDateTime horaLlegada;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "estado")
     private String estado;
 
-    @Column(name = "observaciones", length = 200)
+    @Column(name = "observaciones")
     private String observaciones;
 
     public OperacionTransporte() {

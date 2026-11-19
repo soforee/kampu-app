@@ -11,8 +11,11 @@
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-2xl font-semibold tracking-tight text-zinc-900">Mis paquetes</h1>
-        <p class="mt-1 text-sm text-zinc-500">Solo ves los paquetes reservados a tu nombre. Esta vista es de consulta.</p>
+        <p class="mt-1 text-sm text-zinc-500">Solo ves los paquetes reservados a tu nombre.</p>
       </div>
+      @if (!reservando()) {
+        <button type="button" class="btn-dark" (click)="abrirReserva()"><app-icon name="plus" size="w-4 h-4" /> Reservar un tour</button>
+      }
       @if (saldoTotal() > 0) {
         <div class="text-right">
           <div class="text-xs text-zinc-500">Saldo por pagar</div>
@@ -20,6 +23,41 @@
         </div>
       }
     </div>
+
+    @if (reservando()) {
+      <section class="card mt-6 p-5 sm:p-6">
+        <h2 class="font-semibold text-zinc-900">Reservar un tour</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-2">
+          <div><label class="label req" for="r-paquete">Paquete</label>
+            <select id="r-paquete" class="field" [(ngModel)]="nueva.paqueteId" (ngModelChange)="elegirPaquete()">
+              <option [ngValue]="null" disabled>Elige un paquete</option>
+              @for (x of paquetes$(); track x.paqueteId) { <option [ngValue]="x.paqueteId">{{ x.nombre }} · S/ {{ x.precioBase | number:'1.2-2' }} por persona</option> }
+            </select>
+          </div>
+          <div><label class="label req" for="r-fecha">Fecha</label>
+            <select id="r-fecha" class="field" [(ngModel)]="nueva.fecha" [disabled]="!fechasWeb().length">
+              @for (d of fechasWeb(); track d.fecha) { <option [value]="d.fecha">{{ d.fecha | date:'EEEE dd/MM/yyyy' }} · {{ d.cuposDisponibles }} cupos@if (d.estadoSalida === 'GARANTIZADA') { · garantizada }</option> }
+            </select>
+            @if (nueva.paqueteId && !fechasWeb().length) { <p class="hint">No hay fechas disponibles por la web en los próximos 60 días.</p> }
+            @if (paqueteElegido; as pq) { <p class="hint">Se reserva por la web con al menos {{ pq.anticipacionMinHoras }} h de anticipación.</p> }
+          </div>
+          <div><label class="label req" for="r-cantidad">Pasajeros</label><input id="r-cantidad" type="number" min="1" max="99" class="field" [(ngModel)]="nueva.cantidad"></div>
+          <div><label class="label" for="r-recojo">Punto de recojo</label>
+            <select id="r-recojo" class="field" [(ngModel)]="nueva.lugarRecojoId">
+              <option [ngValue]="null">Oficina de la agencia</option>
+              @for (x of puntos(); track x.lugarId) { @if (!x.porDefecto) { <option [ngValue]="x.lugarId">{{ x.nombre }} · {{ x.horaRecojo }}</option> } }
+            </select>
+          </div>
+        </div>
+        @if (paqueteElegido; as pq) {
+          <p class="mt-3 text-sm text-zinc-600">Total estimado: <b>S/ {{ pq.precioBase * (nueva.cantidad || 0) | number:'1.2-2' }}</b>. Tu reserva queda pendiente y se confirma al validarse tu primer pago.</p>
+        }
+        <div class="mt-4 flex gap-2">
+          <button type="button" class="btn-light" (click)="reservando.set(false)">Cancelar</button>
+          <button type="button" class="btn-brand" [disabled]="enviando()" (click)="reservar()">{{ enviando() ? 'Reservando…' : 'Reservar' }}</button>
+        </div>
+      </section>
+    }
 
     <div class="seg mt-6" role="tablist">
       @for (f of filtros; track f.valor) {
@@ -37,7 +75,7 @@
     } @else if (!visibles().length) {
       <div class="card mt-8 p-10 text-center">
         <p class="font-medium text-zinc-900">{{ paquetes().length ? 'No hay paquetes con este estado.' : 'Aún no tienes paquetes reservados.' }}</p>
-        <p class="mt-1 text-sm text-zinc-500">Revisa nuestros tours en la página de inicio o escríbenos para reservar.</p>
+        <p class="mt-1 text-sm text-zinc-500">Usa "Reservar un tour" o revisa nuestros tours en la página de inicio.</p>
         <a routerLink="/" class="btn-light btn-sm mt-5">Ver tours</a>
       </div>
     } @else {

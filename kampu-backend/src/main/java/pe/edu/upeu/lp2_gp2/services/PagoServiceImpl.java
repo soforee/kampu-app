@@ -72,9 +72,10 @@ public class PagoServiceImpl implements IPagoService {
         p.setEstadoTransaccion(dto.estadoTransaccion());
         // Clave de partición de PAGOS: quién lo registró
         p.setRegistradoPor("ADMIN".equals(SesionActual.rol()) ? "ADMIN" : "VENDEDOR");
+        // TRG_VALIDAR_PAGO_PAQUETE: valida, audita y recalcula la reserva (monto pagado, estado de pago
+        // y confirmación automática con el primer pago aprobado)
         Pago guardado = pagoRepository.saveAndFlush(p);
-        em.refresh(guardado);   // monto_pen la calcula Oracle
-        recalcular(r);
+        em.refresh(guardado);   // monto_pen y quién registró/validó los calcula Oracle
         if ("APROBADO".equals(guardado.getEstadoTransaccion())) {
             eventos.publishEvent(new BoletaEvento(r.getReservaId(), "pago aprobado"));
         }
@@ -98,8 +99,8 @@ public class PagoServiceImpl implements IPagoService {
             throw new BusinessException("Aprobar este pago excedería el saldo de la reserva.");
         }
         p.setEstadoTransaccion(estado);
-        Pago guardado = pagoRepository.saveAndFlush(p);
-        recalcular(r);
+        Pago guardado = pagoRepository.saveAndFlush(p);   // el trigger recalcula la reserva
+        em.refresh(guardado);
         if ("APROBADO".equals(estado)) {
             eventos.publishEvent(new BoletaEvento(r.getReservaId(), "pago aprobado"));
         }
@@ -112,17 +113,4 @@ public class PagoServiceImpl implements IPagoService {
         return r.getMontoTotal().subtract(pagado).max(BigDecimal.ZERO);
     }
 
-    private void recalcular(Reserva r) {
-        if ("ANULADA".equals(r.getEstadoReserva())) return;
-        // Suma de PAGOS.monto_pen (columna virtual) de los pagos aprobados
-        BigDecimal suma = pagoRepository.sumarAprobadosEnSoles(r.getReservaId());
-        BigDecimal pagado = suma.min(r.getMontoTotal());
-        String estadoPago;
-        if (pagado.signum() <= 0) estadoPago = "PENDIENTE";
-        else if (pagado.compareTo(r.getMontoTotal().subtract(ConversorMoneda.TOLERANCIA)) >= 0) estadoPago = "PAGADO";
-        else estadoPago = "PARCIAL";
-        r.setMontoPagado(pagado);
-        r.setEstadoPago(estadoPago);
-        reservaRepository.saveAndFlush(r);
-    }
 }

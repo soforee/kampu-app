@@ -36,14 +36,19 @@
                 <div class="mt-0.5 max-w-[240px] text-xs text-amber-700" [title]="f.salida.faltanteTransporte"><span class="line-clamp-2">Falta: {{ f.salida.faltanteTransporte }}</span></div>
               }
             </td>
-            <td data-label="Estado" class="td"><app-badge [estado]="f.salida.estado" /></td>
+            <td data-label="Estado" class="td"><app-badge [estado]="f.salida.estado" />
+              @if (f.salida.origen === 'RESERVA') { <div class="mt-0.5 text-xs text-zinc-500">Creada por una reserva</div> }
+              @if (f.salida.estado === 'PROGRAMADA' && f.salida.faltanParaGarantizar > 0) { <div class="mt-0.5 text-xs text-zinc-500">Faltan {{ f.salida.faltanParaGarantizar }} para garantizar</div> }
+            </td>
             @if (editable) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 <div class="actions">
                   @if (f.abierta) {
                     <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.salida.salidaId)"><app-icon name="edit" size="w-4 h-4" /></button>
                   }
-                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  @if (f.abierta) {
+                    <button type="button" class="icon-btn-danger" title="Cancelar salida" aria-label="Cancelar salida" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  }
                 </div>
               </td>
             }
@@ -79,18 +84,16 @@
         <div class="form-section-title">Capacidad y estado</div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div><label class="label req">Cupos máximos</label><input type="number" min="1" max="999" class="field" [(ngModel)]="form.cuposMaximos" (blur)="v.tocar('cupos')" [class.field-invalid]="v.error('cupos')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric" step="1">@if (v.error('cupos'); as e) { <p class="field-error">{{ e }}</p> }</div>
-          @if (editId) {
-            <div>
-              <label class="label req">Estado</label>
-              <select class="field" [(ngModel)]="form.estado">
-                @for (e of estados; track e) { <option [value]="e">{{ e.charAt(0) + e.slice(1).toLowerCase() }}</option> }
-              </select>
-            </div>
-          }
+          <div>
+            <label class="label req">Estado</label>
+            <select class="field" [(ngModel)]="form.estado">
+              @for (e of estados; track e) { <option [value]="e">{{ etiqueta(e) }}</option> }
+            </select>
+          </div>
         </div>
-        @if (!editId) { <div class="alert-info !py-2.5 !text-xs"><span>Empieza como programada. Se confirma cuando tiene guía, pasajeros y transporte.</span></div> }
-        @if (form.estado === 'CONFIRMADA' && faltanteActual) {
-          <div class="alert-warn !py-2.5 !text-xs"><span>Para confirmar, el transporte asignado debe alcanzar en todos los tramos. Ahora: {{ faltanteActual }}.</span></div>
+        @if (!editId) { <div class="alert-info !py-2.5 !text-xs"><span>La fecha de fin y los cupos disponibles los calcula la base de datos. Pasa sola a garantizada cuando llega al mínimo de pasajeros del paquete; las reservas de la misma fecha se suman a esta salida.</span></div> }
+        @if (faltanteActual) {
+          <div class="alert-warn !py-2.5 !text-xs"><span>El transporte asignado no alcanza en todos los tramos: {{ faltanteActual }}.</span></div>
         }
       </div>
       <div class="form-section">

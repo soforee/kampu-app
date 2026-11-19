@@ -14,8 +14,9 @@ public record PagoRequestDTO(
         @NotNull(message = "La moneda es obligatoria.")
         @Pattern(regexp = "PEN|USD|EUR", message = "La moneda debe ser PEN, USD o EUR.")
         String moneda,
-        @Size(max = 50, message = "El método de pago admite máximo 50 caracteres.")
-        @Pattern(regexp = Reglas.TEXTO, message = "El método de pago contiene caracteres no permitidos.")
+        // chk_pag_metodo (v10)
+        @NotNull(message = "Selecciona el método de pago.")
+        @Pattern(regexp = "EFECTIVO|TRANSFERENCIA|DEPOSITO|YAPE|PLIN|TARJETA|PASARELA", message = "Método de pago no válido (EFECTIVO, TRANSFERENCIA, DEPOSITO, YAPE, PLIN, TARJETA, PASARELA).")
         String metodoPago,
         @Size(max = 100, message = "El código de transacción admite máximo 100 caracteres.")
         @Pattern(regexp = Reglas.CODIGO, message = "El código de transacción solo admite letras, números y . _ / # -")

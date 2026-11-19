@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pe.edu.upeu.lp2_gp2.dto.AnulacionRequestDTO;
+import pe.edu.upeu.lp2_gp2.dto.*;
 import pe.edu.upeu.lp2_gp2.dto.BoletaEnvioDTO;
 import pe.edu.upeu.lp2_gp2.dto.PasajeroReservaDTO;
 import pe.edu.upeu.lp2_gp2.dto.ReservaDTO;
@@ -59,20 +59,22 @@ public class ReservaController {
         return new ResponseEntity<>(reservaService.crear(dto), HttpStatus.CREATED);
     }
 
-    @PatchMapping("/{id}/confirmar")
-    public ResponseEntity<ReservaDTO> confirmar(@PathVariable Long id) {
-        return ResponseEntity.ok(reservaService.confirmar(id));
-    }
-
-    @PatchMapping("/{id}/completar")
-    public ResponseEntity<ReservaDTO> completar(@PathVariable Long id) {
-        return ResponseEntity.ok(reservaService.completar(id));
-    }
-
+    // v10: no hay confirmar ni completar manual. La reserva se confirma sola con el primer pago aprobado
+    // y se completa sola cuando su salida se completa.
     @PatchMapping("/{id}/anular")
-    public ResponseEntity<ReservaDTO> anular(@PathVariable Long id,
-                                             @Valid @RequestBody(required = false) AnulacionRequestDTO dto) {
-        return ResponseEntity.ok(reservaService.anular(id, dto == null ? null : dto.usuarioId(),
-                dto == null ? null : dto.formaReembolso()));
+    public ResponseEntity<ReservaDTO> anular(@PathVariable Long id, @Valid @RequestBody AnulacionRequestDTO dto) {
+        return ResponseEntity.ok(reservaService.anular(id, dto.motivo(), dto.formaReembolso()));
+    }
+
+    // Punto de recojo (v10): solo reservas abiertas; vacío = la oficina
+    @PatchMapping("/{id}/recojo")
+    public ResponseEntity<ReservaDTO> recojo(@PathVariable Long id, @RequestBody RecojoRequestDTO dto) {
+        return ResponseEntity.ok(reservaService.cambiarRecojo(id, dto.lugarRecojoId()));
+    }
+
+    // Pasajeros: hasta la cantidad reservada (TRG_PASAJEROS_VALIDAR)
+    @PostMapping("/{id}/pasajeros")
+    public ResponseEntity<PasajeroReservaDTO> agregarPasajero(@PathVariable Long id, @Valid @RequestBody PasajeroRequestDTO dto) {
+        return new ResponseEntity<>(reservaService.agregarPasajero(id, dto), HttpStatus.CREATED);
     }
 }

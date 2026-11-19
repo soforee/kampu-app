@@ -2,28 +2,33 @@ package pe.edu.upeu.lp2_gp2.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.Immutable;
 
+// HISTORIAL_OPERACIONES (v10): lo escribe TRG_OPERACIONES_VALIDAR (solo lectura en JPA)
 @Entity
+@Immutable
 @Table(name = "HISTORIAL_OPERACIONES")
 public class HistorialOperacion {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "historial_id")
     private Long historialId;
 
-    @Column(name = "operacion_id", nullable = false)
+    @Column(name = "operacion_id")
     private Long operacionId;
 
-    @Column(name = "estado_nuevo", nullable = false, length = 20)
+    @Column(name = "estado_anterior")
+    private String estadoAnterior;
+
+    @Column(name = "estado_nuevo")
     private String estadoNuevo;
 
     @Column(name = "fecha_cambio")
     private LocalDateTime fechaCambio;
 
-    @Column(name = "usuario", length = 50)
+    @Column(name = "usuario")
     private String usuario;
 
-    @Column(name = "observacion", length = 200)
+    @Column(name = "observacion")
     private String observacion;
 
     public HistorialOperacion() {
@@ -43,6 +48,14 @@ public class HistorialOperacion {
 
     public void setOperacionId(Long operacionId) {
         this.operacionId = operacionId;
+    }
+
+    public String getEstadoAnterior() {
+        return estadoAnterior;
+    }
+
+    public void setEstadoAnterior(String estadoAnterior) {
+        this.estadoAnterior = estadoAnterior;
     }
 
     public String getEstadoNuevo() {

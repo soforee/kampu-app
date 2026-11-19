@@ -3,10 +3,10 @@ package pe.edu.upeu.lp2_gp2.dto;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
-// Operador / Ventas: marcar una salida como en ejecución (CONFIRMADA) o terminada (COMPLETADA)
+// Ciclo de la salida (v10): PROGRAMADA -> GARANTIZADA -> COMPLETADA. Cancelar: PATCH /salidas/{id}/cancelar
 public record EjecucionRequestDTO(
         @NotNull(message = "Indica el estado.")
-        @Pattern(regexp = "CONFIRMADA|COMPLETADA", message = "Solo se puede marcar CONFIRMADA o COMPLETADA.")
+        @Pattern(regexp = "GARANTIZADA|COMPLETADA", message = "Solo se puede marcar GARANTIZADA o COMPLETADA.")
         String estado
 ) {
 }

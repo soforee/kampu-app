@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+// Proveedor tercero (v10): debe brindar al menos un soporte (chk_prov_servicio)
 public record ProveedorRequestDTO(
         @NotBlank(message = "El nombre comercial es obligatorio.")
         @Size(max = 150, message = "El nombre comercial admite máximo 150 caracteres.")
@@ -16,8 +17,13 @@ public record ProveedorRequestDTO(
         @Size(max = 20, message = "El teléfono admite máximo 20 caracteres.")
         @Pattern(regexp = Reglas.TELEFONO, message = Reglas.MSG_TELEFONO)
         String telefono,
-        // true: Kampu Tours (solo puede haber uno)
-        boolean esPropio,
+        @Size(max = 120, message = "El correo admite máximo 120 caracteres.")
+        @Pattern(regexp = Reglas.EMAIL, message = "El correo no es válido (ejemplo: nombre@dominio.com).")
+        String email,
+        boolean ofreceTransporte,
+        boolean ofreceGuiado,
+        boolean ofreceHospedaje,
+        boolean ofreceAlimentacion,
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "ACTIVO|INACTIVO|SUSPENDIDO", message = "El estado debe ser ACTIVO, INACTIVO o SUSPENDIDO.")
         String estado

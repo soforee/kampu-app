@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import org.hibernate.annotations.DynamicUpdate;
 
+// PAQUETES_TOUR (v10): catalogo y reglas para crear salidas al reservar
 @Entity
 @DynamicUpdate
 @Table(name = "PAQUETES_TOUR")
@@ -13,25 +14,40 @@ public class PaqueteTour {
     @Column(name = "paquete_id")
     private Long paqueteId;
 
-    @Column(name = "nombre", nullable = false, length = 100)
+    @Column(name = "nombre")
     private String nombre;
 
-    @Column(name = "descripcion", length = 1000)
+    @Column(name = "descripcion")
     private String descripcion;
 
-    @Column(name = "precio_base", nullable = false, precision = 10, scale = 2)
+    @Column(name = "precio_base")
     private BigDecimal precioBase;
 
-    @Column(name = "dias", nullable = false)
+    @Column(name = "dias")
     private Integer dias;
 
-    @Column(name = "noches", nullable = false)
+    @Column(name = "noches")
     private Integer noches;
 
-    @Column(name = "imagen", length = 500)
+    @Column(name = "imagen")
     private String imagen;
 
-    @Column(name = "estado", length = 20)
+    @Column(name = "cupo_por_defecto")
+    private Integer cupoPorDefecto;
+
+    @Column(name = "minimo_pasajeros")
+    private Integer minimoPasajeros;
+
+    @Column(name = "dias_operacion")
+    private String diasOperacion;
+
+    @Column(name = "anticipacion_min_horas")
+    private Integer anticipacionMinHoras;
+
+    @Column(name = "hora_inicio")
+    private String horaInicio;
+
+    @Column(name = "estado")
     private String estado;
 
     public PaqueteTour() {
@@ -91,6 +107,46 @@ public class PaqueteTour {
 
     public void setImagen(String imagen) {
         this.imagen = imagen;
+    }
+
+    public Integer getCupoPorDefecto() {
+        return cupoPorDefecto;
+    }
+
+    public void setCupoPorDefecto(Integer cupoPorDefecto) {
+        this.cupoPorDefecto = cupoPorDefecto;
+    }
+
+    public Integer getMinimoPasajeros() {
+        return minimoPasajeros;
+    }
+
+    public void setMinimoPasajeros(Integer minimoPasajeros) {
+        this.minimoPasajeros = minimoPasajeros;
+    }
+
+    public String getDiasOperacion() {
+        return diasOperacion;
+    }
+
+    public void setDiasOperacion(String diasOperacion) {
+        this.diasOperacion = diasOperacion;
+    }
+
+    public Integer getAnticipacionMinHoras() {
+        return anticipacionMinHoras;
+    }
+
+    public void setAnticipacionMinHoras(Integer anticipacionMinHoras) {
+        this.anticipacionMinHoras = anticipacionMinHoras;
+    }
+
+    public String getHoraInicio() {
+        return horaInicio;
+    }
+
+    public void setHoraInicio(String horaInicio) {
+        this.horaInicio = horaInicio;
     }
 
     public String getEstado() {

@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// Cliente / turista. password_hash (contraseña) solo si tiene cuenta en el portal web.
+// CLIENTES (v10): el trigger TRG_CLIENTES_NORMALIZAR guarda correo en minusculas y documento en mayusculas.
+// password_hash lo escribe SP_REGISTRAR_CLIENTE_EXTERNO (BCrypt); NULL = cliente sin cuenta web.
 @Entity
 @DynamicUpdate
 @Table(name = "CLIENTES")
@@ -14,29 +15,31 @@ public class Cliente {
     @Column(name = "cliente_id")
     private Long clienteId;
 
-    @Column(name = "nombre_completo", nullable = false, length = 150)
+    @Column(name = "nombre_completo")
     private String nombreCompleto;
 
-    @Column(name = "tipo_documento", nullable = false, length = 20)
+    @Column(name = "tipo_documento")
     private String tipoDocumento;
 
-    @Column(name = "numero_documento", nullable = false, length = 20)
+    @Column(name = "numero_documento")
     private String numeroDocumento;
 
-    @Column(name = "email", nullable = false, length = 100)
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "telefono", nullable = false, length = 20)
+    @Column(name = "telefono")
     private String telefono;
 
-    // Lo escribe SP_REGISTRAR_CLIENTE_EXTERNO; Ventas nunca lo toca
+    @Column(name = "nacionalidad")
+    private String nacionalidad;
+
     @Column(name = "password_hash", insertable = false, updatable = false)
     private String passwordHash;
 
     @Column(name = "fecha_registro", insertable = false, updatable = false)
     private LocalDateTime fechaRegistro;
 
-    @Column(name = "estado_cuenta", length = 20)
+    @Column(name = "estado_cuenta")
     private String estadoCuenta;
 
     public Cliente() {
@@ -88,6 +91,14 @@ public class Cliente {
 
     public void setTelefono(String telefono) {
         this.telefono = telefono;
+    }
+
+    public String getNacionalidad() {
+        return nacionalidad;
+    }
+
+    public void setNacionalidad(String nacionalidad) {
+        this.nacionalidad = nacionalidad;
     }
 
     public String getPasswordHash() {

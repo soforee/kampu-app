@@ -50,7 +50,6 @@ public class BoletaServiceImpl implements IBoletaService {
     private final PaqueteTourRepository paqueteRepository;
     private final PersonalRepository guiaRepository;
     private final PasajeroReservaRepository pasajeroRepository;
-    private final DetalleReservaRepository detalleRepository;
     private final PagoRepository pagoRepository;
 
     private String logoBase64;
@@ -61,7 +60,7 @@ public class BoletaServiceImpl implements IBoletaService {
     public BoletaServiceImpl(JavaMailSender mailSender, ReservaRepository reservaRepository, ClienteRepository clienteRepository,
                              SalidaProgramadaRepository salidaRepository, PaqueteTourRepository paqueteRepository,
                              PersonalRepository guiaRepository, PasajeroReservaRepository pasajeroRepository,
-                             DetalleReservaRepository detalleRepository, PagoRepository pagoRepository) {
+                             PagoRepository pagoRepository) {
         this.mailSender = mailSender;
         this.reservaRepository = reservaRepository;
         this.clienteRepository = clienteRepository;
@@ -69,7 +68,6 @@ public class BoletaServiceImpl implements IBoletaService {
         this.paqueteRepository = paqueteRepository;
         this.guiaRepository = guiaRepository;
         this.pasajeroRepository = pasajeroRepository;
-        this.detalleRepository = detalleRepository;
         this.pagoRepository = pagoRepository;
     }
 
@@ -132,7 +130,6 @@ public class BoletaServiceImpl implements IBoletaService {
         String documento;
         String email;
         String telefono;
-        DetalleReserva detalle;
         int viajeros;
         SalidaProgramada salida;
         PaqueteTour paquete;
@@ -152,18 +149,14 @@ public class BoletaServiceImpl implements IBoletaService {
         d.documento = c.getTipoDocumento() + " " + c.getNumeroDocumento();
         d.email = c.getEmail();
         d.telefono = c.getTelefono();
-        // La aplicación registra una salida por reserva (un DETALLE_RESERVA); se toma el primero
-        List<DetalleReserva> detalles = detalleRepository.findByReservaIdOrderByDetalleIdAsc(reservaId);
-        if (detalles.isEmpty()) throw new ResourceNotFoundException("La reserva no tiene salidas reservadas.");
-        d.detalle = detalles.get(0);
-        d.viajeros = detalles.stream().mapToInt(DetalleReserva::getCantidad).sum();
-        d.salida = salidaRepository.findById(d.detalle.getSalidaId())
+        // v10: una reserva = un paquete en una fecha (salida_id y cantidad_pasajeros en RESERVAS)
+        d.viajeros = d.reserva.getCantidadPasajeros();
+        d.salida = salidaRepository.findById(d.reserva.getSalidaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Salida no encontrada."));
         d.paquete = paqueteRepository.findById(d.salida.getPaqueteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Paquete no encontrado."));
         d.guia = d.salida.getGuiaId() == null ? null : guiaRepository.findById(d.salida.getGuiaId()).orElse(null);
-        d.pasajeros = pasajeroRepository.findByDetalleIdInOrderByPasajeroIdAsc(
-                detalles.stream().map(DetalleReserva::getDetalleId).toList());
+        d.pasajeros = pasajeroRepository.findByReservaIdOrderByPasajeroIdAsc(reservaId);
         d.pagos = pagoRepository.findByReservaIdAndEstadoTransaccion(reservaId, "APROBADO");
         return d;
     }
@@ -431,7 +424,7 @@ public class BoletaServiceImpl implements IBoletaService {
                 encabezado("#", ""), encabezado("Nombre", ""), encabezado("Documento", ""), encabezado("Nacionalidad", "text-align:right;"),
                 filasPasajeros,
                 d.pagos.isEmpty() ? "" : bloquePagos(filasPagos.toString()),
-                d.viajeros, soles(d.detalle.getPrecioUnitario()), soles(r.getMontoTotal()),
+                d.viajeros, soles(d.reserva.getPrecioUnitario()), soles(r.getMontoTotal()),
                 soles(pagado),
                 barraAvance, avance,
                 pagadoTotal ? "Pagado por completo" : "Saldo pendiente",

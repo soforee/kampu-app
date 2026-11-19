@@ -54,18 +54,64 @@
             @if (detalle()!.descripcion) { <p class="leading-relaxed text-zinc-700">{{ detalle()!.descripcion }}</p> }
 
             <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-              <div><dt class="text-xs text-zinc-500">Reserva</dt><dd class="font-medium text-zinc-900">#{{ p.reservaId }}</dd></div>
+              <div><dt class="text-xs text-zinc-500">Reserva</dt><dd class="font-medium text-zinc-900">{{ p.codigoReserva }}</dd></div>
               <div><dt class="text-xs text-zinc-500">Reservado el</dt><dd class="font-medium text-zinc-900">{{ p.fechaReserva | date:'dd/MM/yyyy' }}</dd></div>
               <div><dt class="text-xs text-zinc-500">Guía</dt><dd class="font-medium text-zinc-900">{{ detalle()!.guia || 'Por asignar' }}</dd></div>
+              <div><dt class="text-xs text-zinc-500">Salida</dt><dd class="font-medium text-zinc-900">{{ p.salidaGarantizada ? 'Garantizada' : 'Por confirmar (mínimo de pasajeros)' }}</dd></div>
+              <div class="col-span-2"><dt class="text-xs text-zinc-500">Te recogemos en</dt>
+                <dd class="font-medium text-zinc-900">{{ p.puntoRecojo || 'Oficina de la agencia' }}@if (p.horaRecojo) { · {{ p.horaRecojo | date:'dd/MM HH:mm' }} }</dd>
+                @if (p.direccionRecojo) { <dd class="text-xs text-zinc-500">{{ p.direccionRecojo }}</dd> }
+              </div>
             </dl>
 
+            @if (editable() && puntos().length) {
+              <div class="flex flex-wrap items-end gap-2">
+                <div class="min-w-0 flex-1"><label class="label" for="p-recojo">Cambiar punto de recojo</label>
+                  <select id="p-recojo" class="field" [(ngModel)]="recojoSel">@for (x of puntos(); track x.lugarId) { <option [ngValue]="x.lugarId">{{ x.nombre }} · {{ x.horaRecojo }}</option> }</select>
+                </div>
+                <button type="button" class="btn-light" (click)="cambiarRecojo()">Guardar</button>
+              </div>
+            }
+
+            @if (detalle()!.itinerario.length) {
+              <div>
+                <h2 class="font-semibold text-zinc-900">Itinerario</h2>
+                <ul class="mt-3 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
+                  @for (a of detalle()!.itinerario; track a.itinerarioId) {
+                    <li class="px-4 py-3 text-sm"><b>Día {{ a.diaNumero }}</b>@if (a.horaInicio) { · {{ a.horaInicio }} } · {{ a.titulo }}@if (a.lugar) { <span class="text-zinc-500"> · {{ a.lugar }}</span> }</li>
+                  }
+                </ul>
+              </div>
+            }
+
             <div>
-              <h2 class="font-semibold text-zinc-900">Pasajeros ({{ detalle()!.pasajeros.length }})</h2>
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h2 class="font-semibold text-zinc-900">Pasajeros ({{ detalle()!.pasajeros.length }} de {{ p.pasajeros }})</h2>
+                @if (editable() && faltanPasajeros() > 0 && !agregando()) {
+                  <button type="button" class="btn-light btn-sm" (click)="agregando.set(true)"><app-icon name="plus" size="w-3.5 h-3.5" /> Registrar pasajero</button>
+                }
+              </div>
+              @if (editable() && faltanPasajeros() > 0) { <p class="mt-1 text-xs text-amber-700">Registra a los {{ faltanPasajeros() }} pasajero(s) que faltan antes del viaje.</p> }
+              @if (agregando()) {
+                <div class="mt-3 grid gap-3 rounded-lg border border-zinc-200 p-4 sm:grid-cols-2">
+                  <div class="sm:col-span-2"><label class="label req">Nombre completo</label><input class="field" maxlength="150" [(ngModel)]="nuevo.nombreCompleto" (blur)="vp.tocar('nombre')" [class.field-invalid]="vp.error('nombre')">@if (vp.error('nombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
+                  <div><label class="label req">Tipo de documento</label><select class="field" [(ngModel)]="nuevo.tipoDocumento">@for (t of tipos; track t) { <option [value]="t">{{ t }}</option> }</select></div>
+                  <div><label class="label req">N° de documento</label><input class="field" maxlength="12" [(ngModel)]="nuevo.numeroDocumento" (blur)="vp.tocar('documento')" [class.field-invalid]="vp.error('documento')">@if (vp.error('documento'); as e) { <p class="field-error">{{ e }}</p> }</div>
+                  <div><label class="label">Nacionalidad <span class="opt">Opcional</span></label><input class="field" maxlength="50" [(ngModel)]="nuevo.nacionalidad" (blur)="vp.tocar('nacionalidad')" [class.field-invalid]="vp.error('nacionalidad')">@if (vp.error('nacionalidad'); as e) { <p class="field-error">{{ e }}</p> }</div>
+                  <div><label class="label">Fecha de nacimiento <span class="opt">Opcional</span></label><input type="date" class="field" min="1900-01-01" [(ngModel)]="nuevo.fechaNacimiento"></div>
+                  <div class="flex gap-2 sm:col-span-2">
+                    <button type="button" class="btn-light flex-1" (click)="agregando.set(false)">Cancelar</button>
+                    <button type="button" class="btn-brand flex-1" [disabled]="enviando()" (click)="registrarPasajero()">Registrar</button>
+                  </div>
+                </div>
+              }
               <ul class="mt-3 divide-y divide-zinc-100 rounded-lg border border-zinc-200">
-                @for (x of detalle()!.pasajeros; track $index) {
+                @for (x of detalle()!.pasajeros; track x.pasajeroId) {
                   <li class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                     <span class="text-zinc-900">{{ x.nombreCompleto }}</span>
-                    <span class="text-zinc-500">{{ x.tipoDocumento }} {{ x.numeroDocumento }}</span>
+                    <span class="flex items-center gap-2 text-zinc-500">{{ x.tipoDocumento }} {{ x.numeroDocumento }}
+                      @if (editable()) { <button type="button" class="icon-btn-danger" title="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(x.pasajeroId, x.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }
+                    </span>
                   </li>
                 } @empty { <li class="px-4 py-3 text-sm text-zinc-500">Sin pasajeros registrados.</li> }
               </ul>
@@ -99,7 +145,7 @@
                   </div>
                   <div>
                     <label class="label req" for="p-metodo">Método</label>
-                    <select id="p-metodo" name="metodo" class="field" [(ngModel)]="pago.metodoPago">@for (m of metodos; track m) { <option [value]="m">{{ m }}</option> }</select>
+                    <select id="p-metodo" name="metodo" class="field" [(ngModel)]="pago.metodoPago">@for (m of metodos; track m) { <option [value]="m">{{ etiqueta(m) }}</option> }</select>
                   </div>
                   <div>
                     <label class="label req" for="p-cod">N° de operación</label>
@@ -121,12 +167,24 @@
               <ul class="mt-3 space-y-2 text-sm">
                 @for (g of detalle()!.pagos; track g.pagoId) {
                   <li class="flex items-center justify-between gap-2">
-                    <span>{{ g.fechaPago | date:'dd/MM/yyyy' }} · {{ g.metodoPago }}</span>
+                    <span>{{ g.fechaPago | date:'dd/MM/yyyy' }} · {{ etiqueta(g.metodoPago) }}</span>
                     <span class="flex items-center gap-2"><b class="font-medium">{{ g.moneda }} {{ g.monto | number:'1.2-2' }}</b><app-badge [estado]="g.estadoTransaccion" /></span>
                   </li>
                 } @empty { <li class="text-zinc-500">Aún no hay pagos.</li> }
               </ul>
             </div>
+
+            @if (detalle()!.solicitud; as s) {
+              <div class="rounded-xl border border-zinc-200 p-5 text-sm">
+                <h2 class="font-semibold text-zinc-900">Solicitud de anulación</h2>
+                <p class="mt-1 text-zinc-600">{{ s.fechaSolicitud | date:'dd/MM/yyyy' }} · <app-badge [estado]="s.estado" /></p>
+                <p class="mt-1 text-zinc-600">Motivo: {{ s.motivo }}</p>
+                @if (s.respuesta) { <p class="mt-1 text-zinc-600">Respuesta de la agencia: {{ s.respuesta }}</p> }
+              </div>
+            }
+            @if (editable() && !solicitudPendiente()) {
+              <button type="button" class="btn-light w-full" (click)="solicitarAnulacion()"><app-icon name="x" size="w-4 h-4" /> {{ p.montoPagado > 0 ? 'Solicitar anulación' : 'Anular reserva' }}</button>
+            }
           </aside>
         </div>
       </section>

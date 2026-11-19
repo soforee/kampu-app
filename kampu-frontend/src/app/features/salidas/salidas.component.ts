@@ -5,7 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { RouterLink } from '@angular/router';
-import { EstadoSalida, SalidaForm } from '../../core/models';
+import { EstadoSalida, FormaReembolso, SalidaForm } from '../../core/models';
+import { etiqueta, FORMAS_REEMBOLSO } from '../../core/utils/etiquetas';
 import { addDays, cuando, diasHasta, hoy } from '../../core/utils/date.util';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -27,15 +28,15 @@ export class SalidasComponent {
   // GESTIONAR_CATALOGO: solo Admin y Ventas crean/editan salidas (el Operador solo las consulta)
   editable = inject(AuthService).puede('GESTIONAR_CATALOGO');
 
-  // Mismas transiciones que valida el backend (SalidaProgramadaServiceImpl)
+  // Mismas transiciones que valida la BD (TRG_SALIDAS_VALIDAR). Cancelar va aparte (anula y reembolsa sus reservas).
   private transiciones: { [estado: string]: EstadoSalida[] } = {
-    PROGRAMADA: ['PROGRAMADA', 'CONFIRMADA', 'CANCELADA'],
-    CONFIRMADA: ['CONFIRMADA', 'PROGRAMADA', 'COMPLETADA', 'CANCELADA']
+    PROGRAMADA: ['PROGRAMADA', 'GARANTIZADA'],
+    GARANTIZADA: ['GARANTIZADA', 'COMPLETADA']
   };
   estadoOriginal: EstadoSalida = 'PROGRAMADA';
   get estados(): EstadoSalida[] { return this.transiciones[this.estadoOriginal] ?? [this.estadoOriginal]; }
   hoy = hoy();
-  filtros = [{ valor: '', texto: 'Todas' }, { valor: 'PROGRAMADA', texto: 'Programadas' }, { valor: 'CONFIRMADA', texto: 'Confirmadas' },
+  filtros = [{ valor: '', texto: 'Todas' }, { valor: 'PROGRAMADA', texto: 'Programadas' }, { valor: 'GARANTIZADA', texto: 'Garantizadas' },
              { valor: 'COMPLETADA', texto: 'Completadas' }, { valor: 'CANCELADA', texto: 'Canceladas' }];
   filtro = signal('');
   abierto = signal(false);
@@ -70,7 +71,7 @@ export class SalidasComponent {
 
   filas = computed(() => {
     const f = this.filtro();
-    const abierta = (e: string) => e === 'PROGRAMADA' || e === 'CONFIRMADA';
+    const abierta = (e: string) => e === 'PROGRAMADA' || e === 'GARANTIZADA';
     // Primero lo que viene (la más cercana arriba); después lo cerrado, de lo más reciente a lo más antiguo
     return this.store.salidas()
       .filter(s => !f || s.estado === f)
@@ -113,6 +114,8 @@ export class SalidasComponent {
     this.abierto.set(true);
   }
 
+  etiqueta = etiqueta;
+
   editar(id: number) {
     const sal = this.store.getSalida(id)!;
     this.editId = sal.salidaId;
@@ -146,14 +149,25 @@ export class SalidasComponent {
     });
   }
 
+  // v10: una salida no se borra; se cancela (PKG_RESERVAS.cancelar_salida anula y reembolsa sus reservas
+  // y cancela sus traslados). Si tiene dinero cobrado se pide la forma de reembolso.
   async eliminar(id: number) {
-    if (!(await this.alerts.confirm('Esta acción no se puede deshacer.', 'Eliminar salida'))) return;
-    this.store.eliminarSalida(id).subscribe({
+    const s = this.store.getSalida(id);
+    if (!s) return;
+    const cobrado = this.store.reservas().some(r => r.salidaId === id && r.montoPagado > 0
+      && (r.estadoReserva === 'PENDIENTE' || r.estadoReserva === 'CONFIRMADA'));
+    const datos = await this.alerts.anulacion('Cancelar salida',
+      'Se anularán sus reservas activas (con reembolso de lo cobrado) y se cancelarán sus traslados.',
+      cobrado ? FORMAS_REEMBOLSO.map(f => [f, etiqueta(f)] as [string, string]) : null, 'Cancelar salida');
+    if (!datos) return;
+    this.store.cancelarSalida(id, datos.motivo, datos.formaReembolso as FormaReembolso | null).subscribe({
       next: () => {
         this.store.cargarSalidas();
-        this.alerts.toast('Salida eliminada');
+        this.store.cargarReservas();
+        this.store.cargarOperaciones();
+        this.alerts.toast('Salida cancelada');
       },
-      error: (err) => this.alerts.error(this.store.error(err))
+      error: (err: unknown) => this.alerts.error(this.store.error(err))
     });
   }
 

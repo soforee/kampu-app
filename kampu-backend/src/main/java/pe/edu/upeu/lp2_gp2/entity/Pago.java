@@ -5,7 +5,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// TRG_VALIDAR_PAGO_PAQUETE impide pagar reservas cerradas o aprobar más que el total
+// PAGOS (v10): TRG_VALIDAR_PAGO_PAQUETE valida el ciclo del pago, registra quien lo registra/valida
+// y recalcula la reserva (monto_pagado, estado_pago y confirmacion automatica).
 @Entity
 @DynamicUpdate
 @Table(name = "PAGOS")
@@ -15,37 +16,47 @@ public class Pago {
     @Column(name = "pago_id")
     private Long pagoId;
 
-    @Column(name = "reserva_id", nullable = false)
+    @Column(name = "reserva_id", updatable = false)
     private Long reservaId;
 
-    @Column(name = "monto", nullable = false, precision = 10, scale = 2)
+    @Column(name = "monto")
     private BigDecimal monto;
 
-    @Column(name = "moneda", length = 10)
+    @Column(name = "moneda")
     private String moneda;
 
-    @Column(name = "tipo_cambio", nullable = false, precision = 8, scale = 4)
+    @Column(name = "tipo_cambio")
     private BigDecimal tipoCambio;
 
-    // Columna virtual: ROUND(monto * tipo_cambio, 2)
     @Column(name = "monto_pen", insertable = false, updatable = false)
     private BigDecimal montoPen;
 
-    @Column(name = "metodo_pago", length = 50)
+    @Column(name = "metodo_pago")
     private String metodoPago;
 
-    @Column(name = "codigo_transaccion", length = 100)
+    @Column(name = "codigo_transaccion")
     private String codigoTransaccion;
 
     @Column(name = "fecha_pago")
     private LocalDateTime fechaPago;
 
-    @Column(name = "estado_transaccion", length = 20)
+    @Column(name = "estado_transaccion")
     private String estadoTransaccion;
 
-    // ADMIN / VENDEDOR / CLIENTE: clave de partición de PAGOS
-    @Column(name = "registrado_por", length = 20)
+    @Column(name = "registrado_por")
     private String registradoPor;
+
+    @Column(name = "usuario_registra_id", insertable = false, updatable = false)
+    private Long usuarioRegistraId;
+
+    @Column(name = "usuario_valida_id", insertable = false, updatable = false)
+    private Long usuarioValidaId;
+
+    @Column(name = "fecha_validacion", insertable = false, updatable = false)
+    private LocalDateTime fechaValidacion;
+
+    @Column(name = "observaciones")
+    private String observaciones;
 
     public Pago() {
     }
@@ -136,5 +147,37 @@ public class Pago {
 
     public void setRegistradoPor(String registradoPor) {
         this.registradoPor = registradoPor;
+    }
+
+    public Long getUsuarioRegistraId() {
+        return usuarioRegistraId;
+    }
+
+    public void setUsuarioRegistraId(Long usuarioRegistraId) {
+        this.usuarioRegistraId = usuarioRegistraId;
+    }
+
+    public Long getUsuarioValidaId() {
+        return usuarioValidaId;
+    }
+
+    public void setUsuarioValidaId(Long usuarioValidaId) {
+        this.usuarioValidaId = usuarioValidaId;
+    }
+
+    public LocalDateTime getFechaValidacion() {
+        return fechaValidacion;
+    }
+
+    public void setFechaValidacion(LocalDateTime fechaValidacion) {
+        this.fechaValidacion = fechaValidacion;
+    }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public void setObservaciones(String observaciones) {
+        this.observaciones = observaciones;
     }
 }
