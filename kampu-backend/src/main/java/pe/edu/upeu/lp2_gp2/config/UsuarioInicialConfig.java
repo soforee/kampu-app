@@ -56,7 +56,7 @@ public class UsuarioInicialConfig {
                 + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
         String mensaje = "La base de datos a la que se conectó la aplicación (" + donde + ") no tiene "
                 + (tablas ? "el paquete PKG_SEGURIDAD_ROLES válido" : "las tablas del sistema") + ". "
-                + "Ejecuta db/kampu_tours_v10.sql como SYSTEM en la PDB (crea KAMPU, KAMPU_APP y KAMPU_WEB), "
+                + "Ejecuta db/kampu_tours_v10.sql como SYSTEM en la PDB (crea o conserva KAMPU_BD y crea KAMPU_APP con los roles), "
                 + "o revisa DB_URL, DB_USERNAME y DB_SCHEMA "
                 + "(Oracle XE 21c: jdbc:oracle:thin:@localhost:1521/XEPDB1 · Oracle 23 Free: .../FREEPDB1)."
                 + ("CDB$ROOT".equals(datos.get("CONTENEDOR")) ? " Ojo: estás en el contenedor raíz (CDB$ROOT); los scripts van en la PDB." : "");
