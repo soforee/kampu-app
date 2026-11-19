@@ -29,8 +29,8 @@
             @if (f.paquete.estado === 'ACTIVO' && f.proximas > 0) {
               <a [routerLink]="['/reservas/nueva']" [queryParams]="{ paquete: f.paquete.paqueteId }" class="btn-light btn-sm mr-1"><app-icon name="ticket" size="w-3.5 h-3.5" /> Reservar</a>
             }
-            <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.paquete.paqueteId)"><app-icon name="edit" size="w-4 h-4" /></button>
-            <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(f.paquete.paqueteId)"><app-icon name="trash" size="w-4 h-4" /></button>
+            <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.paquete.paqueteId)"><app-icon name="edit" size="w-4 h-4" /></button>
+            <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(f.paquete.paqueteId)"><app-icon name="trash" size="w-4 h-4" /></button>
           </div>
         </div>
       </div>
@@ -41,8 +41,8 @@
 </div>
 
 @if (abierto()) {
-  <app-modal [titulo]="editId ? 'Editar paquete' : 'Nuevo paquete'" (cerrar)="abierto.set(false)">
-    <div class="space-y-5">
+  <app-modal icono="package" ancho="lg" subtitulo="Tour del catálogo: duración, precio e imagen" [titulo]="editId ? 'Editar paquete' : 'Nuevo paquete'" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
 
       <div class="form-section">
@@ -50,16 +50,23 @@
         <div><label class="label req">Nombre</label><input class="field" maxlength="100" [(ngModel)]="form.nombre" placeholder="Ej. Camino Inca clásico" (blur)="v.tocar('nombre')" [class.field-invalid]="v.error('nombre')">@if (v.error('nombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
         <div>
           <label class="label">Descripción <span class="opt">Opcional · {{ form.descripcion.length }}/1000</span></label>
-          <textarea class="field" rows="3" maxlength="1000" [(ngModel)]="form.descripcion" placeholder="Qué incluye, puntos destacados, nivel de dificultad…" (blur)="v.tocar('descripcion')" [class.field-invalid]="v.error('descripcion')"></textarea>@if (v.error('descripcion'); as e) { <p class="field-error">{{ e }}</p> }
+          <textarea class="field" rows="2" maxlength="1000" [(ngModel)]="form.descripcion" placeholder="Qué incluye, puntos destacados, nivel de dificultad…" (blur)="v.tocar('descripcion')" [class.field-invalid]="v.error('descripcion')"></textarea>@if (v.error('descripcion'); as e) { <p class="field-error">{{ e }}</p> }
         </div>
       </div>
 
       <div class="form-section">
-        <div class="form-section-title">Duración y precio</div>
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div class="form-section-title">Duración, precio y estado</div>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div><label class="label req">Días</label><input type="number" min="1" max="99" class="field" [(ngModel)]="form.dias" (ngModelChange)="sugerirNoches()" (blur)="v.tocar('dias')" [class.field-invalid]="v.error('dias')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric" step="1">@if (v.error('dias'); as e) { <p class="field-error">{{ e }}</p> }</div>
           <div><label class="label req">Noches</label><input type="number" min="0" max="99" class="field" [(ngModel)]="form.noches" (blur)="v.tocar('noches')" [class.field-invalid]="v.error('noches')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric" step="1">@if (v.error('noches'); as e) { <p class="field-error">{{ e }}</p> }</div>
-          <div class="col-span-2 sm:col-span-1"><label class="label req">Precio base (S/)</label><input type="number" min="0" step="0.01" class="field" [(ngModel)]="form.precioBase" (blur)="v.tocar('precio')" [class.field-invalid]="v.error('precio')" (beforeinput)="filtrar($event, 'decimal')" (paste)="pegar($event, 'decimal')" (wheel)="rueda($event)" inputmode="decimal">@if (v.error('precio'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req">Precio (S/)</label><input type="number" min="0" step="0.01" class="field" [(ngModel)]="form.precioBase" (blur)="v.tocar('precio')" [class.field-invalid]="v.error('precio')" (beforeinput)="filtrar($event, 'decimal')" (paste)="pegar($event, 'decimal')" (wheel)="rueda($event)" inputmode="decimal">@if (v.error('precio'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div>
+            <label class="label req">Estado</label>
+            <select class="field" [(ngModel)]="form.estado">
+              <option value="ACTIVO">Activo</option>
+              <option value="INACTIVO">Inactivo</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -88,7 +95,7 @@
           @for (a of itinerario(); track a.itinerarioId) {
             <div class="flex items-center justify-between gap-3 text-sm">
               <span><strong>Día {{ a.diaNumero }}</strong>@if (a.horaInicio) { · {{ a.horaInicio }} } · {{ a.titulo }}@if (a.lugar) { <span class="text-zinc-500"> · {{ a.lugar }}</span> }</span>
-              <button type="button" class="icon-btn-danger" title="Quitar actividad" aria-label="Quitar actividad" (click)="quitarActividad(a)"><app-icon name="trash" size="w-4 h-4" /></button>
+              <button type="button" class="icon-btn-danger" data-tip="Quitar actividad" aria-label="Quitar actividad" (click)="quitarActividad(a)"><app-icon name="trash" size="w-4 h-4" /></button>
             </div>
           } @empty { <p class="hint">Aún no hay actividades.</p> }
           <div class="grid grid-cols-2 sm:grid-cols-6 gap-3">
@@ -107,7 +114,7 @@
         <div class="form-section-title">Imagen <span class="opt">Opcional</span></div>
         <input #archivo type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="elegir($event)">
         @if (vistaPrevia; as src) {
-          <div class="relative h-44 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
+          <div class="relative h-36 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50">
             <img [src]="src" alt="Vista previa" class="w-full h-full object-cover">
             <div class="absolute top-2.5 right-2.5 flex gap-2">
               <button type="button" class="btn-light btn-sm" (click)="archivo.click()">Cambiar</button>
@@ -116,7 +123,7 @@
           </div>
         } @else {
           <button type="button" (click)="archivo.click()" (dragover)="$event.preventDefault()" (drop)="soltar($event)"
-                  class="grid h-32 w-full place-items-center rounded-lg border border-dashed border-zinc-300 bg-white text-sm text-zinc-500 outline-none transition-colors
+                  class="grid h-24 w-full place-items-center rounded-lg border border-dashed border-zinc-300 bg-white text-sm text-zinc-500 outline-none transition-colors
                          hover:border-zinc-400 hover:text-zinc-800 focus-visible:ring-2 focus-visible:ring-brand-500/30">
             <span class="flex flex-col items-center gap-2">
               <app-icon name="upload" size="w-5 h-5" />
@@ -127,13 +134,6 @@
         <p class="hint">JPG, PNG o WebP · máximo 10 MB.</p>
       </div>
 
-      <div>
-        <label class="label req">Estado</label>
-        <select class="field" [(ngModel)]="form.estado">
-          <option value="ACTIVO">Activo</option>
-          <option value="INACTIVO">Inactivo</option>
-        </select>
-      </div>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="abierto.set(false)">Cancelar</button>
         <button type="button" class="btn-brand" (click)="guardar()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>

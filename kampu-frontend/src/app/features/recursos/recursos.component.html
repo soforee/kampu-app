@@ -38,8 +38,8 @@
             </div>
             @if (puedeEditar()) {
               <div class="actions shrink-0">
-                <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarProveedor(p.proveedorId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(p.proveedorId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarProveedor(p.proveedorId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(p.proveedorId)"><app-icon name="trash" size="w-4 h-4" /></button>
               </div>
             }
           </div>
@@ -85,8 +85,8 @@
                 @if (puedeEditar()) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 <div class="actions">
-                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
               </td>
             }
@@ -120,8 +120,8 @@
                 @if (puedeEditar()) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 <div class="actions">
-                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarVehiculo(x.vehiculoId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(x.vehiculoId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarVehiculo(x.vehiculoId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(x.vehiculoId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
               </td>
             }
@@ -154,8 +154,8 @@
                   @if (puedeEditar()) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 <div class="actions">
-                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editarLugar(l.lugarId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn-danger" title="Eliminar" aria-label="Eliminar" (click)="eliminar(l.lugarId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarLugar(l.lugarId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(l.lugarId)"><app-icon name="trash" size="w-4 h-4" /></button>
                 </div>
               </td>
             }
@@ -173,8 +173,8 @@
 }
 
 @if (abierto()) {
-  <app-modal [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
-    <div class="space-y-5">
+  <app-modal [icono]="actual.icono" subtitulo="Logística de la agencia" [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
         @switch (tab()) {

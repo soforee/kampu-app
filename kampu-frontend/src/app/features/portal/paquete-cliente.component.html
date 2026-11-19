@@ -110,7 +110,7 @@
                   <li class="flex items-center justify-between gap-3 px-4 py-3 text-sm">
                     <span class="text-zinc-900">{{ x.nombreCompleto }}</span>
                     <span class="flex items-center gap-2 text-zinc-500">{{ x.tipoDocumento }} {{ x.numeroDocumento }}
-                      @if (editable()) { <button type="button" class="icon-btn-danger" title="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(x.pasajeroId, x.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }
+                      @if (editable()) { <button type="button" class="icon-btn-danger" data-tip="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(x.pasajeroId, x.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }
                     </span>
                   </li>
                 } @empty { <li class="px-4 py-3 text-sm text-zinc-500">Sin pasajeros registrados.</li> }

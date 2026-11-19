@@ -140,6 +140,82 @@ Todos los módulos comparten la misma estructura:
 - barras de avance: cupos vendidos y cobrado sobre lo vendido (para el Operador, traslados asignados);
 - debajo: avisos, el día, las salidas y las últimas reservas.
 
+### Formularios y login
+
+- **Modales tapados por la barra superior:** la animación de entrada de cada pantalla (`fill-mode: both`) creaba una
+  capa propia que dejaba los modales por debajo de la barra superior y del menú. Ahora la animación no deja esa capa
+  y el modal y su fondo quedan por encima. Se comprobaron 6 formularios en escritorio, pantalla baja y celular: ninguno queda tapado.
+- **Modal:** encabezado con ícono, título y descripción, alto máximo ajustado a la pantalla con desplazamiento interno,
+  y los botones (Cancelar y Guardar) fijos abajo, siempre a la vista. Tiene tres anchos (`sm`, `md` y `lg`) según el formulario.
+- **Formularios más compactos:**
+  - campos y botones de 36 px y menos espacio entre campos y secciones;
+  - títulos de sección pequeños y áreas de texto más bajas;
+  - Salida pone los cupos y el guía en una sola fila; Paquete pone el estado junto a los días, las noches y el precio.
+- **Login:**
+  - foto en un panel redondeado y el logotipo en su cuadro, como en la plantilla;
+  - campos con ícono (usuario y candado), "Mostrar" con ícono, y "Ingresar" (principal, con flecha);
+  - "Crear mi cuenta" como botón secundario.
+- **Registro de clientes:** misma estructura que los modales: encabezado con ícono, secciones y botón principal abajo.
+
+### Rediseño integral: página principal, login, navegación e interacciones
+
+Solo cambia la presentación: no se tocaron la lógica de negocio, la base de datos ni la autenticación.
+
+- **Página principal a pantalla completa (full-viewport / full-page scroll):**
+  - cada sección ocupa el alto de la ventana (`100svh`) con el contenido centrado (clase `.pantalla`);
+  - **escritorio (1024 px o más):** cada giro de la rueda, flecha, Av Pág, espacio o deslizamiento cambia a la
+    pantalla siguiente o anterior.
+    - El recorrido es una animación propia de 0,95 s (`requestAnimationFrame` con aceleración suave), sin librerías.
+    - El contenido de la sección que llega entra desde la dirección del movimiento, y el de la que se va se aleja y se desvanece.
+    - Inicio y Fin van a la primera y a la última pantalla.
+    - Los enlaces internos (menú, puntos, botones) usan la misma animación.
+    - En una ventana baja, si una sección no cabe, primero se recorre y luego se pasa a la siguiente.
+    - Las flechas del teclado no cambian de pantalla mientras se escribe en el buscador.
+  - **celular y tablet:** scroll normal con ajuste suave a cada sección (`scroll-snap`, CSS nativo);
+  - con "reducir movimiento" activado, el cambio de pantalla es inmediato y sin animaciones;
+  - a la derecha, unos puntos y el número de sección (01 a 07) marcan la sección visible y llevan a cualquiera de ellas.
+- **Secciones, en orden:**
+  - **Inicio (simplificado):** 5 fotos de destinos con fundido lento y leve parallax.
+    - El texto se reduce al título, una línea de descripción, un botón principal ("Ver N tours") y un enlace de texto ("Cómo funciona").
+    - Abajo quedan barras discretas para las fotos, el crédito de la foto actual y una señal para bajar.
+    - Se quitaron la etiqueta superior y los nombres de lugar bajo cada indicador.
+  - **Destinos:**
+    - el buscador (destino, fecha y tipo) se movió aquí, debajo del título y junto a los tours que filtra;
+    - pestañas Todos / Full day / Escapadas / Expediciones, que usan el mismo filtro de tipo;
+    - los tours van en un carrusel de una fila (`scroll-snap` horizontal) con flechas, para que la sección quepa en una pantalla;
+    - si un paquete no tiene foto propia, se toma la del destino que nombra (por palabras completas).
+  - **Nosotros:** cifras reales calculadas de los datos (paquetes activos, salidas abiertas y cupos libres).
+  - **Cómo funciona:** los 4 pasos que ya hace el sistema.
+  - **Galería** de 7 destinos.
+  - **Por qué elegirnos.**
+  - **Contacto:** foto a pantalla completa con "Crear mi cuenta" o "Ir al panel", y WhatsApp.
+  - **Pie de página.**
+  - Las secciones aparecen al hacer scroll (directiva `appRevelar`, con `IntersectionObserver` del navegador; sin librerías).
+  - Fotos: Wikimedia Commons, con autor y licencia en `docs/ATRIBUCIONES_FOTOS.md`.
+- **Login a pantalla completa:**
+  - las fotos de destinos cubren toda la ventana y se alternan;
+  - a la izquierda va el mensaje de la marca; el formulario flota a la derecha en una tarjeta blanca (en celular, centrado);
+  - el formulario entra con un leve escalonado;
+  - mensaje bajo cada campo vacío (`aria-invalid`) y aviso de Bloq Mayús;
+  - el error del servidor se oculta al volver a escribir;
+  - el botón muestra un indicador de carga.
+- **Menú lateral:**
+  - el botón "Contraer menú" (abajo) cambia entre desplegado (240 px, con nombres) y compacto (76 px, solo íconos).
+    La preferencia se recuerda en el navegador;
+  - en modo compacto, cada ícono muestra su nombre en un tooltip al pasar el cursor o con el teclado;
+  - la opción activa lleva una barra lima en el borde y `aria-current="page"`.
+- **Acciones con ícono:**
+  - editar (lápiz), eliminar (papelera), ver detalle (ojo) e historial (reloj) son botones solo con ícono,
+    con tooltip (`data-tip`) y `aria-label`;
+  - Reservas y Salidas suman el ojo "Ver detalle", que lleva a la misma pantalla que el enlace del código;
+  - las acciones principales (Guardar, Crear, Confirmar, Aprobar, Asignar) conservan su texto;
+  - "Rechazar pago" ahora pide confirmación, como eliminar y anular.
+- **Microinteracciones:**
+  - los botones se hunden levemente al presionarlos;
+  - las ventanas modales se desvanecen al cerrarse con Esc, con el fondo o con la X;
+  - el desplazamiento a cada sección es suave;
+  - con "reducir movimiento" activado en el sistema, todo aparece sin animación.
+
 ## 5. Errores corregidos durante la adaptación
 
 - **Credencial del logotipo:** usaba variables CSS de la paleta anterior, que ya no existían.
@@ -172,9 +248,23 @@ Todos los módulos comparten la misma estructura:
   - el registro de un cliente nuevo entra al portal;
   - en celular, el menú se abre y navega.
 - **Ancho en celular:** las 14 rutas (Admin y portal) y la página principal miden 390 px de ancho, sin desborde.
+  En 768, 1024 y 1280 px, la página principal, el login y 7 módulos tampoco desbordan.
+- **Rediseño (base v11 reinstalada):**
+  - recorrido completo: 22 de 22;
+  - login: campos vacíos, clave incorrecta, ingreso del personal y del cliente;
+  - menú y modales: 18 de 18. Incluye:
+    - contraer, desplegar y recordar el menú;
+    - tooltip e indicador de la opción activa;
+    - el ojo abre el detalle;
+    - cierre animado de los modales con Esc y con la X;
+    - con movimiento reducido no queda nada oculto;
+  - pestañas de categorías: filtran 3 y 2 tours, y "Full day" queda vacío porque no hay tours de un día;
+  - "Rechazar pago": cancelar la confirmación deja el pago pendiente;
+  - formularios: ninguno queda tapado por la barra superior.
 - **`ng build`:** correcto. Quedan avisos de tamaño:
   - el paquete inicial pesa 545 kB frente a un límite de 512 kB, porque el CSS ahora se compila dentro del paquete en lugar de generarse en el navegador;
-  - el CSS del campo de teléfono supera el límite por componente.
+  - el CSS del campo de teléfono supera el límite por componente;
+  - el límite de CSS por componente se subió de 4 kB a 6 kB, porque el carrusel de tours lo superaba por 0,2 kB.
 
 ## 7. Pendiente o a decidir
 

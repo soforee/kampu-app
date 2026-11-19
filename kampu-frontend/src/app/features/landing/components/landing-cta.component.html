@@ -1,0 +1,29 @@
+<section id="contacto" class="pantalla relative overflow-hidden" style="background: var(--kp-dark)">
+  <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
+  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(26, 32, 10, .55), rgba(38, 46, 15, .82) 55%, rgba(26, 32, 10, .95))"></div>
+  <div class="relative mx-auto w-full max-w-6xl px-5 text-center sm:px-8" appRevelar>
+    <div>
+      <p class="seccion-etiqueta !text-leaf-300 justify-center">Contacto</p>
+      <h2 class="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl">¿Listo para tu próxima aventura?</h2>
+      <p class="mx-auto mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
+      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+        @if (auth.autenticado()) {
+          <a [routerLink]="auth.inicio()" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
+            {{ auth.esCliente() ? 'Ver mis paquetes' : 'Ir al panel' }} <app-icon name="arrow-right" size="w-4 h-4" />
+          </a>
+        } @else {
+          <a routerLink="/registro" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
+            Crear mi cuenta <app-icon name="arrow-right" size="w-4 h-4" />
+          </a>
+        }
+        @if (whatsapp) {
+          <a [href]="'https://wa.me/' + whatsapp" target="_blank" rel="noopener" class="inline-flex h-12 items-center gap-2 rounded-full px-6 font-medium text-white ring-1 ring-white/40 transition-colors hover:bg-white/10">
+            <app-icon name="whatsapp" size="w-5 h-5" /> Escríbenos
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+  <a href="https://commons.wikimedia.org/wiki/File:99_-_Machu_Picchu_-_Juin_2009.edit3.jpg" target="_blank" rel="noopener"
+     class="absolute bottom-5 right-5 text-[11px] text-white/45 hover:text-white/75">Machu Picchu · Foto: Martin St-Amant · CC BY-SA 3.0</a>
+</section>

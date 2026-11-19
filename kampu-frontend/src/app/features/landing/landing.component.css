@@ -18,3 +18,25 @@
   background: var(--kp-bg);
   color: var(--kp-text);
 }
+
+/* Puntos de secciones: fijos a la derecha, sobre un fondo translúcido para verse en fotos y en fondos claros */
+.puntos {
+  position: fixed; right: 1.25rem; top: 50%; z-index: 30; transform: translateY(-50%);
+  display: none; flex-direction: column; align-items: center; gap: .65rem;
+  padding: .75rem .5rem; border-radius: 999px;
+  background: rgba(255, 255, 255, .72); box-shadow: 0 6px 20px -10px rgba(38, 46, 15, .35), inset 0 0 0 1px rgba(38, 46, 15, .06);
+  backdrop-filter: blur(8px);
+}
+@media (min-width: 1024px) { .puntos { display: flex; } }
+.punto { position: relative; display: block; width: 8px; height: 8px; border-radius: 999px; background: #C9C6B8; transition: height .3s var(--kp-ease), background-color .3s; }
+.punto:hover { background: #7A7668; }
+.punto-activo { height: 22px; background: var(--kp-primary); }
+.punto:focus-visible { outline: 2px solid var(--kp-accent); outline-offset: 3px; }
+/* Nombre de la sección al pasar el cursor */
+.punto-texto {
+  position: absolute; right: calc(100% + 18px); top: 50%; transform: translate(4px, -50%); white-space: nowrap;
+  border-radius: 7px; background: var(--kp-dark); padding: 4px 9px; font-size: 12px; font-weight: 500; color: #fff;
+  opacity: 0; pointer-events: none; transition: opacity .15s, transform .15s;
+}
+.punto:hover .punto-texto, .punto:focus-visible .punto-texto { opacity: 1; transform: translate(0, -50%); }
+.puntos-num { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--kp-primary); font-variant-numeric: tabular-nums; }

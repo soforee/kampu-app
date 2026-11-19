@@ -80,10 +80,10 @@
                   <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(f.op)"><app-icon name="truck" size="w-3.5 h-3.5" /> Asignar</button>
                 }
                 @if (gestiona && !esFinal(f.op)) {
-                  <button type="button" class="icon-btn" title="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.op)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.op)"><app-icon name="edit" size="w-4 h-4" /></button>
                 }
-                <button type="button" class="icon-btn" title="Historial de estados" aria-label="Historial" (click)="verHistorial(f.op)"><app-icon name="clock" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="Historial de estados" aria-label="Historial" (click)="verHistorial(f.op)"><app-icon name="clock" size="w-4 h-4" /></button>
               </div>
             </td>
           </tr>
@@ -102,8 +102,8 @@
 
 @switch (ventana()) {
   @case ('form') {
-    <app-modal [titulo]="editId ? 'Editar traslado' : 'Nuevo traslado'" (cerrar)="ventana.set(null)">
-      <div class="space-y-5">
+    <app-modal icono="truck" ancho="lg" subtitulo="Tramo, horario, pasajeros y recursos" [titulo]="editId ? 'Editar traslado' : 'Nuevo traslado'" (cerrar)="ventana.set(null)">
+      <div class="space-y-4">
         <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
         <div class="form-section">
           <div class="form-section-title">Tramo</div>
@@ -183,8 +183,8 @@
 
   @case ('asignar') {
     @if (actual(); as o) {
-      <app-modal [titulo]="'Asignar recursos · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
-        <div class="space-y-5">
+      <app-modal icono="sparkles" subtitulo="Vehículo y conductor del mismo proveedor" [titulo]="'Asignar recursos · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
+        <div class="space-y-4">
           <div class="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm">
             <div class="font-medium text-zinc-900">{{ o.origen }} → {{ o.destino }}</div>
             <div class="text-xs text-zinc-500 mt-0.5">{{ o.horaProgramadaSalida | date:'dd/MM/yyyy HH:mm' }} – {{ o.horaEstimadaLlegada | date:'HH:mm' }} · {{ o.paxProgramados }} pasajeros</div>
@@ -237,8 +237,8 @@
 
   @case ('estado') {
     @if (actual(); as o) {
-      <app-modal [titulo]="'Cambiar estado · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
-        <div class="space-y-5">
+      <app-modal icono="refresh" ancho="sm" subtitulo="Avanza el traslado al siguiente estado" [titulo]="'Cambiar estado · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
+        <div class="space-y-4">
           <div class="flex items-center gap-2 text-sm">Estado actual: <app-badge [estado]="o.estadoActual" /></div>
           @if (siguientes(o).length === 0) {
             <p class="text-sm text-zinc-500">No hay transiciones disponibles desde este estado.</p>
@@ -268,7 +268,7 @@
 
   @case ('historial') {
     @if (actual(); as o) {
-      <app-modal [titulo]="'Historial · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
+      <app-modal icono="clock" ancho="sm" subtitulo="Cambios de estado del traslado" [titulo]="'Historial · ' + o.codigoOperacion" (cerrar)="ventana.set(null)">
         <ol class="relative border-l border-zinc-200 ml-2 space-y-4">
           @for (h of historial(); track h.historialId) {
             <li class="ml-4">
