@@ -1,0 +1,19 @@
+import { Component, Input } from '@angular/core';
+import { IconComponent } from '../../../shared/icon.component';
+import { RevelarDirective } from '../../../shared/revelar.directive';
+import { FOTOS_DESTINOS } from '../landing.models';
+
+// Presentación de la agencia con cifras reales del catálogo (paquetes activos, salidas abiertas y cupos libres)
+@Component({
+  selector: 'app-landing-presentacion',
+  standalone: true,
+  imports: [IconComponent, RevelarDirective],
+  templateUrl: './landing-presentacion.component.html'
+})
+export class LandingPresentacionComponent {
+  @Input() tours = 0;
+  @Input() salidas = 0;
+  @Input() cupos = 0;
+  fotoGrande = FOTOS_DESTINOS.find(f => f.clave === 'ollantaytambo') ?? FOTOS_DESTINOS[0];
+  fotoChica = FOTOS_DESTINOS.find(f => f.clave === 'titicaca') ?? FOTOS_DESTINOS[0];
+}

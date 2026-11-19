@@ -124,7 +124,7 @@
                   <td class="td">{{ p.numeroDocumento }}</td>
                   <td class="td">{{ p.nacionalidad }}</td>
                   <td class="td">{{ p.fechaNacimiento | date:'dd/MM/yyyy' }}</td>
-                  <td class="td text-right">@if (gestiona && abierta()) { <button type="button" class="icon-btn-danger" title="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(p.pasajeroId, p.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }</td>
+                  <td class="td text-right">@if (gestiona && abierta()) { <button type="button" class="icon-btn-danger" data-tip="Quitar pasajero" aria-label="Quitar pasajero" (click)="quitarPasajero(p.pasajeroId, p.nombreCompleto)"><app-icon name="trash" size="w-4 h-4" /></button> }</td>
                 </tr>
               }
             </tbody>

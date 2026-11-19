@@ -1,29 +1,49 @@
-<section class="hero tema-claro">
-  <img src="machu-picchu-panorama.jpg" alt="Vista panorámica de Machu Picchu" class="hero-img" fetchpriority="high">
-  <div class="hero-overlay"></div>
+<section id="inicio" class="hero" aria-label="Portada">
+  <!-- Fotos de destinos con fundido; la activa además hace un acercamiento muy lento -->
+  <div class="hero-fondo" [style.transform]="'translate3d(0,' + desplazamiento() + 'px,0)'">
+    @for (f of fotos; track f.clave; let i = $index) {
+      <img [src]="f.src" [alt]="i === indice() ? f.lugar + ', ' + f.region : ''" class="hero-foto" [class.hero-foto-activa]="i === indice()"
+           [attr.fetchpriority]="i === 0 ? 'high' : null" [attr.loading]="i === 0 ? null : 'lazy'">
+    }
+  </div>
+  <div class="hero-velo"></div>
 
-  <div class="relative mx-auto w-full max-w-6xl px-5 pb-36 pt-36 sm:px-8 sm:pb-44">
-    <p class="hero-anim text-[12px] font-extrabold uppercase tracking-[0.18em] text-leaf-300">Agencia de viajes y aventura</p>
-
-    <h1 class="hero-anim mt-5 max-w-3xl text-[42px] font-black leading-[1.03] tracking-tight text-white sm:text-6xl lg:text-[76px]" style="animation-delay: 120ms">
-      Descubre tu próxima aventura en
-      <span class="lugar-wrap">
-        @for (l of lugares; track l; let i = $index) {
-          <span class="lugar" [class.lugar-activo]="i === indice()" [attr.aria-hidden]="i !== indice()">{{ l }}.</span>
-        }
-      </span>
+  <div class="relative mx-auto flex h-full w-full max-w-6xl flex-col justify-center px-5 pt-20 sm:px-8">
+    <h1 class="hero-anim max-w-2xl text-[40px] font-semibold leading-[1.06] tracking-tight text-white sm:text-6xl">
+      Viaja por el Perú con quienes lo conocen.
     </h1>
 
-    <p class="hero-anim mt-6 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg" style="animation-delay: 240ms">
-      Tours con salidas programadas, guías locales y reservas confirmadas al instante.
+    <p class="hero-anim mt-6 max-w-md text-base leading-relaxed text-white/80 sm:text-lg" style="animation-delay: 150ms">
+      Salidas programadas, guías locales y traslados coordinados.
     </p>
 
-    <div class="hero-anim mt-10 flex flex-wrap items-center gap-3" style="animation-delay: 360ms">
-      <a href="#tours" class="cta">
-        {{ textoCta }}
-        <span class="cta-flecha"><app-icon name="arrow-right" size="w-4 h-4" /></span>
-      </a>
-      <a href="#beneficios" class="cta-secundario">Por qué elegirnos</a>
+    <div class="hero-anim mt-9 flex flex-wrap items-center gap-x-7 gap-y-4" style="animation-delay: 300ms">
+      <a href="#tours" class="cta">{{ textoCta }} <app-icon name="arrow-right" size="w-4 h-4" /></a>
+      <a href="#como-funciona" class="enlace-claro">Cómo funciona</a>
     </div>
   </div>
+
+  <!-- Pie de la portada: barras de las fotos (izquierda) y crédito de la foto actual (derecha) -->
+  <div class="absolute inset-x-0 bottom-8 z-10">
+    <div class="mx-auto flex max-w-6xl items-end justify-between gap-6 px-5 sm:px-8">
+      <ol class="flex gap-1.5" aria-label="Fotos de la portada">
+        @for (f of fotos; track f.clave; let i = $index) {
+          <li>
+            <button type="button" class="indicador" [class.indicador-activo]="i === indice()" (click)="ir(i)"
+                    [attr.aria-label]="'Ver ' + f.lugar" [attr.aria-current]="i === indice() ? 'true' : null">
+              <span class="indicador-barra"></span>
+            </button>
+          </li>
+        }
+      </ol>
+      <a [href]="fotos[indice()].fuente" target="_blank" rel="noopener" class="credito">
+        {{ fotos[indice()].lugar }} · Foto: {{ fotos[indice()].autor }} · {{ fotos[indice()].licencia }}
+      </a>
+    </div>
+  </div>
+
+  <!-- Señal para pasar a la siguiente sección -->
+  <a href="#tours" class="bajar" aria-label="Ir a los destinos">
+    <span class="bajar-raton"><span class="bajar-rueda"></span></span>
+  </a>
 </section>

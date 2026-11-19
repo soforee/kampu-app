@@ -29,7 +29,10 @@ Para generar la versión de producción: `npm run build` (queda en `dist/fronten
   - formularios: `field`, `label` (`label req` = obligatorio), `hint`, `field-error`, `form-section`, `form-actions`;
   - contenedores: `card`, `card-header`, `card-title`, `page-header`, `toolbar`;
   - tablas: `tbl`, `th`, `td`, `tbl-tarjetas` (en celular cada fila se muestra como tarjeta);
-  - otros: `seg` / `seg-btn` (filtros), `chip`, `progress`, `alert-error`, `alert-warn`, `alert-info`, `empty`.
+  - otros: `seg` / `seg-btn` (filtros), `chip`, `progress`, `alert-error`, `alert-warn`, `alert-info`, `empty`;
+  - tooltip: atributo `data-tip="Editar"` en botones solo con ícono (además de su `aria-label`);
+  - página principal: `seccion-etiqueta`, `seccion-titulo` y la directiva `appRevelar` (aparición al hacer scroll).
+- Fotos de destinos en `public/destinos/` (Wikimedia Commons; créditos en `docs/ATRIBUCIONES_FOTOS.md`).
 - Estados (reserva, pago, salida, traslado…): componente `app-badge`, texto normal con un punto de color.
 
 ## Estructura
@@ -40,7 +43,7 @@ Para generar la versión de producción: `npm run build` (queda en `dist/fronten
 - `core/services/auth.service.ts`: login y registro; la sesión (usuario, rol y permisos) se guarda en `localStorage`.
 - `core/services/usuario.interceptor.ts`: agrega a cada petición quién la hace (`X-Usuario`, `X-Rol`, `X-Usuario-Id`, `X-Cliente-Id`).
 - `core/services/guards.ts`: el panel es solo para el personal, el portal solo para clientes, y cada pantalla exige su permiso.
-- `layout/shell.component.*`: menú lateral (compacto; se despliega al pasar el cursor) y contenido.
+- `layout/shell.component.*`: menú lateral (desplegado o compacto con tooltips; la preferencia se guarda en el navegador), barra superior y contenido.
 - `features/`: una carpeta por módulo (panel, reservas, salidas, paquetes, pagos, clientes, tráfico, logística, auditoría,
   portal del cliente, login y página principal). Cada componente tiene su `.ts`, `.html` y, si lo necesita, `.css`.
 - `shared/`: componentes reutilizables (íconos, logotipo, modal, estado, migas de pan, teléfono con código de país).

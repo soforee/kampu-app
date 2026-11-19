@@ -1,0 +1,41 @@
+<section id="nosotros" class="pantalla overflow-hidden" style="background: var(--kp-bg-alt)">
+  <div class="mx-auto grid w-full max-w-6xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2">
+    <div appRevelar>
+      <p class="seccion-etiqueta">Kampu Tours</p>
+      <h2 class="seccion-titulo">Organizamos cada detalle de tu viaje.</h2>
+      <p class="mt-5 max-w-lg text-[15px] leading-relaxed" style="color: var(--kp-muted)">
+        Programamos las salidas, asignamos guías y coordinamos cada traslado — del aeropuerto al hotel y del hotel a cada atractivo —
+        para que tu única tarea sea disfrutar.
+      </p>
+      <dl class="mt-10 grid max-w-md grid-cols-3 gap-6">
+        <div>
+          <dt class="text-xs" style="color: var(--kp-muted)">Tours activos</dt>
+          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ tours }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs" style="color: var(--kp-muted)">Salidas abiertas</dt>
+          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ salidas }}</dd>
+        </div>
+        <div>
+          <dt class="text-xs" style="color: var(--kp-muted)">Cupos libres</dt>
+          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ cupos }}</dd>
+        </div>
+      </dl>
+    </div>
+
+    <!-- Composición de fotos -->
+    <div class="relative h-[380px] sm:h-[460px]" appRevelar [retraso]="120">
+      <img [src]="fotoGrande.src" [alt]="fotoGrande.lugar" loading="lazy"
+           class="absolute right-0 top-0 h-[85%] w-[82%] rounded-3xl object-cover shadow-[0_30px_60px_-30px_rgba(38,46,15,.55)]">
+      <img [src]="fotoChica.src" [alt]="fotoChica.lugar" loading="lazy"
+           class="absolute bottom-0 left-0 h-[48%] w-[52%] rounded-3xl border-[6px] object-cover shadow-[0_24px_48px_-24px_rgba(38,46,15,.55)]" style="border-color: var(--kp-bg-alt)">
+      <div class="absolute bottom-[18%] right-[6%] flex items-center gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-[0_18px_40px_-20px_rgba(38,46,15,.45)] backdrop-blur">
+        <span class="grid h-10 w-10 place-items-center rounded-xl" style="background: var(--kp-primary-soft); color: var(--kp-primary)"><app-icon name="map-pin" size="w-5 h-5" /></span>
+        <div>
+          <div class="text-sm font-semibold" style="color: var(--kp-text)">{{ fotoGrande.lugar }}</div>
+          <div class="text-xs" style="color: var(--kp-muted)">{{ fotoGrande.region }}, Perú</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

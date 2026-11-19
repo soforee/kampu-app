@@ -13,7 +13,7 @@
 <div class="card overflow-hidden">
   <div class="relative overflow-x-auto">
     <table class="tbl tbl-tarjetas">
-      <thead><tr><th class="th">Paquete</th><th class="th">Fechas</th><th class="th min-w-[150px]">Ocupación</th><th class="th">Guía</th><th class="th">Transporte</th><th class="th">Estado</th>@if (editable) { <th class="th col-acciones"></th> }</tr></thead>
+      <thead><tr><th class="th">Paquete</th><th class="th">Fechas</th><th class="th min-w-[150px]">Ocupación</th><th class="th">Guía</th><th class="th">Transporte</th><th class="th">Estado</th><th class="th col-acciones"></th></tr></thead>
       <tbody>
         @for (f of visibles(); track f.salida.salidaId) {
           <tr [class.fila-nueva]="store.resaltado() === 'salida-' + f.salida.salidaId" [class.opacity-60]="!f.abierta">
@@ -40,18 +40,19 @@
               @if (f.salida.origen === 'RESERVA') { <div class="mt-0.5 text-xs text-zinc-500">Creada por una reserva</div> }
               @if (f.salida.estado === 'PROGRAMADA' && f.salida.faltanParaGarantizar > 0) { <div class="mt-0.5 text-xs text-zinc-500">Faltan {{ f.salida.faltanParaGarantizar }} para garantizar</div> }
             </td>
-            @if (editable) {
-              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
-                <div class="actions">
+            <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+              <div class="actions">
+                <a [routerLink]="['/salidas', f.salida.salidaId]" class="icon-btn" data-tip="Ver detalle" [attr.aria-label]="'Ver detalle de ' + f.paquete?.nombre"><app-icon name="eye" size="w-4 h-4" /></a>
+                @if (editable) {
                   @if (f.abierta) {
-                    <button type="button" class="icon-btn" title="Editar" aria-label="Editar" (click)="editar(f.salida.salidaId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                    <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.salida.salidaId)"><app-icon name="edit" size="w-4 h-4" /></button>
                   }
                   @if (f.abierta) {
-                    <button type="button" class="icon-btn-danger" title="Cancelar salida" aria-label="Cancelar salida" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                    <button type="button" class="icon-btn-danger" data-tip="Cancelar salida" aria-label="Cancelar salida" (click)="eliminar(f.salida.salidaId)"><app-icon name="trash" size="w-4 h-4" /></button>
                   }
-                </div>
-              </td>
-            }
+                }
+              </div>
+            </td>
           </tr>
         } @empty {
           <tr><td colspan="7"><div class="empty">{{ store.cargado() ? 'No hay salidas para mostrar.' : 'Cargando…' }}</div></td></tr>
@@ -63,8 +64,8 @@
 </div>
 
 @if (abierto()) {
-  <app-modal [titulo]="editId ? 'Editar salida' : 'Nueva salida'" (cerrar)="abierto.set(false)">
-    <div class="space-y-5">
+  <app-modal icono="calendar" subtitulo="Fecha, cupos y guía de un paquete" [titulo]="editId ? 'Editar salida' : 'Nueva salida'" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
         <div class="form-section-title">Paquete y fechas</div>
@@ -81,9 +82,16 @@
         </div>
       </div>
       <div class="form-section">
-        <div class="form-section-title">Capacidad y estado</div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div class="form-section-title">Cupos y guía</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div><label class="label req">Cupos máximos</label><input type="number" min="1" max="999" class="field" [(ngModel)]="form.cuposMaximos" (blur)="v.tocar('cupos')" [class.field-invalid]="v.error('cupos')" (beforeinput)="filtrar($event, 'entero')" (paste)="pegar($event, 'entero')" (wheel)="rueda($event)" inputmode="numeric" step="1">@if (v.error('cupos'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div>
+            <label class="label">Guía <span class="opt">Opcional</span></label>
+            <select class="field" [(ngModel)]="form.guiaId" aria-label="Guía">
+              <option [ngValue]="null">Sin asignar</option>
+              @for (g of store.guias(); track g.personalId) { <option [ngValue]="g.personalId">{{ g.nombreCompleto }} · {{ store.nombreProveedor(g.proveedorId) }}</option> }
+            </select>
+          </div>
           <div>
             <label class="label req">Estado</label>
             <select class="field" [(ngModel)]="form.estado">
@@ -91,20 +99,10 @@
             </select>
           </div>
         </div>
-        @if (!editId) { <div class="alert-info !py-2.5 !text-xs"><span>La fecha de fin y los cupos disponibles los calcula la base de datos. Pasa sola a garantizada cuando llega al mínimo de pasajeros del paquete; las reservas de la misma fecha se suman a esta salida.</span></div> }
+        @if (!editId) { <div class="alert-info !py-2.5 !text-xs"><span>La fecha de fin y los cupos disponibles los calcula la base de datos. Pasa sola a garantizada cuando llega al mínimo de pasajeros del paquete; las reservas de la misma fecha se suman a esta salida. Vehículos y conductores se asignan en <a class="link" routerLink="/operaciones">Tráfico</a>.</span></div> }
         @if (faltanteActual) {
           <div class="alert-warn !py-2.5 !text-xs"><span>El transporte asignado no alcanza en todos los tramos: {{ faltanteActual }}.</span></div>
         }
-      </div>
-      <div class="form-section">
-        <div class="form-section-title">Guía <span class="opt">Opcional</span></div>
-        <div>
-          <select class="field" [(ngModel)]="form.guiaId" aria-label="Guía">
-            <option [ngValue]="null">Sin asignar</option>
-            @for (g of store.guias(); track g.personalId) { <option [ngValue]="g.personalId">{{ g.nombreCompleto }} · {{ store.nombreProveedor(g.proveedorId) }}</option> }
-          </select>
-          <p class="hint">Vehículos y conductores se asignan a cada operación (aeropuerto → hotel, hotel → atractivo…) en <a class="link" routerLink="/operaciones">Tráfico</a>.</p>
-        </div>
       </div>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="abierto.set(false)">Cancelar</button>

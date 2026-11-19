@@ -1,13 +1,19 @@
-<div class="fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-6" role="dialog" aria-modal="true" [attr.aria-labelledby]="idTitulo">
-  <div class="absolute inset-0 bg-zinc-900/30 animate-fade-in" (click)="cerrar.emit()"></div>
-  <div data-panel tabindex="-1" class="relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-modal outline-none animate-pop-in sm:max-w-xl sm:rounded-xl">
-    <div class="flex items-center justify-between gap-4 border-b border-zinc-100 px-6 py-4">
-      <h3 [id]="idTitulo" class="truncate text-base font-semibold text-zinc-900">{{ titulo }}</h3>
-      <button type="button" data-cerrar class="icon-btn -mr-2 shrink-0" title="Cerrar (Esc)" aria-label="Cerrar" (click)="cerrar.emit()">
+<div class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" [attr.aria-labelledby]="idTitulo">
+  <div class="absolute inset-0 bg-brand-950/30 animate-fade-in transition-opacity duration-150" [class.opacity-0]="saliendo()" (click)="pedirCierre()"></div>
+  <div data-panel tabindex="-1"
+       class="relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-modal outline-none animate-pop-in sm:max-h-[calc(100vh-3rem)] sm:rounded-2xl"
+       [class]="ancho === 'sm' ? 'sm:max-w-md' : ancho === 'lg' ? 'sm:max-w-2xl' : 'sm:max-w-xl'" [class.modal-saliendo]="saliendo()">
+    <div class="flex shrink-0 items-center gap-3 border-b border-zinc-100 px-6 py-4">
+      @if (icono) { <span class="ico-tile"><app-icon [name]="icono" size="w-[18px] h-[18px]" /></span> }
+      <div class="min-w-0 flex-1">
+        <h3 [id]="idTitulo" class="truncate text-base font-semibold text-zinc-900">{{ titulo }}</h3>
+        @if (subtitulo) { <p class="truncate text-xs text-zinc-500">{{ subtitulo }}</p> }
+      </div>
+      <button type="button" data-cerrar class="icon-btn-box h-9 w-9 shrink-0" data-tip="Cerrar (Esc)" aria-label="Cerrar" (click)="pedirCierre()">
         <app-icon name="x" size="w-4 h-4" />
       </button>
     </div>
-    <div class="overflow-y-auto p-6">
+    <div class="overflow-y-auto px-6 py-5">
       <ng-content />
     </div>
   </div>

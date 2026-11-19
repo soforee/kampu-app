@@ -1,22 +1,41 @@
 <app-landing-navbar />
 
 <main>
-  <app-landing-hero [totalTours]="tours().length" />
+  <app-landing-hero [totalTours]="totalActivos()" [totalSalidas]="totalSalidas()" />
 
-  <app-landing-search [destinos]="destinos()" (buscar)="buscar($event)" />
+  <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()" [contacto]="contacto()"
+                     [categoria]="filtro().tipo" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()">
+    <app-landing-search [destinos]="destinos()" (buscar)="buscar($event)" />
+  </app-landing-tours>
 
-  <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()"
-                     [contacto]="contacto()" (limpiar)="limpiar()" />
+  <app-landing-presentacion [tours]="totalActivos()" [salidas]="totalSalidas()" [cupos]="totalCupos()" />
+
+  <app-landing-pasos />
+
+  <app-landing-galeria />
 
   <app-landing-beneficios />
+
+  <app-landing-cta [whatsapp]="whatsapp()" />
 </main>
+
+<!-- Puntos de navegación por secciones (escritorio) -->
+<nav class="puntos" aria-label="Secciones de la página">
+  <span class="puntos-num" aria-hidden="true">{{ (indiceActivo() + 1).toString().padStart(2, '0') }}</span>
+  @for (s of secciones; track s.id) {
+    <a [href]="'#' + s.id" class="punto" [class.punto-activo]="seccionActiva() === s.id"
+       [attr.aria-label]="s.texto" [attr.aria-current]="seccionActiva() === s.id ? 'true' : null">
+      <span class="punto-texto">{{ s.texto }}</span>
+    </a>
+  }
+</nav>
 
 <!-- WhatsApp: botón flotante para escribir a la agencia -->
 @if (whatsapp()) {
-<a [href]="'https://wa.me/' + whatsapp()" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" data-testid="whatsapp"
-   class="group fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand-600 hover:bg-brand-700 py-3 pl-3 pr-3 text-white shadow-lifted transition-all duration-300 hover:pr-5 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/30">
-  <app-icon name="whatsapp" size="w-7 h-7" [trazo]="1.7" />
-  <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-bold transition-all duration-300 group-hover:max-w-[160px]">¿Te ayudamos?</span>
+<a [href]="'https://wa.me/' + whatsapp()" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" title="Escríbenos por WhatsApp" data-testid="whatsapp"
+   class="group fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand-600 py-3 pl-3 pr-3 text-white shadow-lifted transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-700 hover:pr-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/30">
+  <app-icon name="whatsapp" size="w-6 h-6" [trazo]="1.7" />
+  <span class="max-w-0 overflow-hidden whitespace-nowrap text-sm font-semibold transition-all duration-300 group-hover:max-w-[160px]">¿Te ayudamos?</span>
 </a>
 }
 

@@ -247,8 +247,9 @@ export class ReservaDetalleComponent {
     });
   }
 
-  resolver(pagoId: number, estado: 'APROBADO' | 'RECHAZADO') {
+  async resolver(pagoId: number, estado: 'APROBADO' | 'RECHAZADO') {
     if (this.store.ocupado()) return;
+    if (estado === 'RECHAZADO' && !(await this.alerts.confirm('El pago quedará rechazado y no se descontará del saldo de la reserva.', 'Rechazar pago', 'Sí, rechazar'))) return;
     this.ejecutar(this.store.resolverPago(pagoId, estado), estado === 'APROBADO' ? 'Pago aprobado' : 'Pago rechazado');
   }
 

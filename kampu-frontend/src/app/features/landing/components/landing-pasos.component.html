@@ -1,0 +1,23 @@
+<section id="como-funciona" class="pantalla bg-white">
+  <div class="mx-auto w-full max-w-6xl px-5 sm:px-8">
+    <div class="mx-auto max-w-2xl text-center" appRevelar>
+      <p class="seccion-etiqueta">Cómo funciona</p>
+      <h2 class="seccion-titulo">De la idea al viaje, en cuatro pasos.</h2>
+    </div>
+
+    <ol class="relative mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+      <!-- Línea que une los pasos (escritorio) -->
+      <span class="absolute left-[12%] right-[12%] top-7 hidden h-px lg:block" style="background: linear-gradient(90deg, transparent, var(--kp-border) 10%, var(--kp-border) 90%, transparent)" aria-hidden="true"></span>
+      @for (p of pasos; track p.titulo; let i = $index) {
+        <li class="relative text-center" appRevelar [retraso]="i * 100">
+          <span class="relative mx-auto grid h-14 w-14 place-items-center rounded-2xl border bg-white shadow-[0_10px_24px_-14px_rgba(38,46,15,.45)]" style="border-color: var(--kp-border); color: var(--kp-primary)">
+            <app-icon [name]="p.icono" size="w-6 h-6" />
+            <span class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full text-[11px] font-semibold" style="background: var(--kp-accent); color: #1A200A">{{ i + 1 }}</span>
+          </span>
+          <h3 class="mt-5 text-base font-semibold" style="color: var(--kp-text)">{{ p.titulo }}</h3>
+          <p class="mx-auto mt-2 max-w-[15rem] text-sm leading-relaxed" style="color: var(--kp-muted)">{{ p.texto }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
