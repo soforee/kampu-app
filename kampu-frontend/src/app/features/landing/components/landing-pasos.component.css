@@ -1,0 +1,7 @@
+/* Número del paso: grande, solo contorno en oliva; se rellena al pasar el cursor */
+.paso-num {
+  display: block; font-size: 5.5rem; line-height: .9; font-weight: 700; letter-spacing: -.04em;
+  color: transparent; -webkit-text-stroke: 1.5px #4B5B1D; transition: color .4s ease;
+}
+.paso:hover .paso-num { color: #C4BD45; -webkit-text-stroke-color: #C4BD45; }
+@media (min-width: 1280px) { .paso-num { font-size: 7rem; } }

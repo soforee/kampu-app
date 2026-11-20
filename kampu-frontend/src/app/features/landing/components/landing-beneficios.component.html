@@ -1,22 +1,33 @@
-<section id="beneficios" class="pantalla bg-white">
-  <div class="mx-auto w-full max-w-6xl px-5 sm:px-8">
-    <div class="grid gap-12 lg:grid-cols-[1fr_1.6fr] lg:gap-16">
-      <div appRevelar>
-        <p class="seccion-etiqueta">Por qué elegirnos</p>
-        <h2 class="seccion-titulo">Viajar con nosotros es simple.</h2>
-        <p class="mt-4 max-w-sm text-[15px] leading-relaxed" style="color: var(--kp-muted)">Nos encargamos de la organización para que tú solo pienses en disfrutar.</p>
-      </div>
-      <div class="grid gap-4 sm:grid-cols-2">
-        @for (b of beneficios; track b.titulo; let i = $index) {
-          <div class="beneficio" appRevelar [retraso]="i * 80">
-            <span class="beneficio-icono"><app-icon [name]="b.icono" size="w-5 h-5" /></span>
-            <div>
-              <h3 class="text-base font-semibold tracking-tight" style="color: var(--kp-text)">{{ b.titulo }}</h3>
-              <p class="mt-1 text-sm leading-relaxed" style="color: var(--kp-muted)">{{ b.texto }}</p>
-            </div>
-          </div>
-        }
+<!-- Por qué elegirnos: lista sobre fondo claro y foto a sangre a la derecha -->
+<section id="beneficios" class="pantalla overflow-hidden !p-0 bg-white">
+  <div class="grid flex-1 lg:grid-cols-[1.1fr_1fr]">
+    <div class="flex items-center px-6 py-16 sm:px-12 lg:pb-16 lg:pt-28 xl:pl-[max(5rem,calc((100vw_-_72rem)/2_+_2rem))]">
+      <div class="w-full max-w-xl" appRevelar>
+        <div data-entra style="--i: 0">
+          <p class="diapo-num"><b>06</b><span>Por qué elegirnos</span></p>
+          <h2 class="diapo-titulo">Viajar con nosotros es simple.</h2>
+        </div>
+        <ul class="mt-10 divide-y" style="border-color: var(--kp-border)">
+          @for (b of beneficios; track b.titulo; let i = $index) {
+            <li class="beneficio" data-entra [style.--i]="i + 1">
+              <span class="beneficio-icono"><app-icon [name]="b.icono" size="w-5 h-5" /></span>
+              <div>
+                <h3 class="text-lg font-semibold tracking-tight" style="color: var(--kp-text)">{{ b.titulo }}</h3>
+                <p class="mt-1 text-[15px] leading-relaxed" style="color: var(--kp-muted)">{{ b.texto }}</p>
+              </div>
+            </li>
+          }
+        </ul>
       </div>
     </div>
+
+    <figure class="relative order-first m-0 min-h-[40vh] overflow-hidden lg:order-none lg:min-h-0" data-foto="der">
+      <img [src]="foto.src" [alt]="foto.lugar + ', ' + foto.region" loading="lazy" class="absolute inset-0 h-full w-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20"></div>
+      <figcaption class="absolute bottom-6 left-6 right-6 flex items-end justify-between gap-4 text-white">
+        <span class="inline-flex items-center gap-2 text-sm font-medium"><app-icon name="map-pin" size="w-4 h-4" /> {{ foto.lugar }}, {{ foto.region }}</span>
+        <a [href]="foto.fuente" target="_blank" rel="noopener" class="text-[11px] text-white/55 hover:text-white/85">Foto: {{ foto.autor }} · {{ foto.licencia }}</a>
+      </figcaption>
+    </figure>
   </div>
 </section>

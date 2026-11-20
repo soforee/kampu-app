@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
 
@@ -7,8 +6,9 @@ import { RevelarDirective } from '../../../shared/revelar.directive';
 @Component({
   selector: 'app-landing-pasos',
   standalone: true,
-  imports: [IconComponent, RevelarDirective, RouterLink],
-  templateUrl: './landing-pasos.component.html'
+  imports: [IconComponent, RevelarDirective],
+  templateUrl: './landing-pasos.component.html',
+  styleUrl: './landing-pasos.component.css'
 })
 export class LandingPasosComponent {
   pasos = [

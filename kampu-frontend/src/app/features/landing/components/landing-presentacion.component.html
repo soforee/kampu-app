@@ -1,40 +1,39 @@
-<section id="nosotros" class="pantalla overflow-hidden" style="background: var(--kp-bg-alt)">
-  <div class="mx-auto grid w-full max-w-6xl items-center gap-14 px-5 sm:px-8 lg:grid-cols-2">
-    <div appRevelar>
-      <p class="seccion-etiqueta">Kampu Tours</p>
-      <h2 class="seccion-titulo">Organizamos cada detalle de tu viaje.</h2>
-      <p class="mt-5 max-w-lg text-[15px] leading-relaxed" style="color: var(--kp-muted)">
-        Programamos las salidas, asignamos guías y coordinamos cada traslado — del aeropuerto al hotel y del hotel a cada atractivo —
-        para que tu única tarea sea disfrutar.
-      </p>
-      <dl class="mt-10 grid max-w-md grid-cols-3 gap-6">
-        <div>
-          <dt class="text-xs" style="color: var(--kp-muted)">Tours activos</dt>
-          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ tours }}</dd>
-        </div>
-        <div>
-          <dt class="text-xs" style="color: var(--kp-muted)">Salidas abiertas</dt>
-          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ salidas }}</dd>
-        </div>
-        <div>
-          <dt class="text-xs" style="color: var(--kp-muted)">Cupos libres</dt>
-          <dd class="mt-1 text-3xl font-semibold tracking-tight tabular-nums" style="color: var(--kp-primary)">{{ cupos }}</dd>
-        </div>
-      </dl>
-    </div>
+<!-- Nosotros: foto a sangre (mitad izquierda) y panel oliva con las cifras reales del catálogo -->
+<section id="nosotros" class="pantalla diapo-oscura overflow-hidden !p-0" style="background: var(--kp-dark)">
+  <div class="grid flex-1 lg:grid-cols-2">
+    <figure class="relative min-h-[42vh] overflow-hidden lg:min-h-0" data-foto="izq">
+      <img [src]="foto.src" [alt]="foto.lugar + ', ' + foto.region" loading="lazy" class="absolute inset-0 h-full w-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/25"></div>
+      <figcaption class="absolute bottom-6 left-6 right-6 flex items-end justify-between gap-4 text-white">
+        <span class="inline-flex items-center gap-2 text-sm font-medium"><app-icon name="map-pin" size="w-4 h-4" /> {{ foto.lugar }}, {{ foto.region }}</span>
+        <a [href]="foto.fuente" target="_blank" rel="noopener" class="text-[11px] text-white/55 hover:text-white/85">Foto: {{ foto.autor }} · {{ foto.licencia }}</a>
+      </figcaption>
+    </figure>
 
-    <!-- Composición de fotos -->
-    <div class="relative h-[380px] sm:h-[460px]" appRevelar [retraso]="120">
-      <img [src]="fotoGrande.src" [alt]="fotoGrande.lugar" loading="lazy"
-           class="absolute right-0 top-0 h-[85%] w-[82%] rounded-3xl object-cover shadow-[0_30px_60px_-30px_rgba(38,46,15,.55)]">
-      <img [src]="fotoChica.src" [alt]="fotoChica.lugar" loading="lazy"
-           class="absolute bottom-0 left-0 h-[48%] w-[52%] rounded-3xl border-[6px] object-cover shadow-[0_24px_48px_-24px_rgba(38,46,15,.55)]" style="border-color: var(--kp-bg-alt)">
-      <div class="absolute bottom-[18%] right-[6%] flex items-center gap-3 rounded-2xl bg-white/95 px-4 py-3 shadow-[0_18px_40px_-20px_rgba(38,46,15,.45)] backdrop-blur">
-        <span class="grid h-10 w-10 place-items-center rounded-xl" style="background: var(--kp-primary-soft); color: var(--kp-primary)"><app-icon name="map-pin" size="w-5 h-5" /></span>
-        <div>
-          <div class="text-sm font-semibold" style="color: var(--kp-text)">{{ fotoGrande.lugar }}</div>
-          <div class="text-xs" style="color: var(--kp-muted)">{{ fotoGrande.region }}, Perú</div>
+    <div class="flex items-center px-6 py-16 sm:px-12 lg:px-16 lg:pb-16 lg:pt-28 xl:px-20">
+      <div class="max-w-lg" appRevelar>
+        <div data-entra style="--i: 0">
+          <p class="diapo-num"><b>03</b><span>Nosotros</span></p>
+          <h2 class="diapo-titulo">Organizamos cada detalle de tu viaje.</h2>
         </div>
+        <p class="mt-6 text-base leading-relaxed text-white/70" data-entra style="--i: 1">
+          Programamos las salidas, asignamos guías y coordinamos cada traslado — del aeropuerto al hotel y del hotel a cada atractivo —
+          para que tu única tarea sea disfrutar.
+        </p>
+        <dl class="mt-12 grid grid-cols-3 gap-6 border-t border-white/10 pt-8" data-entra style="--i: 2">
+          <div class="flex flex-col-reverse">
+            <dt class="mt-2 text-sm text-white/60">Tours activos</dt>
+            <dd class="text-5xl font-semibold tracking-tight tabular-nums text-leaf-400 xl:text-6xl">{{ tours }}</dd>
+          </div>
+          <div class="flex flex-col-reverse">
+            <dt class="mt-2 text-sm text-white/60">Salidas abiertas</dt>
+            <dd class="text-5xl font-semibold tracking-tight tabular-nums text-leaf-400 xl:text-6xl">{{ salidas }}</dd>
+          </div>
+          <div class="flex flex-col-reverse">
+            <dt class="mt-2 text-sm text-white/60">Cupos libres</dt>
+            <dd class="text-5xl font-semibold tracking-tight tabular-nums text-leaf-400 xl:text-6xl">{{ cupos }}</dd>
+          </div>
+        </dl>
       </div>
     </div>
   </div>
