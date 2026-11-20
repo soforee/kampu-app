@@ -1,4 +1,4 @@
-<app-landing-navbar />
+<app-landing-navbar [fondoOscuro]="fondoOscuro()" />
 
 <main>
   <app-landing-hero [totalTours]="totalActivos()" [totalSalidas]="totalSalidas()" />
@@ -20,7 +20,7 @@
 </main>
 
 <!-- Puntos de navegación por secciones (escritorio) -->
-<nav class="puntos" aria-label="Secciones de la página">
+<nav class="puntos" [class.puntos-claros]="fondoOscuro()" aria-label="Secciones de la página">
   <span class="puntos-num" aria-hidden="true">{{ (indiceActivo() + 1).toString().padStart(2, '0') }}</span>
   @for (s of secciones; track s.id) {
     <a [href]="'#' + s.id" class="punto" [class.punto-activo]="seccionActiva() === s.id"

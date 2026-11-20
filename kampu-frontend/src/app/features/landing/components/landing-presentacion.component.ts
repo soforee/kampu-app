@@ -14,6 +14,5 @@ export class LandingPresentacionComponent {
   @Input() tours = 0;
   @Input() salidas = 0;
   @Input() cupos = 0;
-  fotoGrande = FOTOS_DESTINOS.find(f => f.clave === 'ollantaytambo') ?? FOTOS_DESTINOS[0];
-  fotoChica = FOTOS_DESTINOS.find(f => f.clave === 'titicaca') ?? FOTOS_DESTINOS[0];
+  foto = FOTOS_DESTINOS.find(f => f.clave === 'ollantaytambo') ?? FOTOS_DESTINOS[0];
 }

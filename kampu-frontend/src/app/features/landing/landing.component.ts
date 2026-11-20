@@ -36,6 +36,9 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   ];
   seccionActiva = signal('inicio');
   indiceActivo = computed(() => this.secciones.findIndex(s => s.id === this.seccionActiva()));
+  // Pantallas con foto o fondo oscuro: la barra superior y los puntos se vuelven claros sobre ellas
+  private oscuras = ['inicio', 'nosotros', 'galeria', 'contacto'];
+  fondoOscuro = computed(() => this.modoPaginas() ? this.oscuras.includes(this.seccionActiva()) : null);
   private observador?: IntersectionObserver;
 
   /*
@@ -164,7 +167,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     const desde = window.scrollY, hasta = this.posicion(i);
     if (Math.abs(hasta - desde) < 2) return;
     const id = this.paradas[i];
-    if (this.secciones.some(s => s.id === id)) this.seccionActiva.set(id);
     if (this.sinMovimiento) { window.scrollTo({ top: hasta, behavior: 'instant' as ScrollBehavior }); return; }
 
     // La sección que llega anima su contenido; la que se va se atenúa
