@@ -40,3 +40,10 @@
 }
 .punto:hover .punto-texto, .punto:focus-visible .punto-texto { opacity: 1; transform: translate(0, -50%); }
 .puntos-num { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--kp-primary); font-variant-numeric: tabular-nums; }
+/* Sobre fotos y fondos oscuros: puntos claros sin fondo */
+.puntos { transition: background-color .4s ease, box-shadow .4s ease; }
+.puntos-claros { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
+.puntos-claros .punto { background: rgba(255, 255, 255, .4); }
+.puntos-claros .punto:hover { background: rgba(255, 255, 255, .8); }
+.puntos-claros .punto-activo { background: #C4BD45; }
+.puntos-claros .puntos-num { color: #fff; }

@@ -1,4 +1,4 @@
-import { Component, HostListener, inject, signal } from '@angular/core';
+import { Component, HostListener, Input, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { IconComponent } from '../../../shared/icon.component';
@@ -16,6 +16,12 @@ export class LandingNavbarComponent {
 
   solido = signal(false);
   menu = signal(false);
+
+  // Páginas completas (escritorio): la página principal indica si la pantalla visible es una foto o un fondo oscuro.
+  // En ese caso la barra queda transparente con texto blanco; sobre fondos claros, sólida. Sin dato (celular) se usa el scroll.
+  private sobreOscuro = signal<boolean | null>(null);
+  @Input() set fondoOscuro(v: boolean | null) { this.sobreOscuro.set(v); }
+  vistaSolida = computed(() => this.menu() || (this.sobreOscuro() === null ? this.solido() : !this.sobreOscuro()));
 
   links = [
     { href: '#tours', texto: 'Destinos' },

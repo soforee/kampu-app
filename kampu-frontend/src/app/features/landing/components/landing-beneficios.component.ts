@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
+import { FOTOS_DESTINOS } from '../landing.models';
 
 @Component({
   selector: 'app-landing-beneficios',
@@ -10,6 +11,7 @@ import { RevelarDirective } from '../../../shared/revelar.directive';
   styleUrl: './landing-beneficios.component.css'
 })
 export class LandingBeneficiosComponent {
+  foto = FOTOS_DESTINOS.find(f => f.clave === 'paracas') ?? FOTOS_DESTINOS[0];
   beneficios = [
     { icono: 'calendar', titulo: 'Reserva en minutos', texto: 'Elige la salida, registra a tus pasajeros y asegura tu cupo sin trámites.' },
     { icono: 'lock', titulo: 'Pagos seguros', texto: 'Paga en soles, dólares o euros, en una o varias cuotas, con cada pago registrado.' },

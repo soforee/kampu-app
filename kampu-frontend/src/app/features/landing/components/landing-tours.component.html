@@ -1,10 +1,10 @@
-<section id="tours" class="pantalla bg-white">
+<section id="tours" class="pantalla bg-white lg:!pb-10">
   <div class="mx-auto w-full max-w-6xl px-5 sm:px-8">
     <div class="flex flex-wrap items-end justify-between gap-6" appRevelar>
-      <div>
-        <p class="seccion-etiqueta">Destinos</p>
-        <h2 class="seccion-titulo">Elige tu próximo viaje</h2>
-        <p class="mt-2 text-[15px] leading-relaxed" style="color: var(--kp-muted)">Precios por persona. Te confirmamos la disponibilidad al cotizar.</p>
+      <div data-entra style="--i: 0">
+        <p class="diapo-num"><b>02</b><span>Destinos</span></p>
+        <h2 class="diapo-titulo">Elige tu próximo viaje.</h2>
+        <p class="mt-3 text-[15px] leading-relaxed" style="color: var(--kp-muted)">Precios por persona. Te confirmamos la disponibilidad al cotizar.</p>
       </div>
       @if (hayFiltro) {
         <button type="button" class="limpiar" (click)="limpiar.emit()"><app-icon name="x" size="w-4 h-4" /> Quitar filtros</button>
@@ -12,10 +12,10 @@
     </div>
 
     <!-- Buscador (destino, fecha y tipo): vive en esta sección, junto a los tours que filtra -->
-    <div class="mt-6" appRevelar [retraso]="60"><ng-content /></div>
+    <div class="mt-7" appRevelar [retraso]="60" data-entra style="--i: 1"><ng-content /></div>
 
     <!-- Categorías por duración del tour -->
-    <div class="mt-6 flex flex-wrap items-center justify-between gap-4" appRevelar [retraso]="80">
+    <div class="mt-6 flex flex-wrap items-center justify-between gap-4" appRevelar [retraso]="80" data-entra style="--i: 2">
       <nav class="categorias" aria-label="Categorías de tours">
         @for (c of categorias; track c.valor) {
           <button type="button" class="categoria" [class.categoria-activa]="categoria === c.valor" [attr.aria-pressed]="categoria === c.valor"
@@ -58,7 +58,7 @@
     } @else {
       <!-- La clave incluye la categoría: al cambiarla, las tarjetas entran de nuevo con un fundido escalonado -->
       <!-- Carrusel horizontal: los tours en una sola fila para que la sección quepa en la pantalla -->
-      <div #carrusel class="carrusel mt-6" (scroll)="revisarBordes()" tabindex="0" aria-label="Tours disponibles" role="region">
+      <div #carrusel class="carrusel mt-6" data-entra style="--i: 3" (scroll)="revisarBordes()" tabindex="0" aria-label="Tours disponibles" role="region">
         @for (t of tours; track categoria + '-' + t.paquete.paqueteId; let i = $index) {
           <article class="tour" [style.animation-delay.ms]="i * 70">
             <div class="tour-media">

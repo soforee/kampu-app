@@ -105,10 +105,6 @@
   .page-header { @apply mb-6 flex flex-wrap items-end justify-between gap-4; }
   .page-sub { @apply mt-1 text-sm text-zinc-500; }
   .toolbar { @apply mb-4 flex flex-wrap items-center gap-2; }
-  /* Página principal: etiqueta y título de cada sección */
-  .seccion-etiqueta { @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-brand-600; }
-  .seccion-etiqueta::before { content: ''; @apply h-px w-6 bg-leaf-400; }
-  .seccion-titulo { @apply mt-3 text-3xl font-semibold leading-tight tracking-tight text-zinc-900 sm:text-[42px] sm:leading-[1.1]; }
   .font-wordmark { font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
 }
 
@@ -233,19 +229,36 @@ body.swal2-toast-shown .swal2-container,
 .pantalla { position: relative; display: flex; min-height: 100vh; min-height: 100svh; flex-direction: column; justify-content: center;
             padding-top: 6.5rem; padding-bottom: 4rem; scroll-snap-align: start; }
 html.secciones { scroll-snap-type: y proximity; }
-/* Galería: las filas se reparten el alto disponible de la pantalla */
-.galeria-grid { grid-auto-rows: 170px; }
-@media (min-width: 1024px) { .galeria-grid { grid-auto-rows: clamp(150px, calc((100svh - 330px) / 3), 260px); } }
 
 /* Desplazamiento por páginas completas (escritorio): lo controla landing.component.ts */
 html.paginas { scroll-behavior: auto; scrollbar-width: none; }
 html.paginas::-webkit-scrollbar { display: none; }
-/* Transición entre páginas: el contenido que llega entra desde la dirección del movimiento; el que se va se aleja y se desvanece */
-.pagina-entra > .mx-auto { animation: pagina-entra-abajo .95s .2s cubic-bezier(.16, 1, .3, 1) both; }
-.pagina-entra.desde-arriba > .mx-auto { animation-name: pagina-entra-arriba; }
-@keyframes pagina-entra-abajo { from { opacity: 0; transform: translateY(80px) scale(.98); } to { opacity: 1; transform: none; } }
-@keyframes pagina-entra-arriba { from { opacity: 0; transform: translateY(-80px) scale(.98); } to { opacity: 1; transform: none; } }
-.pagina-sale > .mx-auto { opacity: 0; transform: scale(.94); transition: opacity .55s ease, transform .9s cubic-bezier(.65, 0, .35, 1); }
+/* Transición entre páginas (escritorio):
+   - [data-entra] (con --i para el orden): el texto entra desde la dirección del movimiento, escalonado;
+   - [data-foto="izq" | "der"]: las fotos se descubren con un barrido;
+   - la página que se va se aleja y se desvanece. */
+html .pagina-entra [data-entra] { animation: entra-abajo .9s calc(.18s + var(--i, 0) * 90ms) cubic-bezier(.16, 1, .3, 1) both; }
+html .pagina-entra.desde-arriba [data-entra] { animation-name: entra-arriba; }
+html .pagina-entra [data-foto] { animation: foto-der 1.15s .05s cubic-bezier(.77, 0, .175, 1) both; }
+html .pagina-entra [data-foto="izq"] { animation-name: foto-izq; }
+@keyframes entra-abajo { from { opacity: 0; transform: translateY(70px); } to { opacity: 1; transform: none; } }
+@keyframes entra-arriba { from { opacity: 0; transform: translateY(-70px); } to { opacity: 1; transform: none; } }
+@keyframes foto-izq { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes foto-der { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+html .pagina-sale [data-entra] { opacity: 0; transform: translateY(-40px); transition: opacity .45s ease, transform .8s cubic-bezier(.65, 0, .35, 1); }
+html .pagina-sale [data-foto] { transform: scale(1.06); filter: brightness(.6); transition: transform .9s cubic-bezier(.65, 0, .35, 1), filter .9s ease; }
+
+/* Encabezado común de las secciones: número, nombre y título grande (mismo lenguaje que la portada) */
+.diapo-num { display: inline-flex; align-items: center; gap: .75rem; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #4B5B1D; }
+.diapo-num b { font-weight: 600; color: #8C8A2E; font-variant-numeric: tabular-nums; }
+.diapo-num::before { content: ''; height: 1px; width: 2rem; background: #C4BD45; order: 1; }
+.diapo-num b { order: 0; } .diapo-num span { order: 2; }
+.diapo-oscura .diapo-num { color: rgba(255, 255, 255, .85); }
+.diapo-oscura .diapo-num b { color: #C4BD45; }
+.diapo-titulo { margin-top: 1rem; font-size: 2.25rem; line-height: 1.06; font-weight: 600; letter-spacing: -.025em; color: #22231B; }
+@media (min-width: 640px) { .diapo-titulo { font-size: 3rem; } }
+@media (min-width: 1280px) { .diapo-titulo { font-size: 3.5rem; } }
+.diapo-oscura .diapo-titulo { color: #fff; }
 
 /* Aparición al entrar en pantalla (directiva appRevelar) */
 .revelar { opacity: 0; transform: translateY(22px); transition: opacity .8s cubic-bezier(.16, 1, .3, 1), transform .8s cubic-bezier(.16, 1, .3, 1); }
@@ -256,8 +269,8 @@ html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   html.secciones { scroll-snap-type: none; }
-  .pagina-entra > .mx-auto { animation: none; }
-  .pagina-sale > .mx-auto { opacity: 1; transform: none; }
+  html .pagina-entra [data-entra], html .pagina-entra [data-foto] { animation: none; }
+  html .pagina-sale [data-entra], html .pagina-sale [data-foto] { opacity: 1; transform: none; filter: none; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .revelar { opacity: 1; transform: none; }
 }

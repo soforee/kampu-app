@@ -1,12 +1,14 @@
-<section id="contacto" class="pantalla relative overflow-hidden" style="background: var(--kp-dark)">
-  <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy">
-  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(26, 32, 10, .55), rgba(38, 46, 15, .82) 55%, rgba(26, 32, 10, .95))"></div>
-  <div class="relative mx-auto w-full max-w-6xl px-5 text-center sm:px-8" appRevelar>
+<section id="contacto" class="pantalla diapo-oscura relative overflow-hidden" style="background: var(--kp-dark)">
+  <img src="machu-picchu-panorama.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" data-foto="der">
+  <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(26, 32, 10, .85) 0%, rgba(26, 32, 10, .55) 55%, rgba(26, 32, 10, .3) 100%)"></div>
+  <div class="relative mx-auto w-full max-w-6xl px-5 sm:px-8" appRevelar>
     <div>
-      <p class="seccion-etiqueta !text-leaf-300 justify-center">Contacto</p>
-      <h2 class="mx-auto mt-4 max-w-3xl text-4xl font-semibold leading-[1.08] tracking-tight text-white sm:text-6xl">¿Listo para tu próxima aventura?</h2>
-      <p class="mx-auto mt-5 max-w-lg text-base leading-relaxed text-white/80 sm:text-lg">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <div data-entra style="--i: 0">
+        <p class="diapo-num"><b>07</b><span>Contacto</span></p>
+        <h2 class="mt-5 max-w-2xl text-[40px] font-semibold leading-[1.06] tracking-tight text-white sm:text-6xl">¿Listo para tu próxima aventura?</h2>
+      </div>
+      <p class="mt-6 max-w-md text-base leading-relaxed text-white/80 sm:text-lg" data-entra style="--i: 1">Crea tu cuenta para seguir tus paquetes y pagos, o escríbenos y armamos tu viaje.</p>
+      <div class="mt-9 flex flex-wrap items-center gap-3" data-entra style="--i: 2">
         @if (auth.autenticado()) {
           <a [routerLink]="auth.inicio()" class="inline-flex h-12 items-center gap-2 rounded-full bg-leaf-400 px-6 font-semibold text-brand-950 transition-colors hover:bg-leaf-300">
             {{ auth.esCliente() ? 'Ver mis paquetes' : 'Ir al panel' }} <app-icon name="arrow-right" size="w-4 h-4" />

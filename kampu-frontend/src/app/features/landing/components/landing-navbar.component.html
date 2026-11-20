@@ -1,8 +1,8 @@
-<header class="navbar" [class.navbar-solida]="solido() || menu()">
+<header class="navbar" [class.navbar-solida]="vistaSolida()">
   <nav class="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-5 sm:px-8" aria-label="Principal">
     <a routerLink="/" class="shrink-0" aria-label="Kampu, inicio" (click)="cerrarMenu()">
-      <app-logo variante="horizontal" [alto]="28" [oscuro]="!(solido() || menu())"
-                [colorCarpa]="solido() || menu() ? '#4B5B1D' : '#FDF8E6'" />
+      <app-logo variante="horizontal" [alto]="28" [oscuro]="!(vistaSolida())"
+                [colorCarpa]="vistaSolida() ? '#4B5B1D' : '#FDF8E6'" />
     </a>
 
     <ul class="hidden flex-1 items-center justify-center gap-9 md:flex">
