@@ -1,99 +1,97 @@
-<!-- Login a pantalla completa: las fotos de destinos cubren toda la ventana y el formulario flota en una tarjeta -->
-<div class="relative min-h-screen overflow-hidden bg-brand-950 [min-height:100svh]">
-  @for (f of fotos; track f.clave; let i = $index) {
-    <img [src]="f.src" [alt]="i === foto() ? f.lugar + ', ' + f.region : ''" class="foto" [class.activa]="i === foto()" [attr.aria-hidden]="i !== foto()">
-  }
-  <div class="velo"></div>
+<!-- Login a pantalla completa: foto a sangre (izquierda, mismo lenguaje que la portada) y panel blanco a toda altura con el formulario -->
+<div class="grid min-h-screen bg-white [min-height:100svh] lg:grid-cols-[1.25fr_1fr]">
 
-  <div class="relative z-10 mx-auto grid min-h-screen w-full max-w-7xl grid-rows-[auto_1fr_auto] gap-6 px-5 py-5 [min-height:100svh] sm:px-10 sm:py-7">
+  <!-- Foto de destinos con fundido, título y barras como en la portada -->
+  <section class="foto-panel relative min-h-[34vh] overflow-hidden bg-brand-950 lg:min-h-0">
+    @for (f of fotos; track f.clave; let i = $index) {
+      <img [src]="f.src" [alt]="i === foto() ? f.lugar + ', ' + f.region : ''" class="foto" [class.activa]="i === foto()" [attr.aria-hidden]="i !== foto()">
+    }
+    <div class="velo"></div>
 
-    <!-- Encabezado: logotipo y volver a la página principal -->
-    <header class="entra entra-1 flex items-center justify-between gap-4">
-      <a routerLink="/" class="inline-flex items-center rounded-xl bg-white/10 px-3 py-2 ring-1 ring-white/20 backdrop-blur transition hover:bg-white/15" aria-label="Ir a la página principal">
-        <app-logo variante="horizontal" [oscuro]="true" [alto]="22" />
+    <div class="relative z-10 flex h-full flex-col justify-between p-6 sm:p-10 xl:p-14">
+      <a routerLink="/" class="entra entra-1 inline-flex w-fit items-center" aria-label="Ir a la página principal">
+        <app-logo variante="horizontal" [oscuro]="true" [alto]="26" />
       </a>
-      <a routerLink="/" class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-white/80 transition hover:bg-white/10 hover:text-white">
-        <app-icon name="arrow-left" size="w-4 h-4" /> <span class="hidden sm:inline">Volver a la página principal</span><span class="sm:hidden">Inicio</span>
-      </a>
-    </header>
 
-    <!-- Mensaje de la marca (escritorio) y formulario -->
-    <div class="flex items-center justify-center lg:justify-between lg:gap-16">
-      <div class="entra entra-2 hidden max-w-lg text-white lg:block">
-        <p class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-leaf-300"><span class="h-px w-6 bg-leaf-400"></span>Tour Manager</p>
-        <h1 class="mt-4 text-5xl font-semibold leading-[1.06] tracking-tight xl:text-6xl">Salidas, reservas y pagos en un solo lugar.</h1>
-        <p class="mt-5 max-w-md text-base leading-relaxed text-white/80">Cupos al día, cobros claros y pasajeros, guías y transporte coordinados.</p>
-        <ul class="mt-8 space-y-3 text-[15px] text-white/90">
-          <li class="flex items-center gap-3"><span class="grid h-8 w-8 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20 backdrop-blur"><app-icon name="ticket" size="w-4 h-4" /></span> Reservas con cupos en tiempo real</li>
-          <li class="flex items-center gap-3"><span class="grid h-8 w-8 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20 backdrop-blur"><app-icon name="truck" size="w-4 h-4" /></span> Traslados con vehículo y conductor asignados</li>
-          <li class="flex items-center gap-3"><span class="grid h-8 w-8 place-items-center rounded-lg bg-white/10 ring-1 ring-white/20 backdrop-blur"><app-icon name="card" size="w-4 h-4" /></span> Pagos y saldos de cada pasajero</li>
-        </ul>
+      <div class="hidden max-w-xl text-white lg:block">
+        <p class="entra entra-2 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/85"><span class="h-px w-8 bg-leaf-400"></span>Tour Manager</p>
+        <h1 class="entra entra-3 mt-5 text-5xl font-semibold leading-[1.06] tracking-tight xl:text-6xl">Salidas, reservas y pagos en un solo lugar.</h1>
+        <p class="entra entra-4 mt-6 max-w-md text-lg leading-relaxed text-white/75">Cupos al día, cobros claros y pasajeros, guías y transporte coordinados.</p>
       </div>
 
-      <section class="tarjeta entra entra-3 w-full max-w-[430px] rounded-[28px] bg-white px-6 py-8 sm:px-9 sm:py-10" aria-labelledby="titulo-login">
-        <span class="grid h-12 w-12 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft"><app-logo variante="isotipo" [alto]="20" /></span>
-
-        <h2 id="titulo-login" class="mt-6 text-2xl font-semibold tracking-tight text-zinc-900">Iniciar sesión</h2>
-        <p class="mt-1.5 text-sm leading-relaxed text-zinc-500">Personal de la agencia: tu usuario. Clientes: tu correo o número de documento.</p>
-
-        <form class="mt-7 space-y-4" (ngSubmit)="entrar()" novalidate>
-          <div>
-            <label class="label req" for="login-user">Usuario o correo</label>
-            <div class="con-icono">
-              <span class="ico-campo" [class.!text-rose-600]="faltaUsuario()"><app-icon name="user" size="w-4 h-4" /></span>
-              <input id="login-user" type="text" name="username" class="field !h-11" [(ngModel)]="username" (ngModelChange)="escribiendo()" maxlength="100"
-                     autocomplete="username" placeholder="usuario o nombre@correo.com" autofocus
-                     [class.field-invalid]="faltaUsuario()" [attr.aria-invalid]="faltaUsuario()" [attr.aria-describedby]="faltaUsuario() ? 'err-user' : null">
-            </div>
-            @if (faltaUsuario()) { <p id="err-user" class="field-error aviso">Escribe tu usuario, correo o documento.</p> }
-          </div>
-
-          <div>
-            <div class="flex items-center justify-between">
-              <label class="label req" for="login-pass">Contraseña</label>
-              <button type="button" class="mb-1 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-zinc-500 transition hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30"
-                      (click)="ver.set(!ver())" [attr.aria-pressed]="ver()" aria-controls="login-pass">
-                <app-icon [name]="ver() ? 'x' : 'eye'" size="w-3.5 h-3.5" /> {{ ver() ? 'Ocultar' : 'Mostrar' }}
-              </button>
-            </div>
-            <div class="con-icono">
-              <span class="ico-campo" [class.!text-rose-600]="faltaClave()"><app-icon name="lock" size="w-4 h-4" /></span>
-              <input id="login-pass" [type]="ver() ? 'text' : 'password'" name="password" class="field !h-11" [(ngModel)]="password" (ngModelChange)="escribiendo()"
-                     (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="mayusculas.set(false)"
-                     autocomplete="current-password" placeholder="Tu contraseña"
-                     [class.field-invalid]="faltaClave()" [attr.aria-invalid]="faltaClave()" [attr.aria-describedby]="faltaClave() ? 'err-pass' : null">
-            </div>
-            @if (faltaClave()) { <p id="err-pass" class="field-error aviso">Escribe tu contraseña.</p> }
-            @else if (mayusculas()) { <p class="hint aviso inline-flex items-center gap-1 !text-amber-700"><app-icon name="alert" size="w-3.5 h-3.5" /> Bloq Mayús está activado.</p> }
-          </div>
-
-          @if (error()) {
-            <p class="alert-error aviso sacudir" role="alert"><app-icon name="alert" size="w-4 h-4" />{{ error() }}</p>
+      <div class="entra entra-5 flex items-end justify-between gap-6">
+        <div class="flex gap-1.5" aria-hidden="true">
+          @for (f of fotos; track f.clave; let i = $index) {
+            <span class="barra" [class.barra-activa]="i === foto()"></span>
           }
+        </div>
+        <a [href]="fotos[foto()].fuente" target="_blank" rel="noopener" class="text-right text-[11px] text-white/50 transition-colors hover:text-white/85">
+          {{ fotos[foto()].lugar }} · Foto: {{ fotos[foto()].autor }} · {{ fotos[foto()].licencia }}
+        </a>
+      </div>
+    </div>
+  </section>
 
-          <button type="submit" [disabled]="cargando()" class="btn-dark !h-11 w-full" [attr.aria-busy]="cargando()">
-            @if (cargando()) {
-              <svg class="giro h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
-              Ingresando…
-            } @else { Ingresar <app-icon name="arrow-right" size="w-4 h-4" /> }
-          </button>
-        </form>
-
-        <div class="my-6 flex items-center gap-3 text-xs text-zinc-400"><span class="h-px flex-1 bg-zinc-200"></span>¿Eres cliente y no tienes cuenta?<span class="h-px flex-1 bg-zinc-200"></span></div>
-        <a routerLink="/registro" class="btn-light !h-11 w-full"><app-icon name="users" size="w-4 h-4" /> Crear mi cuenta</a>
-      </section>
+  <!-- Formulario -->
+  <section class="flex flex-col px-6 py-8 sm:px-12 lg:px-14 xl:px-20" aria-labelledby="titulo-login">
+    <div class="entra entra-1 flex justify-end">
+      <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-900">
+        <app-icon name="arrow-left" size="w-4 h-4" /> Volver a la página principal
+      </a>
     </div>
 
-    <!-- Pie: destino de la foto actual y su crédito -->
-    <footer class="entra entra-4 flex items-end justify-between gap-4">
-      <div class="flex gap-1.5" aria-hidden="true">
-        @for (f of fotos; track f.clave; let i = $index) {
-          <span class="h-1 rounded-full transition-all duration-500" [class]="i === foto() ? 'w-6 bg-leaf-400' : 'w-2 bg-white/40'"></span>
+    <div class="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
+      <p class="entra entra-2 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-brand-600"><span class="h-px w-8 bg-leaf-400"></span>Bienvenido</p>
+      <h2 id="titulo-login" class="entra entra-3 mt-4 text-4xl font-semibold tracking-tight text-zinc-900">Iniciar sesión</h2>
+      <p class="entra entra-3 mt-3 text-[15px] leading-relaxed text-zinc-500">Personal de la agencia: tu usuario. Clientes: tu correo o número de documento.</p>
+
+      <form class="entra entra-4 mt-9 space-y-5" (ngSubmit)="entrar()" novalidate>
+        <div>
+          <label class="label req" for="login-user">Usuario o correo</label>
+          <div class="con-icono">
+            <span class="ico-campo" [class.!text-rose-600]="faltaUsuario()"><app-icon name="user" size="w-4 h-4" /></span>
+            <input id="login-user" type="text" name="username" class="field campo" [(ngModel)]="username" (ngModelChange)="escribiendo()" maxlength="100"
+                   autocomplete="username" placeholder="usuario o nombre@correo.com" autofocus
+                   [class.field-invalid]="faltaUsuario()" [attr.aria-invalid]="faltaUsuario()" [attr.aria-describedby]="faltaUsuario() ? 'err-user' : null">
+          </div>
+          @if (faltaUsuario()) { <p id="err-user" class="field-error aviso">Escribe tu usuario, correo o documento.</p> }
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <label class="label req" for="login-pass">Contraseña</label>
+            <button type="button" class="mb-1 inline-flex items-center gap-1 rounded-md px-1 text-xs font-medium text-zinc-500 transition hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30"
+                    (click)="ver.set(!ver())" [attr.aria-pressed]="ver()" aria-controls="login-pass">
+              <app-icon [name]="ver() ? 'x' : 'eye'" size="w-3.5 h-3.5" /> {{ ver() ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
+          <div class="con-icono">
+            <span class="ico-campo" [class.!text-rose-600]="faltaClave()"><app-icon name="lock" size="w-4 h-4" /></span>
+            <input id="login-pass" [type]="ver() ? 'text' : 'password'" name="password" class="field campo" [(ngModel)]="password" (ngModelChange)="escribiendo()"
+                   (keyup)="revisarMayusculas($event)" (keydown)="revisarMayusculas($event)" (blur)="mayusculas.set(false)"
+                   autocomplete="current-password" placeholder="Tu contraseña"
+                   [class.field-invalid]="faltaClave()" [attr.aria-invalid]="faltaClave()" [attr.aria-describedby]="faltaClave() ? 'err-pass' : null">
+          </div>
+          @if (faltaClave()) { <p id="err-pass" class="field-error aviso">Escribe tu contraseña.</p> }
+          @else if (mayusculas()) { <p class="hint aviso inline-flex items-center gap-1 !text-amber-700"><app-icon name="alert" size="w-3.5 h-3.5" /> Bloq Mayús está activado.</p> }
+        </div>
+
+        @if (error()) {
+          <p class="alert-error aviso sacudir" role="alert"><app-icon name="alert" size="w-4 h-4" />{{ error() }}</p>
         }
-      </div>
-      <a [href]="fotos[foto()].fuente" target="_blank" rel="noopener" class="text-right text-[11px] leading-snug text-white/60 hover:text-white/90">
-        {{ fotos[foto()].lugar }} · {{ fotos[foto()].region }}<br>Foto: {{ fotos[foto()].autor }} · {{ fotos[foto()].licencia }}
-      </a>
-    </footer>
-  </div>
+
+        <button type="submit" [disabled]="cargando()" class="boton-principal" [attr.aria-busy]="cargando()">
+          @if (cargando()) {
+            <svg class="giro h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-opacity=".25" stroke-width="3"/><path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
+            Ingresando…
+          } @else { Ingresar <app-icon name="arrow-right" size="w-4 h-4" /> }
+        </button>
+      </form>
+
+      <p class="entra entra-5 mt-8 text-center text-sm text-zinc-500">
+        ¿Eres cliente y no tienes cuenta?
+        <a routerLink="/registro" class="ml-1 font-semibold text-brand-700 underline decoration-leaf-400 decoration-2 underline-offset-4 transition-colors hover:text-brand-900">Crear mi cuenta</a>
+      </p>
+    </div>
+  </section>
 </div>

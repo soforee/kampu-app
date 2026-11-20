@@ -1,11 +1,7 @@
-.beneficio {
-  display: flex; gap: 1rem; align-items: flex-start;
-  padding: 1.25rem; border-radius: 18px;
-  border: 1px solid var(--kp-border); background: #FFFFFF;
-  transition: border-color .3s ease, box-shadow .3s ease, transform .3s ease;
-}
-.beneficio:hover { border-color: transparent; transform: translateY(-2px); box-shadow: 0 18px 40px -24px rgba(38, 46, 15, .45); }
+/* Cada beneficio: fila con ícono y texto, separadas por líneas finas */
+.beneficio { display: flex; gap: 1.1rem; align-items: flex-start; padding: 1.25rem 0; border-color: var(--kp-border); }
 .beneficio-icono {
-  display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 14px;
-  background: var(--kp-primary-soft); color: var(--kp-primary);
+  display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px;
+  background: var(--kp-primary-soft); color: var(--kp-primary); transition: background-color .3s ease, color .3s ease;
 }
+.beneficio:hover .beneficio-icono { background: var(--kp-primary); color: #fff; }

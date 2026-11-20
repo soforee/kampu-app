@@ -174,31 +174,28 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
   - **celular y tablet:** scroll normal con ajuste suave a cada sección (`scroll-snap`, CSS nativo);
   - con "reducir movimiento" activado, el cambio de pantalla es inmediato y sin animaciones;
   - a la derecha, unos puntos y el número de sección (01 a 07) marcan la sección visible y llevan a cualquiera de ellas.
-- **Secciones, en orden:**
-  - **Inicio (simplificado):** 5 fotos de destinos con fundido lento y leve parallax.
-    - El texto se reduce al título, una línea de descripción, un botón principal ("Ver N tours") y un enlace de texto ("Cómo funciona").
-    - Abajo quedan barras discretas para las fotos, el crédito de la foto actual y una señal para bajar.
-    - Se quitaron la etiqueta superior y los nombres de lugar bajo cada indicador.
-  - **Destinos:**
-    - el buscador (destino, fecha y tipo) se movió aquí, debajo del título y junto a los tours que filtra;
-    - pestañas Todos / Full day / Escapadas / Expediciones, que usan el mismo filtro de tipo;
-    - los tours van en un carrusel de una fila (`scroll-snap` horizontal) con flechas, para que la sección quepa en una pantalla;
-    - si un paquete no tiene foto propia, se toma la del destino que nombra (por palabras completas).
-  - **Nosotros:** cifras reales calculadas de los datos (paquetes activos, salidas abiertas y cupos libres).
-  - **Cómo funciona:** los 4 pasos que ya hace el sistema.
-  - **Galería** de 7 destinos.
-  - **Por qué elegirnos.**
-  - **Contacto:** foto a pantalla completa con "Crear mi cuenta" o "Ir al panel", y WhatsApp.
-  - **Pie de página.**
-  - Las secciones aparecen al hacer scroll (directiva `appRevelar`, con `IntersectionObserver` del navegador; sin librerías).
+- **Secciones como "diapositivas"** con el mismo lenguaje de la portada:
+  - cada sección lleva un encabezado común (número y nombre, por ejemplo "02 — Destinos") y un título grande (`.diapo-num`, `.diapo-titulo`);
+  - fondos con foto u oscuros se alternan con fondos claros:
+    1. **Inicio:** foto a sangre.
+    2. **Destinos:** fondo claro, con el buscador, las pestañas y el carrusel.
+    3. **Nosotros:** foto a sangre a la izquierda y panel oliva con las cifras reales en grande.
+    4. **Cómo funciona:** fondo crema, con los 4 pasos y números grandes en contorno.
+    5. **Galería:** mosaico de 6 fotos que llena la pantalla, con el encabezado en una columna oscura.
+    6. **Por qué elegirnos:** lista sobre fondo claro y foto a sangre a la derecha.
+    7. **Contacto:** foto a sangre, alineado como la portada.
   - Fotos: Wikimedia Commons, con autor y licencia en `docs/ATRIBUCIONES_FOTOS.md`.
-- **Login a pantalla completa:**
-  - las fotos de destinos cubren toda la ventana y se alternan;
-  - a la izquierda va el mensaje de la marca; el formulario flota a la derecha en una tarjeta blanca (en celular, centrado);
-  - el formulario entra con un leve escalonado;
-  - mensaje bajo cada campo vacío (`aria-invalid`) y aviso de Bloq Mayús;
-  - el error del servidor se oculta al volver a escribir;
-  - el botón muestra un indicador de carga.
+- **Transición entre pantallas (escritorio):**
+  - las fotos se descubren con un barrido (`clip-path`);
+  - los textos marcados con `data-entra` entran escalonados desde la dirección del movimiento;
+  - la pantalla que se va se aleja y se oscurece.
+- **Barra superior y puntos laterales:** transparentes con texto blanco sobre fotos y fondos oscuros, y sólidos sobre fondos claros.
+- **Login a pantalla completa (mismo lenguaje que la página principal):**
+  - foto a sangre a la izquierda, con título, barras y crédito como en la portada;
+  - panel blanco a toda altura a la derecha con el formulario;
+  - la foto entra con barrido y el formulario de forma escalonada;
+  - campos de 48 px y botón redondeado como los de la página principal;
+  - en celular, la foto queda como franja superior.
 - **Menú lateral:**
   - el botón "Contraer menú" (abajo) cambia entre desplegado (240 px, con nombres) y compacto (76 px, solo íconos).
     La preferencia se recuerda en el navegador;
