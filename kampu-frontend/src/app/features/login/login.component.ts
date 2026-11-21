@@ -2,6 +2,7 @@ import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/utils/api';
+import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { AuthService } from '../../core/services/auth.service';
 import { LogoComponent } from '../../shared/logo.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -17,8 +18,11 @@ import { FOTOS_DESTINOS } from '../landing/landing.models';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
-  // ?volver=/mi-cuenta?reservar=2: al entrar, el cliente vuelve a donde iba (solo rutas internas del portal)
-  private volver = inject(ActivatedRoute).snapshot.queryParamMap.get('volver');
+  // ?reservar=<paqueteId>: llega desde una cotización de la página principal; el cliente sigue a reservar ese paquete
+  private consulta = inject(ActivatedRoute).snapshot.queryParamMap;
+  private pendiente = leerReservaPendiente(this.consulta);
+  // (v11) La sesión venció o la cuenta se desactivó (el backend respondió 401)
+  vencida = this.consulta.get('vencida') === '1';
 
   username = '';
   password = '';
@@ -34,18 +38,12 @@ export class LoginComponent {
   foto = signal(0);
 
   constructor() {
-    if (this.auth.autenticado()) this.router.navigateByUrl(this.destino());
+    if (this.auth.autenticado()) this.router.navigateByUrl(this.auth.inicio());
     const reducido = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reducido) {
       const id = setInterval(() => this.foto.set((this.foto() + 1) % this.fotos.length), 7000);
       inject(DestroyRef).onDestroy(() => clearInterval(id));
     }
-  }
-
-  private destino(): string {
-    const v = this.volver;
-    const interna = !!v && v.startsWith('/mi-cuenta') && !v.startsWith('//');
-    return interna && this.auth.esCliente() ? v! : this.auth.inicio();
   }
 
   faltaUsuario() { return this.enviado() && !this.username.trim(); }
@@ -68,8 +66,9 @@ export class LoginComponent {
     this.auth.login(this.username, this.password).subscribe({
       next: (sesion) => {
         this.auth.guardarSesion(sesion);
-        // Personal interno -> panel · Cliente -> "Mis paquetes" (o a donde iba antes de iniciar sesión)
-        this.router.navigateByUrl(this.destino());
+        // Personal interno -> panel · Cliente -> "Mis paquetes" (con el paquete cotizado listo para reservar)
+        if (this.auth.esCliente() && this.pendiente) this.router.navigate(['/mi-cuenta'], { queryParams: { ...this.pendiente } });
+        else this.router.navigateByUrl(this.auth.inicio());
       },
       error: (err) => {
         this.error.set(mensajeError(err));

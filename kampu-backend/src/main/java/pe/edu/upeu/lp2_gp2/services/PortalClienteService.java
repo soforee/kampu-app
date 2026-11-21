@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Portal del cliente (kampu_tours_v10.sql). Todo pasa por PKG_GESTION_PAQUETES_CLIENTE (ROL_CLIENTE), con la
+ * Portal del cliente (kampu_tours_v11.sql). Todo pasa por PKG_GESTION_PAQUETES_CLIENTE (ROL_CLIENTE), con la
  * identidad fijada por PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente:
  *  - VW_PAQUETES_CLIENTE: la vista ya devuelve solo las reservas del cliente de la sesión.
  *  - PKG_GESTION_PAQUETES_CLIENTE: reservar, detalle_paquete, iniciar_pago, registrar_pasajero,

@@ -1,14 +1,23 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from './auth.service';
 
-// Después del login, cada petición a la API lleva quién la hace (usuario, rol y su id).
-// El backend lo usa para la bitácora, para el portal del cliente y para la sesión de Oracle.
+// (v11) Cada petición a la API lleva la sesión firmada por el backend ("Authorization: Bearer ...").
+// Ya no se envían X-Usuario / X-Rol: el backend no confía en datos que el navegador pueda inventar.
+// Si el backend responde 401 con una sesión guardada (venció o la cuenta se desactivó), se cierra la sesión.
 export const usuarioInterceptor: HttpInterceptorFn = (req, next) => {
-  const sesion = inject(AuthService).usuario();
-  if (!sesion || !req.url.startsWith('/api/')) return next(req);
-  const cabeceras: Record<string, string> = { 'X-Usuario': sesion.username, 'X-Rol': sesion.rol };
-  if (sesion.usuarioId) cabeceras['X-Usuario-Id'] = String(sesion.usuarioId);
-  if (sesion.clienteId) cabeceras['X-Cliente-Id'] = String(sesion.clienteId);
-  return next(req.clone({ setHeaders: cabeceras }));
+  const auth = inject(AuthService);
+  const router = inject(Router);
+  const sesion = auth.usuario();
+  if (!req.url.startsWith('/api/')) return next(req);
+  const peticion = sesion?.token ? req.clone({ setHeaders: { Authorization: 'Bearer ' + sesion.token } }) : req;
+  return next(peticion).pipe(catchError((e: unknown) => {
+    if (e instanceof HttpErrorResponse && e.status === 401 && sesion && !req.url.includes('/auth/')) {
+      auth.olvidar();
+      router.navigate(['/login'], { queryParams: { vencida: 1 } });
+    }
+    return throwError(() => e);
+  }));
 };

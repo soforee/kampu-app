@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -24,6 +26,7 @@ import java.util.Map;
  *   GET /auditoria/exportar  -> CSV con los mismos filtros (máx. 5000 filas)
  */
 @RestController
+@Permiso("VER_AUDITORIA")
 @RequestMapping("/api/v1/auditoria")
 public class AuditoriaController {
     private final AuditoriaConsultaService consulta;

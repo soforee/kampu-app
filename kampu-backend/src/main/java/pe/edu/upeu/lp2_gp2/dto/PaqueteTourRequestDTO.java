@@ -41,6 +41,9 @@ public record PaqueteTourRequestDTO(
         @Max(value = 720, message = "La anticipación debe estar entre 0 y 720 horas.")
         Integer anticipacionMinHoras,
         @Pattern(regexp = "^([01][0-9]|2[0-3]):[0-5][0-9]$", message = "La hora de inicio tiene el formato HH:MM.")
-        String horaInicio
+        String horaInicio,
+        // (v11) lo que incluye el paquete, uno por línea
+        @Size(max = 1000, message = "Lo que incluye el paquete admite máximo 1000 caracteres.")
+        String serviciosIncluidos
 ) {
 }

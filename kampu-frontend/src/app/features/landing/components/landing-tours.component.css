@@ -58,8 +58,8 @@
 .tour-reservar { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: .4rem; height: 40px; border-radius: 999px;
   background: var(--kp-primary); color: #fff; font-size: 14px; font-weight: 600; transition: background-color .2s, transform .15s; }
 .tour-reservar:hover { background: var(--kp-primary-hover); }
-.tour-cotizar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--kp-border);
-  color: var(--kp-primary); transition: background-color .2s, border-color .2s; }
+.tour-cotizar { display: inline-flex; flex: 1; align-items: center; justify-content: center; height: 40px; padding: 0 1rem; border-radius: 999px;
+  border: 1px solid var(--kp-border); color: var(--kp-primary); font-size: 14px; font-weight: 600; transition: background-color .2s, border-color .2s; }
 .tour-cotizar:hover { background: var(--kp-primary-soft); border-color: var(--kp-primary); }
 .tour-reservar:active, .tour-cotizar:active { transform: scale(.97); }
 

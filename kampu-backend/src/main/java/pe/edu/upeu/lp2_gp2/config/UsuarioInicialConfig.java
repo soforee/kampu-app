@@ -20,7 +20,7 @@ public class UsuarioInicialConfig {
     public void crearUsuariosIniciales() {
         verificarEsquema();
         if (repo.count() > 0) return;
-        // Mismos usuarios que la semilla de kampu_tours_v10.sql (clave Kampu2026*, BCrypt por chk_usu_hash).
+        // Mismos usuarios que la semilla de kampu_tours_v11.sql (clave Kampu2026*, BCrypt por chk_usu_hash).
         // Roles permitidos por chk_usu_rol: ADMIN, VENDEDOR, OPERADOR (ROL es NOT NULL)
         repo.save(nuevo("kadmin", "Administrador", "ADMIN"));
         repo.save(nuevo("kventas", "Ventas", "VENDEDOR"));
@@ -56,7 +56,7 @@ public class UsuarioInicialConfig {
                 + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
         String mensaje = "La base de datos a la que se conectó la aplicación (" + donde + ") no tiene "
                 + (tablas ? "el paquete PKG_SEGURIDAD_ROLES válido" : "las tablas del sistema") + ". "
-                + "Ejecuta db/kampu_tours_v10.sql como SYSTEM en la PDB (crea o conserva KAMPU_BD y crea KAMPU_APP con los roles), "
+                + "Ejecuta db/kampu_tours_v11.sql como SYSTEM en la PDB (crea o conserva KAMPU_BD y crea KAMPU_APP con los roles), "
                 + "o revisa DB_URL, DB_USERNAME y DB_SCHEMA "
                 + "(Oracle XE 21c: jdbc:oracle:thin:@localhost:1521/XEPDB1 · Oracle 23 Free: .../FREEPDB1)."
                 + ("CDB$ROOT".equals(datos.get("CONTENEDOR")) ? " Ojo: estás en el contenedor raíz (CDB$ROOT); los scripts van en la PDB." : "");

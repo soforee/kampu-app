@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,16 +22,19 @@ public class PagoController {
         this.pagoService = pagoService;
     }
 
+    @Permiso("VER_MONTOS")
     @GetMapping
     public ResponseEntity<List<PagoDTO>> listar(@RequestParam(required = false) Long reservaId) {
         return ResponseEntity.ok(pagoService.listar(reservaId));
     }
 
+    @Permiso("REGISTRAR_PAGO")
     @PostMapping
     public ResponseEntity<PagoDTO> registrar(@Valid @RequestBody PagoRequestDTO dto) {
         return new ResponseEntity<>(pagoService.registrar(dto), HttpStatus.CREATED);
     }
 
+    @Permiso("REGISTRAR_PAGO")
     @PatchMapping("/{id}/resolver")
     public ResponseEntity<PagoDTO> resolver(@PathVariable Long id, @Valid @RequestBody ResolucionPagoRequestDTO dto) {
         return ResponseEntity.ok(pagoService.resolver(id, dto.estado()));

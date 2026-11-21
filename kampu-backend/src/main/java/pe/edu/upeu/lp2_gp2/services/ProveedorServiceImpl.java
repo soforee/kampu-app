@@ -77,7 +77,7 @@ public class ProveedorServiceImpl implements IProveedorService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_tours_v10.sql no otorga DELETE sobre PROVEEDORES: la baja es lógica (estado INACTIVO)
+        // kampu_tours_v11.sql no otorga DELETE sobre PROVEEDORES: la baja es lógica (estado INACTIVO)
         Proveedor p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El proveedor ya está INACTIVO.");
         p.setEstado("INACTIVO");

@@ -38,6 +38,18 @@ public class UsuarioSistema {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
+    // (v11) Solo GUIA / CONDUCTOR: su ficha de PERSONAL (chk_usu_personal)
+    @Column(name = "personal_id")
+    private Long personalId;
+
+    public Long getPersonalId() {
+        return personalId;
+    }
+
+    public void setPersonalId(Long personalId) {
+        this.personalId = personalId;
+    }
+
     public UsuarioSistema() {
     }
 
