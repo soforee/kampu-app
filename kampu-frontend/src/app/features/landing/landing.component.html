@@ -4,8 +4,8 @@
   <app-landing-hero [totalTours]="totalActivos()" [totalSalidas]="totalSalidas()" />
 
   <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()" [contacto]="contacto()"
-                     [categoria]="filtro().tipo" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()">
-    <app-landing-search [destinos]="destinos()" (buscar)="buscar($event)" />
+                     [categoria]="filtro().tipo" [conteos]="conteos()" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()">
+    <app-landing-search [destinos]="destinos()" [valores]="filtro()" (buscar)="buscar($event)" />
   </app-landing-tours>
 
   <app-landing-presentacion [tours]="totalActivos()" [salidas]="totalSalidas()" [cupos]="totalCupos()" />

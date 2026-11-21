@@ -15,7 +15,7 @@
       @let p = paquete()!;
       <section class="card mt-4 overflow-hidden">
         <div class="relative h-44 bg-zinc-200 sm:h-56">
-          @if (imagen(); as src) { <img [src]="src" alt="" class="h-full w-full object-cover"> }
+          @if (imagen(); as src) { <img [src]="src" alt="" class="h-full w-full object-cover" (error)="$any($event.target).hidden = true"> }
           <div class="absolute inset-0 bg-zinc-950/40"></div>
           <div class="absolute bottom-0 p-5 text-white sm:p-6">
             <div class="flex flex-wrap gap-1.5"><app-badge [estado]="p.estadoEjecucion" /><app-badge [estado]="p.estadoPago" /></div>

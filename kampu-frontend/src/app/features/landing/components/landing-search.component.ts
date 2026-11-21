@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { hoy } from '../../../core/utils/date.util';
 import { IconComponent } from '../../../shared/icon.component';
-import { FiltroBusqueda, TipoTour } from '../landing.models';
+import { FiltroBusqueda } from '../landing.models';
 
 @Component({
   selector: 'app-landing-search',
@@ -14,20 +14,22 @@ import { FiltroBusqueda, TipoTour } from '../landing.models';
 export class LandingSearchComponent {
   @Input() destinos: string[] = [];
   @Output() buscar = new EventEmitter<FiltroBusqueda>();
+  // Filtro vigente de la página: al "Quitar filtros" los campos también se vacían
+  // (solo cuando cambia lo aplicado; tocar una pestaña no borra lo que se está escribiendo)
+  private aplicado = { destino: '', fecha: '' };
+  @Input() set valores(f: FiltroBusqueda) {
+    if (f.destino === this.aplicado.destino && f.fecha === this.aplicado.fecha) return;
+    this.aplicado = { destino: f.destino, fecha: f.fecha };
+    this.destino = f.destino;
+    this.fecha = f.fecha;
+  }
 
   destino = '';
   fecha = '';
-  tipo: TipoTour = '';
   hoy = hoy();
 
-  tipos: { valor: TipoTour; texto: string }[] = [
-    { valor: '', texto: 'Todos los tours' },
-    { valor: 'FULL_DAY', texto: 'Full day (1 día)' },
-    { valor: 'ESCAPADA', texto: 'Escapadas (2 a 3 días)' },
-    { valor: 'EXPEDICION', texto: 'Expediciones (4 días o más)' }
-  ];
-
+  // La categoría (duración) se elige con las pestañas de la sección, no aquí
   enviar() {
-    this.buscar.emit({ destino: this.destino, fecha: this.fecha, tipo: this.tipo });
+    this.buscar.emit({ destino: this.destino.trim(), fecha: this.fecha, tipo: '' });
   }
 }
