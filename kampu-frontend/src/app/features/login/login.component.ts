@@ -1,7 +1,8 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/utils/api';
+import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { AuthService } from '../../core/services/auth.service';
 import { LogoComponent } from '../../shared/logo.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -17,6 +18,8 @@ import { FOTOS_DESTINOS } from '../landing/landing.models';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  // ?reservar=<paqueteId>: llega desde una cotización de la página principal; el cliente sigue a reservar ese paquete
+  private pendiente = leerReservaPendiente(inject(ActivatedRoute).snapshot.queryParamMap);
 
   username = '';
   password = '';
@@ -60,8 +63,9 @@ export class LoginComponent {
     this.auth.login(this.username, this.password).subscribe({
       next: (sesion) => {
         this.auth.guardarSesion(sesion);
-        // Personal interno -> panel · Cliente -> "Mis paquetes"
-        this.router.navigateByUrl(this.auth.inicio());
+        // Personal interno -> panel · Cliente -> "Mis paquetes" (con el paquete cotizado listo para reservar)
+        if (this.auth.esCliente() && this.pendiente) this.router.navigate(['/mi-cuenta'], { queryParams: { ...this.pendiente } });
+        else this.router.navigateByUrl(this.auth.inicio());
       },
       error: (err) => {
         this.error.set(mensajeError(err));

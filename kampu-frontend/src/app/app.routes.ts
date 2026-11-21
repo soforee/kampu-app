@@ -31,6 +31,7 @@ export const routes: Routes = [
       { path: 'clientes', loadComponent: () => import('./features/clientes/clientes.component').then(m => m.ClientesComponent), data: permiso('VER_CLIENTES') },
       { path: 'operaciones', loadComponent: () => import('./features/operaciones/operaciones.component').then(m => m.OperacionesComponent), data: permiso('VER_OPERACIONES') },
       { path: 'recursos', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: permiso('VER_LOGISTICA') },
+      { path: 'usuarios', loadComponent: () => import('./features/usuarios/usuarios.component').then(m => m.UsuariosComponent), data: permiso('GESTIONAR_USUARIOS') },
       { path: 'auditoria', loadComponent: () => import('./features/auditoria/auditoria.component').then(m => m.AuditoriaComponent), data: permiso('VER_AUDITORIA') }
     ]
   },

@@ -46,6 +46,7 @@ export class ShellComponent {
     { ruta: '/clientes', texto: 'Clientes', icono: 'users', permiso: 'VER_CLIENTES' },
     { ruta: '/operaciones', texto: 'Tráfico', icono: 'truck', permiso: 'VER_OPERACIONES' },
     { ruta: '/recursos', texto: 'Logística', icono: 'map-pin', permiso: 'VER_LOGISTICA' },
+    { ruta: '/usuarios', texto: 'Usuarios', icono: 'id', permiso: 'GESTIONAR_USUARIOS' },
     { ruta: '/auditoria', texto: 'Auditoría', icono: 'file-text', permiso: 'VER_AUDITORIA' }
   ];
   menu = computed(() => this.todo.filter(m => !m.permiso || this.auth.puede(m.permiso)));
