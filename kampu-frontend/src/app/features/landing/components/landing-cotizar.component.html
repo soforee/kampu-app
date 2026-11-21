@@ -1,0 +1,144 @@
+<app-modal icono="tag" [titulo]="'Cotizar · ' + paquete.nombre" subtitulo="Sin crear cuenta: elige fecha y pasajeros y te damos el precio al instante" ancho="lg" (cerrar)="cerrar.emit()">
+  @if (cotizacion(); as c) {
+    <!-- Paso 2: cotización lista -->
+    <div class="space-y-5" data-testid="cotizacion">
+      <div class="rounded-2xl border border-brand-100 bg-brand-50/60 p-5">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">Tu cotización</p>
+            <h4 class="mt-1 text-lg font-semibold text-zinc-900">{{ c.paquete }}</h4>
+            <p class="text-sm text-zinc-600">{{ c.dias }} {{ c.dias === 1 ? 'día' : 'días' }}@if (c.noches) { · {{ c.noches }} {{ c.noches === 1 ? 'noche' : 'noches' }} }</p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-zinc-500">Total</p>
+            <p class="text-3xl font-semibold tracking-tight text-zinc-900" data-testid="cotizacion-total">S/ {{ c.total | number:'1.2-2' }}</p>
+            <p class="text-xs text-zinc-500">S/ {{ c.precioUnitario | number:'1.2-2' }} × {{ c.cantidad }} {{ c.cantidad === 1 ? 'pasajero' : 'pasajeros' }}</p>
+          </div>
+        </div>
+        <dl class="mt-4 grid gap-3 border-t border-brand-100 pt-4 text-sm sm:grid-cols-3">
+          <div><dt class="text-xs text-zinc-500">Fecha</dt>
+            <dd class="font-medium text-zinc-900">{{ c.fechaInicio | date:'EEE d MMM y' }}@if (c.fechaFin !== c.fechaInicio) { <span class="block text-xs font-normal text-zinc-500">hasta {{ c.fechaFin | date:'EEE d MMM' }}</span> }</dd></div>
+          <div><dt class="text-xs text-zinc-500">Inicio</dt><dd class="font-medium text-zinc-900">{{ c.horaInicio }} h</dd></div>
+          <div><dt class="text-xs text-zinc-500">Recojo</dt>
+            <dd class="font-medium text-zinc-900">{{ c.puntoRecojo ?? 'Oficina de la agencia' }}@if (c.horaRecojo) { <span class="block text-xs font-normal text-zinc-500">a las {{ c.horaRecojo }}</span> }</dd></div>
+        </dl>
+      </div>
+
+      <ul class="space-y-2 text-sm text-zinc-600">
+        <li class="flex gap-2"><span class="mt-0.5 text-brand-600"><app-icon name="check-circle" size="w-4 h-4" /></span>
+          Quedan {{ c.cuposDisponibles }} {{ c.cuposDisponibles === 1 ? 'cupo' : 'cupos' }} para esa fecha.</li>
+        <li class="flex gap-2"><span class="mt-0.5 text-brand-600"><app-icon name="info" size="w-4 h-4" /></span>
+          @if (c.estadoSalida === 'GARANTIZADA' || c.faltanParaGarantizar === 0) { La salida queda garantizada con tu grupo. }
+          @else { La salida se garantiza al completar {{ c.faltanParaGarantizar }} {{ c.faltanParaGarantizar === 1 ? 'pasajero más' : 'pasajeros más' }}; si no, te ofrecemos otra fecha o el reembolso. }
+        </li>
+        @if (!c.reservableWeb) {
+          <li class="flex gap-2"><span class="mt-0.5 text-amber-600"><app-icon name="alert" size="w-4 h-4" /></span>
+            Por la web este paquete se reserva con {{ c.anticipacionMinHoras }} h de anticipación: para esta fecha escríbenos y lo coordinamos.</li>
+        }
+        <li class="flex gap-2"><span class="mt-0.5 text-zinc-400"><app-icon name="clock" size="w-4 h-4" /></span>
+          Precio vigente al {{ c.emitida | date:'d/MM/y HH:mm' }}. Se congela al reservar.</li>
+      </ul>
+
+      <div class="form-section">
+        <div class="form-section-title">¿Cómo quieres seguir?</div>
+        <div class="grid gap-2 sm:grid-cols-2">
+          @if (whatsapp) {
+            <a [href]="enlaceWhatsapp(c)" target="_blank" rel="noopener" class="btn-brand justify-center" data-testid="cotizacion-whatsapp">
+              <app-icon name="whatsapp" size="w-4 h-4" /> Enviar por WhatsApp
+            </a>
+          }
+          @if (contacto.email) {
+            <a [href]="enlaceCorreo(c)" class="btn-light justify-center"><app-icon name="mail" size="w-4 h-4" /> Enviar por correo</a>
+          }
+        </div>
+        @if (c.reservableWeb && (!auth.autenticado() || auth.esCliente())) {
+          <div class="mt-3 rounded-xl border border-zinc-200 p-4">
+            @if (auth.esCliente()) {
+              <p class="text-sm text-zinc-600">Ya iniciaste sesión: reserva esta cotización desde tu cuenta.</p>
+              <button type="button" class="btn-dark mt-3" (click)="reservar(c)">Reservar ahora <app-icon name="arrow-right" size="w-4 h-4" /></button>
+            } @else {
+              <p class="text-sm text-zinc-600">¿Prefieres reservar en línea? Crea tu cuenta gratis y la reserva se abre con estos datos.</p>
+              <div class="mt-3 flex flex-wrap items-center gap-3">
+                <button type="button" class="btn-dark" (click)="reservar(c)" data-testid="cotizacion-registro">Crear cuenta y reservar <app-icon name="arrow-right" size="w-4 h-4" /></button>
+                <button type="button" class="link text-sm" (click)="reservar(c, 'login')">Ya tengo cuenta</button>
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-light" (click)="editar()"><app-icon name="arrow-left" size="w-4 h-4" /> Cambiar datos</button>
+        <button type="button" class="btn-light" (click)="cerrar.emit()">Cerrar</button>
+      </div>
+    </div>
+  } @else {
+    <!-- Paso 1: datos del viaje -->
+    <div class="space-y-4">
+      <div class="flex items-center justify-between gap-3 rounded-xl bg-zinc-50 px-4 py-3 text-sm">
+        <span class="text-zinc-600">Precio por persona</span>
+        <b class="text-zinc-900">S/ {{ paquete.precioBase | number:'1.2-2' }}</b>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <label class="label req" for="cot-fecha">Fecha de salida</label>
+          @if (cargandoFechas()) {
+            <div class="field animate-pulse text-zinc-400">Buscando fechas disponibles…</div>
+          } @else if (!fechas().length) {
+            <p class="rounded-xl border border-dashed border-zinc-200 p-4 text-sm text-zinc-500">No hay fechas con cupos en los próximos meses. Escríbenos y te avisamos de nuevas salidas.</p>
+          } @else {
+            <select id="cot-fecha" class="field" [(ngModel)]="fecha" (ngModelChange)="error.set('')" data-testid="cotizacion-fecha">
+              @for (d of fechas(); track d.fecha) {
+                <option [value]="d.fecha">{{ d.fecha | date:'EEEE d MMM y' }} · {{ d.cuposDisponibles }} cupos@if (d.estadoSalida === 'GARANTIZADA') { · garantizada }</option>
+              }
+            </select>
+            @if (dia; as d) {
+              <p class="hint">
+                @if (d.estadoSalida === 'GARANTIZADA') { Salida garantizada. }
+                @else if (d.faltanParaGarantizar > 0) { Se garantiza con {{ d.faltanParaGarantizar }} {{ d.faltanParaGarantizar === 1 ? 'pasajero' : 'pasajeros' }}. }
+                @if (!d.reservableWeb) { Fecha cercana: se coordina con un asesor. }
+              </p>
+            }
+          }
+        </div>
+
+        <div>
+          <label class="label req" for="cot-cantidad">Pasajeros</label>
+          <div class="flex items-stretch gap-2">
+            <button type="button" class="btn-light w-11 justify-center px-0" (click)="cambiarCantidad(-1)" [disabled]="cantidad <= 1" aria-label="Un pasajero menos">−</button>
+            <input id="cot-cantidad" type="number" min="1" max="99" class="field text-center" [(ngModel)]="cantidad" (ngModelChange)="error.set('')" data-testid="cotizacion-cantidad">
+            <button type="button" class="btn-light w-11 justify-center px-0" (click)="cambiarCantidad(1)" [disabled]="cantidad >= 99 || (!!dia && cantidad >= dia.cuposDisponibles)" aria-label="Un pasajero más">+</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="label" for="cot-recojo">Punto de recojo <span class="opt">Opcional</span></label>
+          <select id="cot-recojo" class="field" [(ngModel)]="lugarRecojoId">
+            <option [ngValue]="null">Oficina de la agencia</option>
+            @for (x of puntos(); track x.lugarId) { @if (!x.porDefecto) { <option [ngValue]="x.lugarId">{{ x.nombre }} · {{ x.horaRecojo }}</option> } }
+          </select>
+        </div>
+
+        <div>
+          <label class="label" for="cot-nombre">Tu nombre <span class="opt">Opcional</span></label>
+          <input id="cot-nombre" class="field" maxlength="80" [(ngModel)]="nombre" placeholder="Para saludarte al responder" autocomplete="name">
+        </div>
+        <div>
+          <label class="label" for="cot-comentario">Comentarios <span class="opt">Opcional</span></label>
+          <input id="cot-comentario" class="field" maxlength="300" [(ngModel)]="comentario" placeholder="Ej. viajamos con niños">
+        </div>
+      </div>
+
+      @if (error()) { <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">{{ error() }}</div> }
+
+      <div class="form-actions items-center">
+        <p class="mr-auto text-sm text-zinc-500">Estimado: <b class="text-zinc-900">S/ {{ estimado | number:'1.2-2' }}</b></p>
+        <button type="button" class="btn-light" (click)="cerrar.emit()">Cancelar</button>
+        <button type="button" class="btn-dark" [disabled]="calculando() || !fechas().length" (click)="cotizar()" data-testid="cotizacion-calcular">
+          <app-icon name="tag" size="w-4 h-4" /> {{ calculando() ? 'Calculando…' : 'Ver cotización' }}
+        </button>
+      </div>
+    </div>
+  }
+</app-modal>

@@ -1,9 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RegistroForm, TipoDocumento } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { mensajeError } from '../../core/utils/api';
+import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { filtrarEscritura, filtrarPegado } from '../../core/utils/filtro';
 import { errorTelefonoPais } from '../../core/utils/paises';
 import { FormValidacion, V } from '../../core/utils/validacion';
@@ -25,6 +26,8 @@ export const PASSWORD_MIN = 8;
 export class RegistroComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  // ?reservar=<paqueteId>: viene de una cotización; al crear la cuenta se abre la reserva de ese paquete
+  private pendiente = leerReservaPendiente(inject(ActivatedRoute).snapshot.queryParamMap);
 
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
   min = PASSWORD_MIN;
@@ -74,7 +77,7 @@ export class RegistroComponent {
       next: sesion => {
         // Autenticación automática tras el registro
         this.auth.guardarSesion(sesion);
-        this.router.navigate(['/mi-cuenta'], { queryParams: { bienvenido: 1 } });
+        this.router.navigate(['/mi-cuenta'], { queryParams: { bienvenido: 1, ...(this.pendiente ?? {}) } });
       },
       error: err => {
         this.error.set(mensajeError(err));

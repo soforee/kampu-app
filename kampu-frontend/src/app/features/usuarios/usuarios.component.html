@@ -1,0 +1,170 @@
+<app-page-header titulo="Usuarios del sistema">
+  <p detalle class="page-sub">{{ usuarios().length }} usuario(s) · solo el administrador ve este módulo</p>
+  <button type="button" class="btn-dark" (click)="nuevo()" data-testid="nuevo-usuario"><app-icon name="plus" size="w-4 h-4" /> Nuevo usuario</button>
+</app-page-header>
+
+<div class="toolbar flex flex-wrap items-center gap-3">
+  <app-buscador [(valor)]="texto" placeholder="Usuario, nombre o correo" />
+  <div class="seg" role="tablist" aria-label="Filtrar por rol">
+    @for (f of filtros; track f.valor) {
+      <button type="button" class="seg-btn" [class.on]="filtroRol() === f.valor" (click)="filtroRol.set(f.valor)">{{ f.texto }} <span class="ml-1 text-zinc-400">{{ contar(f.valor) }}</span></button>
+    }
+  </div>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="relative overflow-x-auto">
+    <table class="tbl tbl-tarjetas">
+      <thead><tr><th class="th">Usuario</th><th class="th">Correo</th><th class="th">Rol</th><th class="th">Estado</th><th class="th">Último acceso</th><th class="th col-acciones"></th></tr></thead>
+      <tbody>
+        @for (u of visibles(); track u.usuarioId) {
+          <tr [class.fila-nueva]="resaltado() === u.usuarioId">
+            <td data-label="Usuario" class="td">
+              <div class="font-medium text-zinc-900">{{ u.nombreCompleto || u.username }} @if (esYo(u)) { <span class="chip ml-1">Tú</span> }</div>
+              <div class="text-xs text-zinc-500">{{ u.username }}</div>
+            </td>
+            <td data-label="Correo" class="td text-zinc-700">{{ u.email || '—' }}</td>
+            <td data-label="Rol" class="td whitespace-nowrap">
+              <span class="inline-flex items-center gap-1.5 text-zinc-800"><app-icon [name]="rolInfo(u.rol).icono" size="w-4 h-4" /> {{ rolInfo(u.rol).texto }}</span>
+            </td>
+            <td data-label="Estado" class="td whitespace-nowrap">
+              <app-badge [estado]="u.estado" />
+              @if (u.intentosFallidos > 0 && u.estado === 'ACTIVO') { <span class="ml-1 text-xs text-zinc-400" title="Intentos fallidos de inicio de sesión">{{ u.intentosFallidos }} fallido(s)</span> }
+            </td>
+            <td data-label="Último acceso" class="td whitespace-nowrap text-zinc-600">{{ u.ultimoAcceso ? (u.ultimoAcceso | date:'dd/MM/yyyy HH:mm') : 'Nunca' }}</td>
+            <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+              <div class="actions">
+                <button type="button" class="icon-btn" data-tip="Cambiar rol" aria-label="Cambiar rol" (click)="abrirRol(u)"><app-icon name="edit" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="Nueva contraseña" aria-label="Nueva contraseña" (click)="abrirClave(u)"><app-icon name="lock" size="w-4 h-4" /></button>
+                @if (!esYo(u)) {
+                  <button type="button" [class]="u.estado === 'ACTIVO' ? 'icon-btn-danger' : 'icon-btn'" [attr.data-tip]="textoAcceso(u.estado)" [attr.aria-label]="textoAcceso(u.estado)" (click)="cambiarAcceso(u)">
+                    <app-icon [name]="u.estado === 'ACTIVO' ? 'x-circle' : 'refresh'" size="w-4 h-4" />
+                  </button>
+                }
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6">
+            <div class="empty">
+              @if (cargando()) { Cargando… }
+              @else if (error()) { <span class="text-rose-700">{{ error() }}</span> <button type="button" class="btn-light btn-sm ml-2" (click)="cargar()">Reintentar</button> }
+              @else { No se encontraron usuarios. }
+            </div>
+          </td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-paginacion [(pagina)]="pagina" [total]="filas().length" />
+</div>
+
+@if (abierto()) {
+  <app-modal icono="user" titulo="Nuevo usuario" subtitulo="Cuenta para el personal de la agencia" ancho="lg" (cerrar)="abierto.set(false)">
+    <div class="space-y-4">
+      <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
+      <div class="form-section">
+        <div class="form-section-title">Datos de la persona</div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div><label class="label req" for="u-nombre">Nombre completo</label>
+            <input id="u-nombre" class="field" maxlength="150" [(ngModel)]="form.nombreCompleto" placeholder="Ej. María Quispe Huamán" (blur)="v.tocar('nombre'); sugerirUsuario()" [class.field-invalid]="v.error('nombre')" autocomplete="off">
+            @if (v.error('nombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req" for="u-email">Correo</label>
+            <input id="u-email" type="email" class="field" maxlength="120" [(ngModel)]="form.email" placeholder="correo@kampu.pe" (blur)="v.tocar('email')" [class.field-invalid]="v.error('email')" inputmode="email" autocomplete="off">
+            @if (v.error('email'); as e) { <p class="field-error">{{ e }}</p> }</div>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Rol en el sistema</div>
+        <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Rol del usuario">
+          @for (r of roles; track r.valor) {
+            <label class="flex cursor-pointer flex-col gap-1 rounded-xl border p-3 transition-colors"
+                   [class]="form.rol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 hover:border-zinc-300'">
+              <span class="flex items-center gap-2 text-sm font-semibold text-zinc-900">
+                <input type="radio" name="u-rol" class="sr-only" [value]="r.valor" [(ngModel)]="form.rol">
+                <app-icon [name]="r.icono" size="w-4 h-4" /> {{ r.texto }}
+                @if (form.rol === r.valor) { <span class="ml-auto text-brand-600"><app-icon name="check-circle" size="w-4 h-4" /></span> }
+              </span>
+              <span class="text-xs leading-relaxed text-zinc-500">{{ r.detalle }}</span>
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">Acceso</div>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="sm:col-span-2"><label class="label req" for="u-username">Nombre de usuario</label>
+            <input id="u-username" class="field" maxlength="50" [(ngModel)]="form.username" placeholder="Ej. mquispe" (blur)="v.tocar('username')" [class.field-invalid]="v.error('username')" autocomplete="off" autocapitalize="none" spellcheck="false">
+            @if (v.error('username'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">Con este usuario inicia sesión. No se puede cambiar después.</p> }</div>
+          <div><label class="label req" for="u-pass">Contraseña</label>
+            <div class="relative">
+              <input id="u-pass" class="field pr-10" [type]="verClave() ? 'text' : 'password'" maxlength="64" [(ngModel)]="form.password" (blur)="v.tocar('password')" [class.field-invalid]="v.error('password')" autocomplete="new-password">
+              <button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-zinc-400 hover:text-zinc-700" (click)="verClave.set(!verClave())" [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'"><app-icon name="eye" size="w-4 h-4" /></button>
+            </div>
+            <div class="mt-1.5 grid grid-cols-4 gap-1" aria-hidden="true">
+              @for (i of [1, 2, 3, 4]; track i) {
+                <span class="h-1 rounded-full" [class]="fuerza(form.password) >= i ? (fuerza(form.password) < 2 ? 'bg-rose-400' : fuerza(form.password) < 4 ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-zinc-200'"></span>
+              }
+            </div>
+            @if (v.error('password'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">Mínimo {{ min }} caracteres. Compártela con la persona por un medio seguro.</p> }</div>
+          <div><label class="label req" for="u-conf">Confirmar contraseña</label>
+            <input id="u-conf" class="field" [type]="verClave() ? 'text' : 'password'" maxlength="64" [(ngModel)]="form.confirmacion" (blur)="v.tocar('confirmacion')" [class.field-invalid]="v.error('confirmacion')" autocomplete="new-password">
+            @if (v.error('confirmacion'); as e) { <p class="field-error">{{ e }}</p> }</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn-light" (click)="abierto.set(false)">Cancelar</button>
+        <button type="button" class="btn-dark" [disabled]="ocupado()" (click)="crear()"><app-icon name="check" size="w-4 h-4" /> {{ ocupado() ? 'Creando…' : 'Crear usuario' }}</button>
+      </div>
+    </div>
+  </app-modal>
+}
+
+@if (editando(); as u) {
+  <app-modal icono="edit" titulo="Cambiar rol" [subtitulo]="u.nombreCompleto + ' · ' + u.username" (cerrar)="editando.set(null)">
+    <div class="space-y-4">
+      <div class="grid gap-2" role="radiogroup" aria-label="Rol del usuario">
+        @for (r of roles; track r.valor) {
+          <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors"
+                 [class]="nuevoRol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 hover:border-zinc-300'">
+            <input type="radio" name="u-nuevo-rol" class="mt-1 accent-brand-600" [value]="r.valor" [(ngModel)]="nuevoRol" [disabled]="esYo(u) && r.valor !== 'ADMIN'">
+            <span>
+              <span class="flex items-center gap-2 text-sm font-semibold text-zinc-900"><app-icon [name]="r.icono" size="w-4 h-4" /> {{ r.texto }} @if (u.rol === r.valor) { <span class="chip">Actual</span> }</span>
+              <span class="mt-0.5 block text-xs leading-relaxed text-zinc-500">{{ r.detalle }}</span>
+            </span>
+          </label>
+        }
+      </div>
+      @if (esYo(u)) { <p class="hint">No puedes quitarte a ti mismo el rol de administrador.</p> }
+      <p class="hint">El cambio se aplica en su próximo inicio de sesión y queda registrado en la auditoría.</p>
+      <div class="form-actions">
+        <button type="button" class="btn-light" (click)="editando.set(null)">Cancelar</button>
+        <button type="button" class="btn-dark" [disabled]="ocupado() || nuevoRol === u.rol" (click)="guardarRol()"><app-icon name="check" size="w-4 h-4" /> Guardar rol</button>
+      </div>
+    </div>
+  </app-modal>
+}
+
+@if (claveDe(); as u) {
+  <app-modal icono="lock" titulo="Nueva contraseña" [subtitulo]="u.nombreCompleto + ' · ' + u.username" ancho="sm" (cerrar)="claveDe.set(null)">
+    <div class="space-y-4">
+      <div><label class="label req" for="c-pass">Contraseña nueva</label>
+        <div class="relative">
+          <input id="c-pass" class="field pr-10" [type]="verClave() ? 'text' : 'password'" maxlength="64" [(ngModel)]="clave.password" (blur)="vc.tocar('password')" [class.field-invalid]="vc.error('password')" autocomplete="new-password">
+          <button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-zinc-400 hover:text-zinc-700" (click)="verClave.set(!verClave())" [attr.aria-label]="verClave() ? 'Ocultar contraseña' : 'Mostrar contraseña'"><app-icon name="eye" size="w-4 h-4" /></button>
+        </div>
+        @if (vc.error('password'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">Mínimo {{ min }} caracteres. Reinicia sus intentos fallidos.</p> }</div>
+      <div><label class="label req" for="c-conf">Confirmar contraseña</label>
+        <input id="c-conf" class="field" [type]="verClave() ? 'text' : 'password'" maxlength="64" [(ngModel)]="clave.confirmacion" (blur)="vc.tocar('confirmacion')" [class.field-invalid]="vc.error('confirmacion')" autocomplete="new-password">
+        @if (vc.error('confirmacion'); as e) { <p class="field-error">{{ e }}</p> }</div>
+      @if (u.estado === 'BLOQUEADO') { <p class="hint">El usuario sigue bloqueado: usa «Desbloquear» en la lista para que pueda entrar.</p> }
+      <div class="form-actions">
+        <button type="button" class="btn-light" (click)="claveDe.set(null)">Cancelar</button>
+        <button type="button" class="btn-dark" [disabled]="ocupado()" (click)="guardarClave()"><app-icon name="check" size="w-4 h-4" /> Guardar</button>
+      </div>
+    </div>
+  </app-modal>
+}

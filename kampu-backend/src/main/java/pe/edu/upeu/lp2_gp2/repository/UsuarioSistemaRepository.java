@@ -12,5 +12,7 @@ import java.util.Optional;
 public interface UsuarioSistemaRepository extends JpaRepository<UsuarioSistema, Long> {
     Optional<UsuarioSistema> findByUsernameIgnoreCase(String username);
 
+    boolean existsByEmailIgnoreCase(String email);
+
     List<UsuarioSistema> findAllByOrderByUsuarioIdAsc();
 }
