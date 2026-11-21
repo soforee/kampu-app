@@ -14,3 +14,10 @@ muestra el autor de cada una. Las fotos de los paquetes que sube la agencia tien
 | `destinos/paracas.jpg` | Reserva de Paracas, Ica | Mojnsen | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Paracas_National_Reserve.jpg |
 | `destinos/lima.jpg` | Costa de Lima | Checo890 | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Coast_of_Lima_Peru.jpg |
 | `destinos/ollantaytambo.jpg` | Ollantaytambo, Cusco | Bernard Gagnon | CC BY-SA 3.0 | https://commons.wikimedia.org/wiki/File:Ollantaytambo,_Peru.jpg |
+| `destinos/laguna-azul.jpg` | Laguna Azul (Sauce), San Martín | Pitxiquin | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Port_de_Sauce_a_la_Laguna_de_Sauce_a_la_prov%C3%ADncia_de_San_Mart%C3%ADn.jpg |
+| `destinos/ahuashiyacu.jpg` | Cataratas de Ahuashiyacu, San Martín | EdsonFuentesMera | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Cataras_de_Ahuashiyacu.jpg |
+| `destinos/lamas.jpg` | Plaza de Armas de Lamas, San Martín | Ibrehaut (Ivan Brehaut L.) | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Plaza_de_Armas_de_Lamas,_Tarapoto,_San_Mart%C3%ADn,_Per%C3%BA._01.jpg |
+| `destinos/moyobamba.jpg` | Moyobamba, San Martín | Aleksei M. | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Moyobamba,_Peru,_2018.jpg |
+
+Las fotos de San Martín se usan en Destinos cuando el paquete no tiene foto propia o su archivo no existe
+(los datos semilla de `kampu_tours_v10.sql` apuntan a `/img/paquetes/*.jpg`, que no están en el repositorio).

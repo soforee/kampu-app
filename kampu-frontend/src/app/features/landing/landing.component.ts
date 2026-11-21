@@ -218,20 +218,37 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 
   destinos = computed(() => this.paquetes().filter(p => p.estado === 'ACTIVO').map(p => p.nombre));
 
-  tours = computed<TourCard[]>(() => {
+  // Paquetes activos que cumplen destino y fecha (sin la categoría): base de las tarjetas y de los conteos por pestaña
+  private candidatos = computed(() => {
     const f = this.filtro();
-    const texto = f.destino.trim().toLowerCase();
+    const texto = this.normalizar(f.destino.trim());
     return this.paquetes()
       .filter(p => p.estado === 'ACTIVO')
-      .filter(p => !texto || p.nombre.toLowerCase().includes(texto) || (p.descripcion ?? '').toLowerCase().includes(texto))
-      .filter(p => this.cumpleTipo(p, f.tipo))
-      .map(p => ({
+      .filter(p => !texto || this.normalizar(p.nombre).includes(texto) || this.normalizar(p.descripcion ?? '').includes(texto))
+      .map(p => ({ p, fecha: this.proximaFecha(p, f.fecha) }))
+      // Con fecha elegida solo quedan los paquetes que se pueden reservar desde ese día
+      .filter(x => !f.fecha || x.fecha.fecha !== null);
+  });
+
+  tours = computed<TourCard[]>(() => {
+    const tipo = this.filtro().tipo;
+    return this.candidatos()
+      .filter(x => this.cumpleTipo(x.p, tipo))
+      .map(({ p, fecha }) => ({
         paquete: p,
         gradiente: this.gradientes[p.paqueteId % this.gradientes.length],
         duracion: this.duracion(p),
-        proximaSalida: this.proximaSalida(p.paqueteId, f.fecha)
-      }))
-      .filter(t => !f.fecha || t.proximaSalida !== null);
+        proximaSalida: fecha.fecha,
+        cupos: fecha.cupos,
+        salidaExistente: fecha.existente
+      }));
+  });
+
+  // Cantidad de tours por pestaña con el destino y la fecha actuales
+  conteos = computed<Record<string, number>>(() => {
+    const c = this.candidatos();
+    return Object.fromEntries((['', 'FULL_DAY', 'ESCAPADA', 'EXPEDICION'] as TipoTour[])
+      .map(t => [t, c.filter(x => this.cumpleTipo(x.p, t)).length]));
   });
 
   constructor() {
@@ -249,8 +266,9 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     });
   }
 
+  // El buscador cambia destino y fecha; la categoría la manejan las pestañas
   buscar(f: FiltroBusqueda) {
-    this.filtro.set(f);
+    this.filtro.set({ ...f, tipo: this.filtro().tipo });
     document.getElementById('tours')?.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -286,15 +304,47 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   }
 
   // Primera salida con cupos desde la fecha elegida (o desde hoy).
-  private proximaSalida(paqueteId: number, desde: string): string | null {
+  /*
+   * Próxima fecha reservable desde "desde" (o desde hoy), como PKG_RESERVAS en la base:
+   *  1) una salida ya programada (PROGRAMADA o GARANTIZADA) con cupos libres;
+   *  2) si no hay, el próximo día en que opera el paquete (dias_operacion = L M M J V S D)
+   *     respetando la anticipación mínima; al reservar esa fecha la base crea la salida.
+   * Se usa la que llegue primero.
+   */
+  private proximaFecha(p: PaqueteTour, desde: string): { fecha: string | null; cupos: number | null; existente: boolean } {
     const hoyStr = hoy();
     const inicio = desde && desde > hoyStr ? desde : hoyStr;
-    const fechas = this.salidas()
-      .filter(s => s.paqueteId === paqueteId && s.cuposDisponibles > 0)
-      .filter(s => s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA')
-      .filter(s => s.fechaInicio >= inicio)
-      .map(s => s.fechaInicio)
-      .sort();
-    return fechas.length > 0 ? fechas[0] : null;
+    // Anticipación mínima para reservar por la web, con la misma regla que la base (PKG_RESERVAS):
+    // (fecha a las 00:00 - ahora) en horas >= anticipacion_min_horas
+    const minimo = Date.now() + (p.anticipacionMinHoras ?? 0) * 3600_000;
+    const reservable = (fecha: string) => new Date(`${fecha}T00:00:00`).getTime() >= minimo;
+
+    const salida = this.salidas()
+      .filter(x => x.paqueteId === p.paqueteId && x.cuposDisponibles > 0 && x.fechaInicio >= inicio)
+      .filter(x => (x.estado === 'PROGRAMADA' || x.estado === 'GARANTIZADA') && reservable(x.fechaInicio))
+      .sort((a, b) => a.fechaInicio.localeCompare(b.fechaInicio))[0];
+
+    const mascara = p.diasOperacion || '1111111';
+    let opera: string | null = null;
+    const d = new Date(`${inicio}T00:00:00`);
+    for (let i = 0; i < 90 && mascara.includes('1'); i++, d.setDate(d.getDate() + 1)) {
+      const fecha = this.iso(d);
+      if (mascara.charAt((d.getDay() + 6) % 7) === '1' && reservable(fecha)) { opera = fecha; break; }
+    }
+
+    if (salida && (!opera || salida.fechaInicio <= opera)) return { fecha: salida.fechaInicio, cupos: salida.cuposDisponibles, existente: true };
+    if (opera) return { fecha: opera, cupos: p.cupoPorDefecto ?? null, existente: false };
+    return { fecha: null, cupos: null, existente: false };
   }
+
+
+  private iso(d: Date) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // Búsqueda sin tildes ni mayúsculas: "clasico" encuentra "Clásico"
+  private normalizar(t: string) {
+    return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  }
+
 }

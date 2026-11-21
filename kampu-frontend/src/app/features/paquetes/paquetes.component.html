@@ -11,7 +11,7 @@
     <article class="card flex flex-col overflow-hidden" [class.opacity-60]="f.paquete.estado !== 'ACTIVO'" [class.fila-nueva]="store.resaltado() === 'paquete-' + f.paquete.paqueteId">
       <div class="relative h-40 bg-zinc-100">
         @if (imagenes.url(f.paquete.imagen); as src) {
-          <img [src]="src" [alt]="f.paquete.nombre" class="absolute inset-0 h-full w-full object-cover">
+          <img [src]="src" [alt]="f.paquete.nombre" class="absolute inset-0 h-full w-full object-cover" (error)="$any($event.target).hidden = true">
         } @else {
           <div class="absolute inset-0 grid place-items-center text-zinc-300"><app-icon name="image" size="w-8 h-8" /></div>
         }

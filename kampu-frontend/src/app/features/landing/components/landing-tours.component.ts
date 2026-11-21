@@ -1,4 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { AuthService } from '../../../core/services/auth.service';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
 import { PaqueteTour } from '../../../core/models';
 import { ImagenService } from '../../../core/services/imagen.service';
@@ -9,7 +11,7 @@ import { Contacto, TipoTour, TourCard, fotoDePaquete } from '../landing.models';
 @Component({
   selector: 'app-landing-tours',
   standalone: true,
-  imports: [CurrencyPipe, IconComponent, RevelarDirective],
+  imports: [CurrencyPipe, IconComponent, RevelarDirective, RouterLink],
   templateUrl: './landing-tours.component.html',
   styleUrl: './landing-tours.component.css'
 })
@@ -63,6 +65,8 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   @Output() cotizar = new EventEmitter<PaqueteTour>();
   // Categoría activa (por duración del tour) y aviso al cambiarla
   @Input() categoria: TipoTour = '';
+  // Cantidad de tours por categoría con el destino y la fecha actuales
+  @Input() conteos: Record<string, number> = {};
   @Output() categoriaChange = new EventEmitter<TipoTour>();
 
   categorias: { valor: TipoTour; texto: string; detalle: string }[] = [
@@ -73,6 +77,9 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   ];
 
   imagenes = inject(ImagenService);
+  private auth = inject(AuthService);
+  // Paquetes cuya foto propia no cargó (archivo inexistente): se usa la del destino
+  private fallidas = signal<Set<number>>(new Set());
 
   private meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
@@ -82,13 +89,27 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
     return `${d} ${this.meses[m - 1]} ${y}`;
   }
 
-  // Imagen del paquete o, si no tiene, la foto de su destino (de la galería)
-  imagen(t: TourCard): { src: string; referencial: boolean } | null {
+  // Foto propia del paquete; si no tiene o no cargó, la foto real de su destino (con su crédito); si no hay, null
+  imagen(t: TourCard): { src: string; posicion?: string; credito?: { autor: string; licencia: string; fuente: string } } | null {
     const propia = this.imagenes.url(t.paquete.imagen);
-    if (propia) return { src: propia, referencial: false };
+    if (propia && !this.fallidas().has(t.paquete.paqueteId)) return { src: propia };
     const foto = fotoDePaquete(t.paquete.nombre, t.paquete.descripcion ?? '');
-    return foto ? { src: foto.src, referencial: true } : null;
+    return foto ? { src: foto.src, posicion: foto.posicion, credito: foto } : null;
   }
 
+  fallo(t: TourCard) {
+    const id = t.paquete.paqueteId;
+    if (this.fallidas().has(id)) return;
+    this.fallidas.set(new Set(this.fallidas()).add(id));
+  }
 
+  // Reservar: el cliente va a "Mis paquetes" con el paquete elegido; sin sesión, al login con ?reservar=
+  // (el login lo lleva después a "Mis paquetes", ver reserva-pendiente.ts); el personal de ventas, a "Nueva reserva".
+  // Guías y conductores no venden: solo ven "Cotizar".
+  reservar(t: TourCard): { ruta: string; params: Record<string, number> } | null {
+    const id = t.paquete.paqueteId;
+    if (!this.auth.autenticado()) return { ruta: '/login', params: { reservar: id } };
+    if (this.auth.esCliente()) return { ruta: '/mi-cuenta', params: { reservar: id } };
+    return this.auth.puede('GESTIONAR_RESERVAS') ? { ruta: '/reservas/nueva', params: { paquete: id } } : null;
+  }
 }

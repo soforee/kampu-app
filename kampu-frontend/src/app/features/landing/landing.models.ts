@@ -12,7 +12,10 @@ export interface TourCard {
   paquete: PaqueteTour;
   gradiente: string;
   duracion: string;
+  // Próxima fecha reservable: una salida ya programada con cupos o, si no hay, el próximo día que opera el paquete
   proximaSalida: string | null;
+  cupos: number | null;          // cupos libres de esa fecha (salida existente) o cupo por defecto del paquete
+  salidaExistente: boolean;      // true = ya hay una salida programada ese día
 }
 
 export interface Contacto {
@@ -37,6 +40,7 @@ export interface FotoDestino {
   licencia: string;
   fuente: string;
   palabras: string[];
+  posicion?: string;             // encuadre de la foto (object-position), p. ej. 'center 25%'
 }
 
 export const FOTOS_DESTINOS: FotoDestino[] = [
@@ -55,7 +59,16 @@ export const FOTOS_DESTINOS: FotoDestino[] = [
   { clave: 'lima', lugar: 'Costa de Lima', region: 'Lima', src: 'destinos/lima.jpg', autor: 'Checo890', licencia: 'CC BY-SA 3.0',
     fuente: 'https://commons.wikimedia.org/wiki/File:Coast_of_Lima_Peru.jpg', palabras: ['lima', 'barranco', 'miraflores'] },
   { clave: 'ollantaytambo', lugar: 'Ollantaytambo', region: 'Cusco', src: 'destinos/ollantaytambo.jpg', autor: 'Bernard Gagnon', licencia: 'CC BY-SA 3.0',
-    fuente: 'https://commons.wikimedia.org/wiki/File:Ollantaytambo,_Peru.jpg', palabras: ['ollantaytambo'] }
+    fuente: 'https://commons.wikimedia.org/wiki/File:Ollantaytambo,_Peru.jpg', palabras: ['ollantaytambo'] },
+  // Región San Martín (paquetes de Tarapoto y alrededores)
+  { clave: 'laguna-azul', lugar: 'Laguna Azul', region: 'San Martín', src: 'destinos/laguna-azul.jpg', autor: 'Pitxiquin', licencia: 'CC BY-SA 4.0',
+    fuente: 'https://commons.wikimedia.org/wiki/File:Port_de_Sauce_a_la_Laguna_de_Sauce_a_la_prov%C3%ADncia_de_San_Mart%C3%ADn.jpg', palabras: ['laguna azul', 'sauce'] },
+  { clave: 'ahuashiyacu', lugar: 'Cataratas de Ahuashiyacu', region: 'San Martín', src: 'destinos/ahuashiyacu.jpg', autor: 'EdsonFuentesMera', licencia: 'CC BY-SA 4.0',
+    fuente: 'https://commons.wikimedia.org/wiki/File:Cataras_de_Ahuashiyacu.jpg', palabras: ['tarapoto', 'ahuashiyacu'], posicion: 'center 20%' },
+  { clave: 'lamas', lugar: 'Plaza de Armas de Lamas', region: 'San Martín', src: 'destinos/lamas.jpg', autor: 'Ibrehaut (Ivan Brehaut L.)', licencia: 'CC BY-SA 4.0',
+    fuente: 'https://commons.wikimedia.org/wiki/File:Plaza_de_Armas_de_Lamas,_Tarapoto,_San_Mart%C3%ADn,_Per%C3%BA._01.jpg', palabras: ['lamas', 'chazuta'] },
+  { clave: 'moyobamba', lugar: 'Moyobamba', region: 'San Martín', src: 'destinos/moyobamba.jpg', autor: 'Aleksei M.', licencia: 'CC BY-SA 4.0',
+    fuente: 'https://commons.wikimedia.org/wiki/File:Moyobamba,_Peru,_2018.jpg', palabras: ['alto mayo', 'moyobamba', 'tingana'] },
 ];
 
 /** Foto de referencia de un paquete sin imagen propia: el primer destino mencionado en su nombre o descripción. */
