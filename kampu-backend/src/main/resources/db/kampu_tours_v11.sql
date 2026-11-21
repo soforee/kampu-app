@@ -1,6 +1,30 @@
 /* ============================================================================
-   KAMPU TOURS - Esquema Oracle Database 21c XE - v10 (puntos de recojo)
+   KAMPU TOURS - Esquema Oracle Database 21c XE - v11 (cotizaciones y personal de campo)
    ----------------------------------------------------------------------------
+   QUE CAMBIA EN v11 (cotizacion sin cuenta, servicios adicionales y roles de campo)
+     * COTIZACIONES: cualquier visitante cotiza sin cuenta. Cada cotizacion tiene
+       un codigo (KC-2026-000001) y una clave de acceso; la BD guarda solo el
+       hash SHA-256 de la clave y bloquea el codigo tras 10 claves erradas.
+       Estados: GENERADA -> SOLICITADA (el visitante acepto y pidio reservar)
+       -> RESERVADA (el personal la confirmo: se crea la reserva) | RECHAZADA |
+       CANCELADA (la retiro el visitante) | VENCIDA (paso su vigencia).
+       Desde RESERVADA, el estado comercial es el de la reserva (pendiente,
+       confirmada, anulada): no se duplica en la cotizacion.
+     * PKG_COTIZACIONES: calcula precios en la BD con las reglas de venta del
+       paquete, valida la clave, registra la solicitud y la convierte en
+       reserva (busca o crea el cliente SIN cuenta web: no es un usuario).
+     * SERVICIOS_ADICIONALES (por persona o por grupo, de un paquete o de todos)
+       y COTIZACION_SERVICIOS (precio congelado). RESERVAS.monto_adicionales
+       entra en monto_total, asi pagos y saldos incluyen los adicionales.
+     * PAQUETES_TOUR.servicios_incluidos: lo que incluye el paquete.
+     * Roles GUIA y CONDUCTOR: el personal de campo puede (no debe) tener una
+       cuenta, siempre vinculada a su registro de PERSONAL y con un cargo de
+       la funcion correcta. Ven solo lo suyo: VW_MIS_SALIDAS_GUIA y
+       VW_MIS_TRASLADOS_CONDUCTOR (sin montos ni datos de contacto del cliente).
+     * Permisos nuevos: VER_COTIZACIONES, GESTIONAR_COTIZACIONES (Admin, Ventas
+       y Operador) y VER_ASIGNACIONES_PROPIAS (Guia y Conductor).
+     * Instalaciones v10 existentes: migracion_v10_a_v11.sql (conserva datos).
+
    QUE CAMBIA EN v10 (puntos de recojo)
      * LUGARES marca que sitios son punto de recojo y cuantos minutos antes de
        la hora de inicio del paquete se pasa por cada uno. La oficina (tipo
@@ -140,6 +164,8 @@ BEGIN
     crear('CREATE ROLE ROL_VENTAS', -1921);
     crear('CREATE ROLE ROL_OPERADOR', -1921);
     crear('CREATE ROLE ROL_CLIENTE', -1921);
+    -- (v11) Personal de campo con cuenta: guias y conductores (solo sus asignaciones)
+    crear('CREATE ROLE ROL_CAMPO', -1921);
 END;
 /
 
@@ -170,12 +196,14 @@ BEGIN
                   'VW_PAQUETES_CLIENTE', 'VW_RESUMEN_PAQUETES_POR_ROL', 'VW_RESUMEN_CLIENTES',
                   'VW_METRICAS_ESTADOS', 'VW_MANIFIESTO_SALIDA', 'VW_ALERTAS_OPERACION', 'VW_RECOJOS_SALIDA',
                   -- (adaptado) vistas de la instalacion anterior de KAMPU_BD (v11)
-                  'VW_CUADRE_INTEGRIDAD', 'VW_RESUMEN_FLOTA'))) LOOP
+                  'VW_CUADRE_INTEGRIDAD', 'VW_RESUMEN_FLOTA',
+                  -- (v11) asignaciones del personal de campo
+                  'VW_MIS_SALIDAS_GUIA', 'VW_MIS_TRASLADOS_CONDUCTOR'))) LOOP
         soltar('DROP VIEW KAMPU_BD.' || r.nombre);
     END LOOP;
 
     FOR r IN (SELECT COLUMN_VALUE AS nombre FROM TABLE(SYS.ODCIVARCHAR2LIST(
-                  'PKG_GESTION_PAQUETES_CLIENTE', 'PKG_RESERVAS', 'PKG_SEGURIDAD_ROLES'))) LOOP
+                  'PKG_COTIZACIONES', 'PKG_GESTION_PAQUETES_CLIENTE', 'PKG_RESERVAS', 'PKG_SEGURIDAD_ROLES'))) LOOP
         soltar('DROP PACKAGE KAMPU_BD.' || r.nombre);
     END LOOP;
     soltar('DROP PROCEDURE KAMPU_BD.SP_REGISTRAR_CLIENTE_EXTERNO');
@@ -183,9 +211,11 @@ BEGIN
 
     soltar('DROP SEQUENCE KAMPU_BD.SEQ_CODIGO_OPERACION');
     soltar('DROP SEQUENCE KAMPU_BD.SEQ_CODIGO_RESERVA');
+    soltar('DROP SEQUENCE KAMPU_BD.SEQ_CODIGO_COTIZACION');
 
     -- DETALLE_RESERVA ya no existe en v7: se incluye para limpiar instalaciones v6
     FOR r IN (SELECT COLUMN_VALUE AS nombre FROM TABLE(SYS.ODCIVARCHAR2LIST(
+                  'COTIZACION_SERVICIOS', 'COTIZACIONES', 'SERVICIOS_ADICIONALES',
                   'SOLICITUDES_ANULACION', 'AUDITORIA', 'HISTORIAL_OPERACIONES', 'OPERACIONES_TRANSPORTE', 'PAGOS',
                   'PASAJEROS_RESERVA', 'DETALLE_RESERVA', 'RESERVAS', 'SALIDAS_PROGRAMADAS',
                   'PAQUETE_ITINERARIO', 'PAQUETES_TOUR', 'VEHICULOS', 'PERSONAL', 'CARGOS', 'LUGARES',
@@ -201,6 +231,8 @@ END;
 -- KR-2026-000001 y KMP-001 (NOCACHE: volumen bajo, codigos sin saltos al reiniciar)
 CREATE SEQUENCE SEQ_CODIGO_RESERVA   START WITH 1 INCREMENT BY 1 NOCACHE;
 CREATE SEQUENCE SEQ_CODIGO_OPERACION START WITH 1 INCREMENT BY 1 NOCACHE;
+-- (v11) KC-2026-000001
+CREATE SEQUENCE SEQ_CODIGO_COTIZACION START WITH 1 INCREMENT BY 1 NOCACHE;
 
 -- ============================================================================
 -- 4. TABLAS
@@ -215,6 +247,9 @@ CREATE SEQUENCE SEQ_CODIGO_OPERACION START WITH 1 INCREMENT BY 1 NOCACHE;
 -- ============================================================================
 
 -- 4.1 USUARIOS DEL SISTEMA (personal interno: ADMIN, VENDEDOR, OPERADOR)
+--     (v11) GUIA y CONDUCTOR: cuenta OPCIONAL del personal de campo, siempre
+--     vinculada a su registro de PERSONAL (personal_id). El personal existe aunque
+--     no tenga cuenta; la FK se agrega despues de crear PERSONAL.
 CREATE TABLE USUARIOS_SISTEMA (
     usuario_id         NUMBER(10)    GENERATED BY DEFAULT ON NULL AS IDENTITY,
     username           VARCHAR2(50)  NOT NULL,
@@ -225,12 +260,16 @@ CREATE TABLE USUARIOS_SISTEMA (
     estado             VARCHAR2(20)  DEFAULT ON NULL 'ACTIVO',
     intentos_fallidos  NUMBER(2)     DEFAULT ON NULL 0,                -- (+v6)
     ultimo_acceso      TIMESTAMP,                                      -- (+v6)
+    personal_id        NUMBER(10),                                     -- (+v11) solo GUIA / CONDUCTOR
     creado_por         VARCHAR2(100),
     fecha_creacion     TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
     modificado_por     VARCHAR2(100),
     fecha_modificacion TIMESTAMP,
     CONSTRAINT pk_usuarios_sistema PRIMARY KEY (usuario_id),
-    CONSTRAINT chk_usu_rol      CHECK (rol IN ('ADMIN', 'VENDEDOR', 'OPERADOR')),
+    CONSTRAINT chk_usu_rol      CHECK (rol IN ('ADMIN', 'VENDEDOR', 'OPERADOR', 'GUIA', 'CONDUCTOR')),
+    -- (v11) Guia y conductor van siempre ligados a su ficha de personal; el resto nunca
+    CONSTRAINT chk_usu_personal CHECK ((rol IN ('GUIA', 'CONDUCTOR') AND personal_id IS NOT NULL)
+                                    OR (rol IN ('ADMIN', 'VENDEDOR', 'OPERADOR') AND personal_id IS NULL)),
     CONSTRAINT chk_usu_estado   CHECK (estado IN ('ACTIVO', 'INACTIVO', 'BLOQUEADO')),
     CONSTRAINT chk_usu_hash     CHECK (LENGTH(password_hash) >= 60),   -- BCrypt
     CONSTRAINT chk_usu_email    CHECK (email IS NULL OR REGEXP_LIKE(email, '^[^@ ]+@[^@ ]+\.[^@ ]+$')),
@@ -376,6 +415,11 @@ CREATE UNIQUE INDEX uq_pers_telefono ON PERSONAL (TRANSLATE(telefono, '0+-() ', 
 CREATE INDEX idx_pers_proveedor ON PERSONAL (proveedor_id);
 CREATE INDEX idx_pers_cargo     ON PERSONAL (cargo, estado);
 
+-- (v11) Cuenta del personal de campo: una persona del personal tiene a lo sumo una cuenta
+ALTER TABLE USUARIOS_SISTEMA ADD CONSTRAINT fk_usu_personal
+    FOREIGN KEY (personal_id) REFERENCES PERSONAL (personal_id);
+CREATE UNIQUE INDEX uq_usu_personal ON USUARIOS_SISTEMA (personal_id);
+
 -- 4.6 VEHICULOS (flota propia y de terceros; v8: proveedor_id NULL = vehiculo propio)
 CREATE TABLE VEHICULOS (
     vehiculo_id        NUMBER(10)    GENERATED BY DEFAULT ON NULL AS IDENTITY,
@@ -417,6 +461,7 @@ CREATE TABLE PAQUETES_TOUR (
     dias_operacion         VARCHAR2(7)    DEFAULT ON NULL '1111111', -- (+v7) L M M J V S D  (1 = opera ese dia)
     anticipacion_min_horas NUMBER(3)      DEFAULT ON NULL 48,      -- (+v7) minimo para reservar por la web
     hora_inicio            VARCHAR2(5)    DEFAULT ON NULL '08:00', -- (+v10) hora de inicio del dia 1 (HH24:MI)
+    servicios_incluidos    VARCHAR2(1000),                         -- (+v11) uno por linea (transporte, guia, entradas...)
     estado                 VARCHAR2(20)   DEFAULT ON NULL 'ACTIVO',
     creado_por             VARCHAR2(100),
     fecha_creacion         TIMESTAMP      DEFAULT ON NULL SYSTIMESTAMP,
@@ -432,6 +477,31 @@ CREATE TABLE PAQUETES_TOUR (
     CONSTRAINT chk_paq_anticipa   CHECK (anticipacion_min_horas BETWEEN 0 AND 720),
     CONSTRAINT chk_paq_hora       CHECK (REGEXP_LIKE(hora_inicio, '^([01][0-9]|2[0-3]):[0-5][0-9]$'))
 );
+
+-- 4.7b SERVICIOS ADICIONALES (+v11): lo que el cliente puede sumar a un paquete
+--      (seguro, almuerzo, foto, traslado privado...). paquete_id NULL = para todos.
+--      POR_PERSONA: se cobra por cada pasajero que lo toma. POR_GRUPO: una vez por cotizacion.
+CREATE TABLE SERVICIOS_ADICIONALES (
+    servicio_id        NUMBER(10)    GENERATED BY DEFAULT ON NULL AS IDENTITY,
+    paquete_id         NUMBER(10),
+    nombre             VARCHAR2(100) NOT NULL,
+    descripcion        VARCHAR2(300),
+    precio             NUMBER(10,2)  NOT NULL,
+    modalidad          VARCHAR2(15)  DEFAULT ON NULL 'POR_PERSONA',
+    estado             VARCHAR2(20)  DEFAULT ON NULL 'ACTIVO',
+    creado_por         VARCHAR2(100),
+    fecha_creacion     TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
+    modificado_por     VARCHAR2(100),
+    fecha_modificacion TIMESTAMP,
+    CONSTRAINT pk_servicios_adicionales PRIMARY KEY (servicio_id),
+    CONSTRAINT fk_srv_paquete   FOREIGN KEY (paquete_id) REFERENCES PAQUETES_TOUR (paquete_id),
+    CONSTRAINT chk_srv_precio   CHECK (precio > 0),
+    CONSTRAINT chk_srv_modalidad CHECK (modalidad IN ('POR_PERSONA', 'POR_GRUPO')),
+    CONSTRAINT chk_srv_estado   CHECK (estado IN ('ACTIVO', 'INACTIVO'))
+);
+-- Mismo nombre una sola vez por paquete (o una sola vez entre los generales)
+CREATE UNIQUE INDEX uq_srv_nombre ON SERVICIOS_ADICIONALES (NVL(paquete_id, 0), LOWER(TRIM(nombre)));
+CREATE INDEX idx_srv_paquete ON SERVICIOS_ADICIONALES (paquete_id, estado);
 
 -- 4.8 ITINERARIO DEL PAQUETE (+v6): faltaba la entidad. Paquete 1:N dias/actividades,
 --     y relacion N:M paquete-lugar resuelta aqui.
@@ -513,7 +583,9 @@ CREATE TABLE RESERVAS (
     cantidad_pasajeros  NUMBER(2)     NOT NULL,                        -- (+v7) cupos que toma
     precio_unitario     NUMBER(10,2)  NOT NULL,                        -- (+v7) lo congela el trigger
     descuento           NUMBER(10,2)  DEFAULT ON NULL 0,               -- (+v7)
-    monto_total         NUMBER(10,2)  GENERATED ALWAYS AS (cantidad_pasajeros * precio_unitario - descuento) VIRTUAL,
+    monto_adicionales   NUMBER(10,2)  DEFAULT ON NULL 0,               -- (+v11) servicios adicionales de la cotizacion (congelado)
+    monto_total         NUMBER(10,2)  GENERATED ALWAYS AS
+                                      (cantidad_pasajeros * precio_unitario - descuento + monto_adicionales) VIRTUAL,
     canal               VARCHAR2(20)  DEFAULT ON NULL 'PRESENCIAL',
     usuario_registra_id NUMBER(10),                                    -- vendedor; NULL si fue WEB
     fecha_reserva       TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
@@ -539,6 +611,7 @@ CREATE TABLE RESERVAS (
     CONSTRAINT fk_res_usuario      FOREIGN KEY (usuario_anula_id)    REFERENCES USUARIOS_SISTEMA (usuario_id),
     CONSTRAINT fk_res_recojo       FOREIGN KEY (lugar_recojo_id)     REFERENCES LUGARES (lugar_id),
     CONSTRAINT chk_res_cantidad CHECK (cantidad_pasajeros > 0),
+    CONSTRAINT chk_res_adicionales CHECK (monto_adicionales >= 0),
     CONSTRAINT chk_res_precio   CHECK (precio_unitario > 0
                                        AND descuento BETWEEN 0 AND cantidad_pasajeros * precio_unitario),
     CONSTRAINT chk_res_canal    CHECK (canal IN ('WEB', 'PRESENCIAL', 'TELEFONO', 'WHATSAPP')),
@@ -654,6 +727,94 @@ CREATE INDEX idx_sol_reserva       ON SOLICITUDES_ANULACION (reserva_id);
 CREATE INDEX idx_sol_estado_fecha  ON SOLICITUDES_ANULACION (estado, fecha_solicitud);
 CREATE INDEX idx_sol_usuario       ON SOLICITUDES_ANULACION (atendida_por_id);
 
+-- 4.12c COTIZACIONES (+v11): lo que cotiza un visitante (o un cliente con cuenta).
+--       NO es una reserva ni toma cupos. No crea usuarios: los datos de contacto
+--       se piden recien al solicitar la reserva. El acceso del visitante es por
+--       codigo + clave; aqui solo se guarda el hash SHA-256 (hex) de la clave.
+--       GENERADA   guardada y disponible para el visitante (puede modificarla)
+--       SOLICITADA el visitante acepto la cotizacion y pidio reservar (pendiente)
+--       RESERVADA  el personal la confirmo: reserva_id apunta a la reserva creada
+--       RECHAZADA  el personal no pudo atenderla (motivo_rechazo)
+--       CANCELADA  el visitante la retiro
+--       VENCIDA    paso su vigencia (o la fecha del viaje) sin concretarse
+CREATE TABLE COTIZACIONES (
+    cotizacion_id      NUMBER(10)    GENERATED BY DEFAULT ON NULL AS IDENTITY,
+    codigo_cotizacion  VARCHAR2(20)  NOT NULL,                         -- KC-2026-000001 (trigger)
+    clave_hash         VARCHAR2(64)  NOT NULL,                         -- SHA-256 de la clave de acceso
+    paquete_id         NUMBER(10)    NOT NULL,
+    fecha_viaje        DATE          NOT NULL,
+    adultos            NUMBER(2)     NOT NULL,
+    ninos              NUMBER(2)     DEFAULT ON NULL 0,
+    cantidad_pasajeros NUMBER(3)     GENERATED ALWAYS AS (adultos + ninos) VIRTUAL,
+    lugar_recojo_id    NUMBER(10),
+    precio_unitario    NUMBER(10,2)  NOT NULL,                         -- precio por cupo al cotizar
+    monto_adicionales  NUMBER(10,2)  DEFAULT ON NULL 0,                -- suma de COTIZACION_SERVICIOS
+    monto_total        NUMBER(10,2)  GENERATED ALWAYS AS ((adultos + ninos) * precio_unitario + monto_adicionales) VIRTUAL,
+    estado             VARCHAR2(20)  DEFAULT ON NULL 'GENERADA',
+    vence_en           TIMESTAMP     NOT NULL,
+    observaciones      VARCHAR2(500),
+    -- Contacto: se exige al solicitar la reserva (chk_cot_contacto)
+    nombre_contacto    VARCHAR2(150),
+    tipo_documento     VARCHAR2(10),
+    numero_documento   VARCHAR2(20),
+    email              VARCHAR2(120),
+    telefono           VARCHAR2(20),
+    cliente_id         NUMBER(10),                                     -- cliente con cuenta que cotizo, o el de la reserva
+    reserva_id         NUMBER(10),
+    fecha_solicitud    TIMESTAMP,
+    atendida_por_id    NUMBER(10),
+    fecha_atencion     TIMESTAMP,
+    motivo_rechazo     VARCHAR2(300),
+    intentos_fallidos  NUMBER(2)     DEFAULT ON NULL 0,                -- claves erradas seguidas
+    bloqueada_hasta    TIMESTAMP,
+    creado_por         VARCHAR2(100),
+    fecha_creacion     TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
+    modificado_por     VARCHAR2(100),
+    fecha_modificacion TIMESTAMP,
+    CONSTRAINT pk_cotizaciones PRIMARY KEY (cotizacion_id),
+    CONSTRAINT uq_cot_codigo    UNIQUE (codigo_cotizacion),
+    CONSTRAINT uq_cot_reserva   UNIQUE (reserva_id),
+    CONSTRAINT fk_cot_paquete   FOREIGN KEY (paquete_id)      REFERENCES PAQUETES_TOUR (paquete_id),
+    CONSTRAINT fk_cot_recojo    FOREIGN KEY (lugar_recojo_id) REFERENCES LUGARES (lugar_id),
+    CONSTRAINT fk_cot_cliente   FOREIGN KEY (cliente_id)      REFERENCES CLIENTES (cliente_id),
+    CONSTRAINT fk_cot_reserva   FOREIGN KEY (reserva_id)      REFERENCES RESERVAS (reserva_id),
+    CONSTRAINT fk_cot_usuario   FOREIGN KEY (atendida_por_id) REFERENCES USUARIOS_SISTEMA (usuario_id),
+    CONSTRAINT chk_cot_hash     CHECK (REGEXP_LIKE(clave_hash, '^[0-9a-f]{64}$')),
+    CONSTRAINT chk_cot_pax      CHECK (adultos BETWEEN 1 AND 99 AND ninos BETWEEN 0 AND 98 AND adultos + ninos <= 99),
+    CONSTRAINT chk_cot_precio   CHECK (precio_unitario > 0 AND monto_adicionales >= 0),
+    CONSTRAINT chk_cot_estado   CHECK (estado IN ('GENERADA', 'SOLICITADA', 'RESERVADA', 'RECHAZADA', 'CANCELADA', 'VENCIDA')),
+    CONSTRAINT chk_cot_tipo_doc CHECK (tipo_documento IS NULL OR tipo_documento IN ('DNI', 'CE', 'PASAPORTE')),
+    CONSTRAINT chk_cot_email    CHECK (email IS NULL OR REGEXP_LIKE(email, '^[^@ ]+@[^@ ]+\.[^@ ]+$')),
+    CONSTRAINT chk_cot_contacto CHECK (estado NOT IN ('SOLICITADA', 'RESERVADA', 'RECHAZADA')
+        OR (nombre_contacto IS NOT NULL AND tipo_documento IS NOT NULL AND numero_documento IS NOT NULL
+            AND email IS NOT NULL AND telefono IS NOT NULL AND fecha_solicitud IS NOT NULL)),
+    CONSTRAINT chk_cot_reservada CHECK ((estado = 'RESERVADA' AND reserva_id IS NOT NULL)
+                                     OR (estado <> 'RESERVADA' AND reserva_id IS NULL)),
+    CONSTRAINT chk_cot_rechazo  CHECK (estado <> 'RECHAZADA' OR motivo_rechazo IS NOT NULL),
+    CONSTRAINT chk_cot_intentos CHECK (intentos_fallidos BETWEEN 0 AND 99)
+);
+CREATE INDEX idx_cot_estado_fecha ON COTIZACIONES (estado, fecha_creacion);
+CREATE INDEX idx_cot_paquete      ON COTIZACIONES (paquete_id, fecha_viaje);
+CREATE INDEX idx_cot_cliente      ON COTIZACIONES (cliente_id);
+CREATE INDEX idx_cot_recojo       ON COTIZACIONES (lugar_recojo_id);
+CREATE INDEX idx_cot_usuario      ON COTIZACIONES (atendida_por_id);
+
+-- Servicios adicionales de una cotizacion. El precio se congela al agregarlo.
+-- cantidad: pasajeros que lo toman (POR_PERSONA) o 1 (POR_GRUPO).
+CREATE TABLE COTIZACION_SERVICIOS (
+    cotizacion_id   NUMBER(10)   NOT NULL,
+    servicio_id     NUMBER(10)   NOT NULL,
+    cantidad        NUMBER(3)    NOT NULL,
+    precio_unitario NUMBER(10,2) NOT NULL,
+    subtotal        NUMBER(12,2) GENERATED ALWAYS AS (cantidad * precio_unitario) VIRTUAL,
+    CONSTRAINT pk_cotizacion_servicios PRIMARY KEY (cotizacion_id, servicio_id),
+    CONSTRAINT fk_cts_cotizacion FOREIGN KEY (cotizacion_id) REFERENCES COTIZACIONES (cotizacion_id) ON DELETE CASCADE,
+    CONSTRAINT fk_cts_servicio   FOREIGN KEY (servicio_id)   REFERENCES SERVICIOS_ADICIONALES (servicio_id),
+    CONSTRAINT chk_cts_cantidad  CHECK (cantidad BETWEEN 1 AND 99),
+    CONSTRAINT chk_cts_precio    CHECK (precio_unitario > 0)
+);
+CREATE INDEX idx_cts_servicio ON COTIZACION_SERVICIOS (servicio_id);
+
 -- 4.13 OPERACIONES DE TRANSPORTE (traslados de una salida o sueltos)
 CREATE TABLE OPERACIONES_TRANSPORTE (
     operacion_id       NUMBER(10)   GENERATED BY DEFAULT ON NULL AS IDENTITY,
@@ -727,7 +888,9 @@ CREATE TABLE AUDITORIA (
     origen         VARCHAR2(10)   DEFAULT ON NULL 'BD',
     fecha          TIMESTAMP      DEFAULT ON NULL SYSTIMESTAMP,
     CONSTRAINT pk_auditoria PRIMARY KEY (auditoria_id),
-    CONSTRAINT chk_aud_rol    CHECK (rol_usuario IN ('ADMIN', 'VENDEDOR', 'OPERADOR', 'CLIENTE', 'SISTEMA')),
+    -- (v11) GUIA, CONDUCTOR e INVITADO (visitante sin cuenta que cotiza)
+    CONSTRAINT chk_aud_rol    CHECK (rol_usuario IN ('ADMIN', 'VENDEDOR', 'OPERADOR', 'GUIA', 'CONDUCTOR',
+                                                     'CLIENTE', 'INVITADO', 'SISTEMA')),
     CONSTRAINT chk_aud_accion CHECK (accion IN ('CREAR', 'ACTUALIZAR', 'ELIMINAR', 'REGISTRO',
                                                 'LOGIN', 'LOGOUT', 'LOGIN_FALLIDO')),
     CONSTRAINT chk_aud_origen CHECK (origen IN ('BD', 'APP'))
@@ -745,8 +908,12 @@ CREATE INDEX idx_aud_usuario ON AUDITORIA (usuario, fecha);
 CREATE OR REPLACE PACKAGE PKG_SEGURIDAD_ROLES AS
     PROCEDURE iniciar_sesion (p_usuario VARCHAR2, p_rol VARCHAR2, p_cliente_id NUMBER DEFAULT NULL);
     PROCEDURE cerrar_sesion;
+    -- (v11) Visitante sin cuenta que opera SU cotizacion (ya validada por clave):
+    -- solo deja rastro en AUDITORIA como INVITADO; no tiene ningun permiso.
+    PROCEDURE iniciar_sesion_invitado (p_codigo_cotizacion VARCHAR2);
     FUNCTION usuario_actual    RETURN VARCHAR2;
     FUNCTION usuario_id_actual RETURN NUMBER;     -- USUARIOS_SISTEMA.usuario_id (NULL para clientes)
+    FUNCTION personal_id_actual RETURN NUMBER;    -- (v11) PERSONAL.personal_id de un GUIA o CONDUCTOR con sesion
     FUNCTION rol_actual        RETURN VARCHAR2;
     FUNCTION rol_auditoria     RETURN VARCHAR2;   -- rol valido para AUDITORIA (SISTEMA si no hay sesion)
     FUNCTION cliente_actual    RETURN NUMBER;
@@ -764,16 +931,19 @@ CREATE OR REPLACE PACKAGE PKG_SEGURIDAD_ROLES AS
 
     -- Administracion de accesos de usuarios internos (solo ADMIN)
     PROCEDURE asignar_rol (p_usuario_id NUMBER, p_rol VARCHAR2);
+    -- (v11) Rol GUIA o CONDUCTOR ligado a una persona del PERSONAL (cuenta de campo)
+    PROCEDURE asignar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_personal_id NUMBER);
     PROCEDURE revocar_acceso (p_usuario_id NUMBER);
     PROCEDURE restablecer_acceso (p_usuario_id NUMBER);
 END PKG_SEGURIDAD_ROLES;
 /
 
 CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
-    g_usuario    VARCHAR2(100);
-    g_usuario_id NUMBER;
-    g_rol        VARCHAR2(20);
-    g_cliente_id NUMBER;
+    g_usuario     VARCHAR2(100);
+    g_usuario_id  NUMBER;
+    g_rol         VARCHAR2(20);
+    g_cliente_id  NUMBER;
+    g_personal_id NUMBER;    -- (v11) ficha de PERSONAL de un GUIA / CONDUCTOR
 
     -- Catalogo de acciones (unica fuente de verdad de los permisos)
     c_acciones CONSTANT VARCHAR2(1000) :=
@@ -781,7 +951,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
      || 'VER_CLIENTES,GESTIONAR_CLIENTES,VER_RESERVAS,GESTIONAR_RESERVAS,VER_MONTOS,REGISTRAR_PAGO,'
      || 'GESTIONAR_CATALOGO,ACTUALIZAR_EJECUCION,VER_RESUMEN,'
      || 'VER_LOGISTICA,GESTIONAR_LOGISTICA,VER_OPERACIONES,GESTIONAR_OPERACIONES,'
-     || 'VER_PAQUETES_PROPIOS,INFORMAR_PAGO';
+     || 'VER_PAQUETES_PROPIOS,INFORMAR_PAGO,'
+     || 'VER_COTIZACIONES,GESTIONAR_COTIZACIONES,VER_ASIGNACIONES_PROPIAS';
 
     -- Usuarios de BD en los que se confia para fijar la identidad de personal interno
     -- (pool del backend y mantenimiento). Cualquier otro usuario de BD solo puede ser el mismo.
@@ -794,7 +965,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
         v_sesion VARCHAR2(128) := SYS_CONTEXT('USERENV', 'SESSION_USER');
     BEGIN
         -- Un intento fallido nunca deja una sesion previa activa
-        g_usuario := NULL; g_usuario_id := NULL; g_rol := NULL; g_cliente_id := NULL;
+        g_usuario := NULL; g_usuario_id := NULL; g_rol := NULL; g_cliente_id := NULL; g_personal_id := NULL;
         IF p_usuario IS NULL THEN
             DBMS_SESSION.CLEAR_IDENTIFIER;
             RETURN;
@@ -819,7 +990,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
                     || ' no puede iniciar sesion como ' || p_usuario);
             END IF;
             BEGIN
-                SELECT usuario_id, rol INTO v_id, v_rol_bd
+                SELECT usuario_id, rol, personal_id INTO v_id, v_rol_bd, g_personal_id
                   FROM USUARIOS_SISTEMA
                  WHERE LOWER(username) = LOWER(TRIM(p_usuario))
                    AND estado = 'ACTIVO';
@@ -845,6 +1016,23 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
         iniciar_sesion(NULL, NULL, NULL);
     END cerrar_sesion;
 
+    PROCEDURE iniciar_sesion_invitado (p_codigo_cotizacion VARCHAR2) IS
+    BEGIN
+        g_usuario := NULL; g_usuario_id := NULL; g_rol := NULL; g_cliente_id := NULL; g_personal_id := NULL;
+        IF p_codigo_cotizacion IS NULL THEN
+            DBMS_SESSION.CLEAR_IDENTIFIER;
+            RETURN;
+        END IF;
+        g_usuario := SUBSTR('invitado ' || TRIM(p_codigo_cotizacion), 1, 100);
+        g_rol     := 'INVITADO';
+        DBMS_SESSION.SET_IDENTIFIER(SUBSTR(g_usuario, 1, 64));
+    END iniciar_sesion_invitado;
+
+    FUNCTION personal_id_actual RETURN NUMBER IS
+    BEGIN
+        RETURN CASE WHEN g_rol IN ('GUIA', 'CONDUCTOR') THEN g_personal_id END;
+    END personal_id_actual;
+
     FUNCTION usuario_actual RETURN VARCHAR2 IS
     BEGIN
         RETURN NVL(g_usuario, NVL(SYS_CONTEXT('USERENV', 'CLIENT_IDENTIFIER'), USER));
@@ -862,7 +1050,8 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
 
     FUNCTION rol_auditoria RETURN VARCHAR2 IS
     BEGIN
-        RETURN CASE WHEN g_rol IN ('ADMIN', 'VENDEDOR', 'OPERADOR', 'CLIENTE') THEN g_rol ELSE 'SISTEMA' END;
+        RETURN CASE WHEN g_rol IN ('ADMIN', 'VENDEDOR', 'OPERADOR', 'GUIA', 'CONDUCTOR', 'CLIENTE', 'INVITADO')
+                    THEN g_rol ELSE 'SISTEMA' END;
     END rol_auditoria;
 
     FUNCTION cliente_actual RETURN NUMBER IS
@@ -881,18 +1070,24 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
             RETURN 0;
         END IF;
         IF v_rol = 'ADMIN' THEN
-            RETURN CASE WHEN p_accion IN ('VER_PAQUETES_PROPIOS', 'INFORMAR_PAGO') THEN 0 ELSE 1 END;
+            RETURN CASE WHEN p_accion IN ('VER_PAQUETES_PROPIOS', 'INFORMAR_PAGO', 'VER_ASIGNACIONES_PROPIAS')
+                        THEN 0 ELSE 1 END;
         END IF;
         RETURN CASE
             -- Ventas: operacion comercial; sin usuarios, auditoria ni gestion de flota/trafico
             WHEN v_rol = 'VENDEDOR' AND p_accion IN (
                  'VER_CLIENTES', 'GESTIONAR_CLIENTES', 'VER_RESERVAS', 'GESTIONAR_RESERVAS',
                  'VER_MONTOS', 'REGISTRAR_PAGO', 'GESTIONAR_CATALOGO', 'ACTUALIZAR_EJECUCION',
-                 'VER_LOGISTICA', 'VER_OPERACIONES', 'VER_RESUMEN') THEN 1
-            -- Operador: ejecucion y trafico; sin montos ni clientes
+                 'VER_LOGISTICA', 'VER_OPERACIONES', 'VER_RESUMEN',
+                 'VER_COTIZACIONES', 'GESTIONAR_COTIZACIONES') THEN 1
+            -- Operador: ejecucion y trafico; sin montos ni clientes en reservas y pagos.
+            -- (v11) Atiende las solicitudes de reserva que llegan por cotizacion.
             WHEN v_rol = 'OPERADOR' AND p_accion IN (
                  'VER_LOGISTICA', 'GESTIONAR_LOGISTICA', 'VER_OPERACIONES', 'GESTIONAR_OPERACIONES',
-                 'ACTUALIZAR_EJECUCION', 'VER_RESUMEN') THEN 1
+                 'ACTUALIZAR_EJECUCION', 'VER_RESUMEN',
+                 'VER_COTIZACIONES', 'GESTIONAR_COTIZACIONES') THEN 1
+            -- (v11) Guia y conductor: solo sus propias asignaciones
+            WHEN v_rol IN ('GUIA', 'CONDUCTOR') AND p_accion = 'VER_ASIGNACIONES_PROPIAS' THEN 1
             -- Cliente: solo sus paquetes (lectura) e informar pagos
             WHEN v_rol = 'CLIENTE' AND p_accion IN ('VER_PAQUETES_PROPIOS', 'INFORMAR_PAGO') THEN 1
             ELSE 0
@@ -966,16 +1161,37 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
     BEGIN
         exigir('GESTIONAR_USUARIOS');
         IF v_rol IS NULL OR v_rol NOT IN ('ADMIN', 'VENDEDOR', 'OPERADOR') THEN
-            RAISE_APPLICATION_ERROR(-20096, 'Rol interno no valido: ' || p_rol);
+            RAISE_APPLICATION_ERROR(-20096, CASE WHEN v_rol IN ('GUIA', 'CONDUCTOR')
+                THEN 'El rol ' || v_rol || ' requiere elegir la persona del personal (asignar_rol_campo)'
+                ELSE 'Rol interno no valido: ' || p_rol END);
         END IF;
         IF v_rol <> 'ADMIN' THEN
             validar_no_ultimo_admin(p_usuario_id);
         END IF;
-        UPDATE USUARIOS_SISTEMA SET rol = v_rol WHERE usuario_id = p_usuario_id;
+        -- Un rol de oficina no queda ligado a una ficha de personal de campo
+        UPDATE USUARIOS_SISTEMA SET rol = v_rol, personal_id = NULL WHERE usuario_id = p_usuario_id;
         IF SQL%ROWCOUNT = 0 THEN
             RAISE_APPLICATION_ERROR(-20091, 'El usuario ' || p_usuario_id || ' no existe');
         END IF;
     END asignar_rol;
+
+    PROCEDURE asignar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_personal_id NUMBER) IS
+        v_rol VARCHAR2(20) := UPPER(TRIM(p_rol));
+    BEGIN
+        exigir('GESTIONAR_USUARIOS');
+        IF v_rol IS NULL OR v_rol NOT IN ('GUIA', 'CONDUCTOR') THEN
+            RAISE_APPLICATION_ERROR(-20096, 'Rol de campo no valido: ' || p_rol);
+        END IF;
+        IF p_usuario_id = g_usuario_id THEN
+            RAISE_APPLICATION_ERROR(-20097, 'No puedes cambiar tu propio rol a uno de campo');
+        END IF;
+        validar_no_ultimo_admin(p_usuario_id);
+        -- TRG_USUARIOS_PERSONAL valida que el cargo de la persona corresponda al rol
+        UPDATE USUARIOS_SISTEMA SET rol = v_rol, personal_id = p_personal_id WHERE usuario_id = p_usuario_id;
+        IF SQL%ROWCOUNT = 0 THEN
+            RAISE_APPLICATION_ERROR(-20091, 'El usuario ' || p_usuario_id || ' no existe');
+        END IF;
+    END asignar_rol_campo;
 
     PROCEDURE revocar_acceso (p_usuario_id NUMBER) IS
     BEGIN
@@ -1054,7 +1270,10 @@ CREATE OR REPLACE PACKAGE PKG_RESERVAS AS
                         p_canal         VARCHAR2 DEFAULT 'PRESENCIAL',
                         p_descuento     NUMBER   DEFAULT 0,
                         p_observaciones VARCHAR2 DEFAULT NULL,
-                        p_lugar_recojo_id NUMBER DEFAULT NULL);   -- (v10) NULL = oficina
+                        p_lugar_recojo_id NUMBER DEFAULT NULL,    -- (v10) NULL = oficina
+                        -- (v11) Solo PKG_COTIZACIONES.confirmar: la reserva nace de una cotizacion
+                        -- SOLICITADA; se exige GESTIONAR_COTIZACIONES y que los datos coincidan.
+                        p_cotizacion_id NUMBER DEFAULT NULL);
 
     PROCEDURE recalcular (p_reserva_id NUMBER);
     -- TRUE mientras recalcular() escribe: el trigger de RESERVAS solo acepta montos desde aqui
@@ -1172,8 +1391,11 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
                         p_canal         VARCHAR2 DEFAULT 'PRESENCIAL',
                         p_descuento     NUMBER   DEFAULT 0,
                         p_observaciones VARCHAR2 DEFAULT NULL,
-                        p_lugar_recojo_id NUMBER DEFAULT NULL) IS
+                        p_lugar_recojo_id NUMBER DEFAULT NULL,
+                        p_cotizacion_id NUMBER DEFAULT NULL) IS
         v_rol    VARCHAR2(20)          := PKG_SEGURIDAD_ROLES.rol_actual;
+        v_adicionales RESERVAS.monto_adicionales%TYPE := 0;
+        v_precio      RESERVAS.precio_unitario%TYPE;      -- (v11) precio cotizado; NULL = el vigente
         v_canal  RESERVAS.canal%TYPE   := UPPER(NVL(p_canal, 'PRESENCIAL'));
         v_fecha  DATE                  := TRUNC(p_fecha);
         v_estado PAQUETES_TOUR.estado%TYPE;
@@ -1191,6 +1413,29 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
             IF NVL(p_descuento, 0) <> 0 THEN
                 RAISE_APPLICATION_ERROR(-20415, 'Los descuentos solo los aplica Ventas');
             END IF;
+            v_canal := 'WEB';
+            IF p_cotizacion_id IS NOT NULL THEN
+                RAISE_APPLICATION_ERROR(-20084, 'Las cotizaciones las confirma el personal de la agencia');
+            END IF;
+        ELSIF p_cotizacion_id IS NOT NULL THEN
+            -- (v11) Reserva que nace de una solicitud por cotizacion: la confirma quien atiende
+            -- cotizaciones (Admin, Ventas u Operador). Paquete, fecha, cantidad y recojo deben
+            -- ser los de la cotizacion; los adicionales se toman de ella (precio congelado).
+            PKG_SEGURIDAD_ROLES.exigir('GESTIONAR_COTIZACIONES');
+            BEGIN
+                SELECT monto_adicionales, precio_unitario INTO v_adicionales, v_precio
+                  FROM COTIZACIONES
+                 WHERE cotizacion_id = p_cotizacion_id
+                   AND estado = 'SOLICITADA'
+                   AND paquete_id = p_paquete_id
+                   AND fecha_viaje = TRUNC(p_fecha)
+                   AND adultos + ninos = p_cantidad
+                   AND NVL(lugar_recojo_id, -1) = NVL(p_lugar_recojo_id, -1);
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    RAISE_APPLICATION_ERROR(-20416, 'La cotizacion ' || p_cotizacion_id
+                        || ' no esta solicitada o sus datos no coinciden con la reserva');
+            END;
             v_canal := 'WEB';
         ELSE
             PKG_SEGURIDAD_ROLES.exigir('GESTIONAR_RESERVAS');
@@ -1217,8 +1462,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
                 || '. Proxima fecha disponible: '
                 || TO_CHAR(proxima_fecha_operacion(p_paquete_id, v_fecha), 'DD/MM/YYYY'));
         END IF;
-        -- La anticipacion aplica a la venta web; Ventas puede vender a ultima hora
-        IF v_canal = 'WEB' AND (v_fecha - SYSDATE) * 24 < v_horas THEN
+        -- La anticipacion aplica a la venta web; Ventas puede vender a ultima hora.
+        -- (v11) Una cotizacion la confirma el personal: tampoco aplica (se valido al solicitarla).
+        IF v_canal = 'WEB' AND p_cotizacion_id IS NULL AND (v_fecha - SYSDATE) * 24 < v_horas THEN
             RAISE_APPLICATION_ERROR(-20414, 'Este paquete se reserva por la web con al menos '
                 || v_horas || ' horas de anticipacion');
         END IF;
@@ -1228,9 +1474,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
 
         -- El trigger toma los cupos, congela el precio y garantiza la salida si corresponde
         INSERT INTO RESERVAS (cliente_id, salida_id, cantidad_pasajeros, descuento, canal, observaciones,
-                              lugar_recojo_id)
+                              lugar_recojo_id, monto_adicionales, precio_unitario)
         VALUES (p_cliente_id, v_salida, p_cantidad, NVL(p_descuento, 0), v_canal, p_observaciones,
-                p_lugar_recojo_id)
+                p_lugar_recojo_id, v_adicionales, v_precio)
         RETURNING reserva_id INTO p_reserva_id;
     EXCEPTION
         WHEN OTHERS THEN
@@ -1810,6 +2056,515 @@ END SP_REGISTRAR_CLIENTE_EXTERNO;
 /
 
 -- ============================================================================
+-- 9b. PKG_COTIZACIONES (+v11): cotizacion sin cuenta (visitante) o con cuenta
+--     (cliente), solicitud de reserva y confirmacion por el personal.
+--     * Los precios se calculan AQUI con las reglas de venta del paquete; el
+--       backend no envia montos.
+--     * El visitante opera su cotizacion con la clave (se recibe el hash SHA-256);
+--       el cliente con sesion, ademas, con su cuenta. 10 claves erradas
+--       seguidas bloquean el codigo 30 minutos.
+--     * p_servicios: 'servicio_id:cantidad' separados por coma ('3:2,5:1').
+-- ============================================================================
+CREATE OR REPLACE PACKAGE PKG_COTIZACIONES AS
+    c_vigencia_dias CONSTANT PLS_INTEGER := 7;     -- validez de una cotizacion GENERADA
+    c_max_intentos  CONSTANT PLS_INTEGER := 10;    -- claves erradas antes del bloqueo
+    c_bloqueo_min   CONSTANT PLS_INTEGER := 30;
+
+    -- Calcula sin guardar (vista previa). p_detalle: servicio_id, nombre, modalidad, cantidad,
+    -- precio_unitario, subtotal de cada servicio adicional elegido.
+    PROCEDURE calcular (p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER, p_ninos NUMBER,
+                        p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                        p_precio_unitario OUT NUMBER, p_monto_adicionales OUT NUMBER,
+                        p_cupos OUT NUMBER, p_estado_salida OUT VARCHAR2, p_faltan OUT NUMBER,
+                        p_reservable_web OUT NUMBER, p_detalle OUT SYS_REFCURSOR);
+
+    -- Guarda una cotizacion GENERADA. Si hay sesion de cliente, queda a su nombre.
+    PROCEDURE crear (p_clave_hash VARCHAR2, p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER,
+                     p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                     p_observaciones VARCHAR2, p_cotizacion_id OUT NUMBER);
+
+    -- Codigo + hash de la clave -> id de la cotizacion (ORA-20512 si no coincide; cuenta el intento)
+    FUNCTION acceder (p_codigo VARCHAR2, p_clave_hash VARCHAR2) RETURN NUMBER;
+
+    -- El visitante (clave) o el cliente duenio cambia su cotizacion GENERADA: se recalcula
+    PROCEDURE modificar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_fecha DATE, p_adultos NUMBER,
+                         p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2);
+
+    -- Acepta la cotizacion y pide reservar: GENERADA -> SOLICITADA (sin crear cuenta)
+    PROCEDURE solicitar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_nombre VARCHAR2, p_tipo_doc VARCHAR2,
+                         p_num_doc VARCHAR2, p_email VARCHAR2, p_telefono VARCHAR2, p_observaciones VARCHAR2);
+
+    -- El visitante retira su cotizacion o su solicitud
+    PROCEDURE cancelar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2);
+
+    -- Personal (GESTIONAR_COTIZACIONES): SOLICITADA -> RESERVADA (busca o crea el cliente, sin
+    -- cuenta web, y crea la reserva PENDIENTE con el precio cotizado) o -> RECHAZADA
+    PROCEDURE confirmar (p_cotizacion_id NUMBER, p_reserva_id OUT NUMBER);
+    PROCEDURE rechazar (p_cotizacion_id NUMBER, p_motivo VARCHAR2);
+
+    -- Marca VENCIDA lo que paso su vigencia o su fecha de viaje (idempotente)
+    PROCEDURE vencer;
+END PKG_COTIZACIONES;
+/
+
+CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
+
+    TYPE t_servicio IS RECORD (servicio_id NUMBER, cantidad NUMBER, precio NUMBER);
+    TYPE t_servicios IS TABLE OF t_servicio INDEX BY PLS_INTEGER;
+
+    -- Fecha, cupos y recojo con las mismas reglas que PKG_RESERVAS.reservar
+    PROCEDURE validar_viaje (p_paquete_id NUMBER, p_fecha DATE, p_cantidad NUMBER, p_lugar_recojo_id NUMBER,
+                             p_precio OUT NUMBER, p_cupos OUT NUMBER, p_estado_salida OUT VARCHAR2,
+                             p_faltan OUT NUMBER, p_reservable_web OUT NUMBER) IS
+        v_fecha  DATE := TRUNC(p_fecha);
+        v_estado PAQUETES_TOUR.estado%TYPE;
+        v_horas  PAQUETES_TOUR.anticipacion_min_horas%TYPE;
+        v_cupo   PAQUETES_TOUR.cupo_por_defecto%TYPE;
+        v_minimo PAQUETES_TOUR.minimo_pasajeros%TYPE;
+        v_es     LUGARES.es_punto_recojo%TYPE;
+        v_prox   DATE;
+    BEGIN
+        BEGIN
+            SELECT estado, precio_base, anticipacion_min_horas, cupo_por_defecto, minimo_pasajeros
+              INTO v_estado, p_precio, v_horas, v_cupo, v_minimo
+              FROM PAQUETES_TOUR WHERE paquete_id = p_paquete_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20501, 'El paquete seleccionado no existe');
+        END;
+        IF v_estado <> 'ACTIVO' THEN
+            RAISE_APPLICATION_ERROR(-20501, 'Este paquete no esta a la venta por el momento');
+        END IF;
+        IF p_cantidad IS NULL OR p_cantidad < 1 OR p_cantidad > 99 THEN
+            RAISE_APPLICATION_ERROR(-20502, 'La cantidad de pasajeros debe estar entre 1 y 99');
+        END IF;
+        IF v_fecha IS NULL OR v_fecha < TRUNC(SYSDATE) THEN
+            RAISE_APPLICATION_ERROR(-20503, 'Elige una fecha de viaje de hoy en adelante');
+        END IF;
+        IF v_fecha > TRUNC(SYSDATE) + 365 THEN
+            RAISE_APPLICATION_ERROR(-20503, 'Cotizamos viajes hasta con un anio de anticipacion');
+        END IF;
+        IF PKG_RESERVAS.opera_en(p_paquete_id, v_fecha) = 0 THEN
+            v_prox := PKG_RESERVAS.proxima_fecha_operacion(p_paquete_id, v_fecha);
+            RAISE_APPLICATION_ERROR(-20504, 'El paquete no opera el ' || TO_CHAR(v_fecha, 'DD/MM/YYYY')
+                || CASE WHEN v_prox IS NOT NULL THEN '. Proxima fecha disponible: ' || TO_CHAR(v_prox, 'DD/MM/YYYY') END);
+        END IF;
+
+        -- Salida vigente de ese dia (si no existe, se crearia con el cupo por defecto)
+        BEGIN
+            SELECT estado, cupos_disponibles, GREATEST(v_minimo - (cupos_maximos - cupos_disponibles), 0)
+              INTO p_estado_salida, p_cupos, p_faltan
+              FROM SALIDAS_PROGRAMADAS
+             WHERE paquete_id = p_paquete_id AND fecha_inicio = v_fecha AND estado <> 'CANCELADA';
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                p_estado_salida := 'SIN_SALIDA';
+                p_cupos         := v_cupo;
+                p_faltan        := v_minimo;
+        END;
+        IF p_estado_salida NOT IN ('SIN_SALIDA', 'PROGRAMADA', 'GARANTIZADA') THEN
+            RAISE_APPLICATION_ERROR(-20505, 'La salida del ' || TO_CHAR(v_fecha, 'DD/MM/YYYY') || ' ya no recibe reservas');
+        END IF;
+        IF p_cantidad > p_cupos THEN
+            RAISE_APPLICATION_ERROR(-20506, 'Para el ' || TO_CHAR(v_fecha, 'DD/MM/YYYY') || ' quedan ' || p_cupos
+                || ' cupo(s). Reduce los pasajeros o elige otra fecha');
+        END IF;
+        p_faltan := GREATEST(p_faltan - p_cantidad, 0);
+
+        IF p_lugar_recojo_id IS NOT NULL THEN
+            BEGIN
+                SELECT es_punto_recojo INTO v_es FROM LUGARES WHERE lugar_id = p_lugar_recojo_id;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN v_es := 0;
+            END;
+            IF v_es = 0 THEN
+                RAISE_APPLICATION_ERROR(-20507, 'El punto de recojo elegido no esta disponible');
+            END IF;
+        END IF;
+
+        p_reservable_web := CASE WHEN (v_fecha - SYSDATE) * 24 >= v_horas THEN 1 ELSE 0 END;
+    END validar_viaje;
+
+    -- '3:2,5:1' -> servicios validados (activos, del paquete o generales, cantidad segun modalidad)
+    FUNCTION leer_servicios (p_servicios VARCHAR2, p_paquete_id NUMBER, p_cantidad NUMBER) RETURN t_servicios IS
+        v_lista t_servicios;
+        v_item  VARCHAR2(40);
+        v_id    NUMBER;
+        v_cant  NUMBER;
+        v_srv   SERVICIOS_ADICIONALES%ROWTYPE;
+        i       PLS_INTEGER := 1;
+    BEGIN
+        IF TRIM(p_servicios) IS NULL THEN
+            RETURN v_lista;
+        END IF;
+        IF NOT REGEXP_LIKE(REPLACE(p_servicios, ' '), '^[0-9]{1,10}:[0-9]{1,3}(,[0-9]{1,10}:[0-9]{1,3})*$') THEN
+            RAISE_APPLICATION_ERROR(-20508, 'Lista de servicios adicionales no valida');
+        END IF;
+        LOOP
+            v_item := REGEXP_SUBSTR(REPLACE(p_servicios, ' '), '[^,]+', 1, i);
+            EXIT WHEN v_item IS NULL;
+            v_id   := TO_NUMBER(SUBSTR(v_item, 1, INSTR(v_item, ':') - 1));
+            v_cant := TO_NUMBER(SUBSTR(v_item, INSTR(v_item, ':') + 1));
+            BEGIN
+                SELECT * INTO v_srv FROM SERVICIOS_ADICIONALES WHERE servicio_id = v_id;
+            EXCEPTION
+                WHEN NO_DATA_FOUND THEN
+                    RAISE_APPLICATION_ERROR(-20508, 'El servicio adicional ' || v_id || ' no existe');
+            END;
+            IF v_srv.estado <> 'ACTIVO' OR (v_srv.paquete_id IS NOT NULL AND v_srv.paquete_id <> p_paquete_id) THEN
+                RAISE_APPLICATION_ERROR(-20508, 'El servicio "' || v_srv.nombre || '" no esta disponible para este paquete');
+            END IF;
+            IF v_srv.modalidad = 'POR_GRUPO' AND v_cant <> 1 THEN
+                RAISE_APPLICATION_ERROR(-20509, 'El servicio "' || v_srv.nombre || '" se cobra una vez por grupo');
+            END IF;
+            IF v_srv.modalidad = 'POR_PERSONA' AND (v_cant < 1 OR v_cant > p_cantidad) THEN
+                RAISE_APPLICATION_ERROR(-20509, 'El servicio "' || v_srv.nombre || '" se toma para 1 a '
+                    || p_cantidad || ' pasajero(s)');
+            END IF;
+            FOR k IN 1 .. v_lista.COUNT LOOP
+                IF v_lista(k).servicio_id = v_id THEN
+                    RAISE_APPLICATION_ERROR(-20508, 'El servicio "' || v_srv.nombre || '" esta repetido');
+                END IF;
+            END LOOP;
+            v_lista(v_lista.COUNT + 1).servicio_id := v_id;
+            v_lista(v_lista.COUNT).cantidad := v_cant;
+            v_lista(v_lista.COUNT).precio   := v_srv.precio;
+            i := i + 1;
+        END LOOP;
+        RETURN v_lista;
+    END leer_servicios;
+
+    FUNCTION total_servicios (p_lista t_servicios) RETURN NUMBER IS
+        v_total NUMBER := 0;
+    BEGIN
+        FOR k IN 1 .. p_lista.COUNT LOOP
+            v_total := v_total + p_lista(k).cantidad * p_lista(k).precio;
+        END LOOP;
+        RETURN v_total;
+    END total_servicios;
+
+    PROCEDURE guardar_servicios (p_cotizacion_id NUMBER, p_lista t_servicios) IS
+    BEGIN
+        DELETE FROM COTIZACION_SERVICIOS WHERE cotizacion_id = p_cotizacion_id;
+        FOR k IN 1 .. p_lista.COUNT LOOP
+            INSERT INTO COTIZACION_SERVICIOS (cotizacion_id, servicio_id, cantidad, precio_unitario)
+            VALUES (p_cotizacion_id, p_lista(k).servicio_id, p_lista(k).cantidad, p_lista(k).precio);
+        END LOOP;
+    END guardar_servicios;
+
+    FUNCTION vigencia (p_fecha DATE) RETURN TIMESTAMP IS
+    BEGIN
+        -- 7 dias, pero nunca mas alla del fin del dia del viaje
+        RETURN LEAST(CAST(SYSTIMESTAMP AS TIMESTAMP) + NUMTODSINTERVAL(c_vigencia_dias, 'DAY'),
+                     CAST(TRUNC(p_fecha) + 1 AS TIMESTAMP));
+    END vigencia;
+
+    -- Bloquea la fila y verifica que quien opera sea su duenio (clave o cliente con sesion)
+    FUNCTION leer_propia (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2) RETURN COTIZACIONES%ROWTYPE IS
+        v COTIZACIONES%ROWTYPE;
+    BEGIN
+        BEGIN
+            SELECT * INTO v FROM COTIZACIONES WHERE cotizacion_id = p_cotizacion_id FOR UPDATE;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20510, 'La cotizacion no existe');
+        END;
+        -- Comparaciones explicitas: un NULL nunca debe contar como acceso permitido
+        IF p_clave_hash IS NOT NULL AND v.clave_hash = LOWER(p_clave_hash) THEN
+            RETURN v;
+        END IF;
+        IF PKG_SEGURIDAD_ROLES.rol_actual = 'CLIENTE' AND v.cliente_id IS NOT NULL
+           AND v.cliente_id = PKG_SEGURIDAD_ROLES.cliente_actual THEN
+            RETURN v;
+        END IF;
+        RAISE_APPLICATION_ERROR(-20512, 'Codigo o clave de la cotizacion incorrectos');
+    END leer_propia;
+
+    -- Deja el rastro del visitante en AUDITORIA (si no hay sesion de personal o de cliente)
+    PROCEDURE marcar_invitado (p_codigo VARCHAR2) IS
+    BEGIN
+        IF PKG_SEGURIDAD_ROLES.rol_actual IS NULL OR PKG_SEGURIDAD_ROLES.rol_actual = 'INVITADO' THEN
+            PKG_SEGURIDAD_ROLES.iniciar_sesion_invitado(p_codigo);
+        END IF;
+    END marcar_invitado;
+
+    PROCEDURE registrar_intento (p_cotizacion_id NUMBER, p_correcto BOOLEAN) IS
+        PRAGMA AUTONOMOUS_TRANSACTION;
+    BEGIN
+        IF p_correcto THEN
+            UPDATE COTIZACIONES SET intentos_fallidos = 0, bloqueada_hasta = NULL
+             WHERE cotizacion_id = p_cotizacion_id AND (intentos_fallidos > 0 OR bloqueada_hasta IS NOT NULL);
+        ELSE
+            UPDATE COTIZACIONES
+               SET intentos_fallidos = CASE WHEN intentos_fallidos + 1 >= c_max_intentos THEN 0 ELSE intentos_fallidos + 1 END,
+                   bloqueada_hasta   = CASE WHEN intentos_fallidos + 1 >= c_max_intentos
+                                            THEN SYSTIMESTAMP + NUMTODSINTERVAL(c_bloqueo_min, 'MINUTE') END
+             WHERE cotizacion_id = p_cotizacion_id;
+        END IF;
+        COMMIT;
+    END registrar_intento;
+
+    PROCEDURE calcular (p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER, p_ninos NUMBER,
+                        p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                        p_precio_unitario OUT NUMBER, p_monto_adicionales OUT NUMBER,
+                        p_cupos OUT NUMBER, p_estado_salida OUT VARCHAR2, p_faltan OUT NUMBER,
+                        p_reservable_web OUT NUMBER, p_detalle OUT SYS_REFCURSOR) IS
+        v_lista t_servicios;
+        v_ids   VARCHAR2(4000);
+    BEGIN
+        IF p_adultos IS NULL OR p_adultos < 1 THEN
+            RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
+        END IF;
+        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+                      p_precio_unitario, p_cupos, p_estado_salida, p_faltan, p_reservable_web);
+        v_lista := leer_servicios(p_servicios, p_paquete_id, p_adultos + NVL(p_ninos, 0));
+        p_monto_adicionales := total_servicios(v_lista);
+        -- Detalle en el mismo orden en que se eligieron
+        FOR k IN 1 .. v_lista.COUNT LOOP
+            v_ids := v_ids || ',' || v_lista(k).servicio_id || ':' || v_lista(k).cantidad || ':' || k;
+        END LOOP;
+        OPEN p_detalle FOR
+            SELECT s.servicio_id, s.nombre, s.modalidad, x.cantidad, s.precio AS precio_unitario,
+                   x.cantidad * s.precio AS subtotal
+              FROM (SELECT TO_NUMBER(REGEXP_SUBSTR(item, '[^:]+', 1, 1)) AS servicio_id,
+                           TO_NUMBER(REGEXP_SUBSTR(item, '[^:]+', 1, 2)) AS cantidad,
+                           TO_NUMBER(REGEXP_SUBSTR(item, '[^:]+', 1, 3)) AS orden
+                      FROM (SELECT REGEXP_SUBSTR(v_ids, '[^,]+', 1, LEVEL) AS item FROM DUAL
+                            CONNECT BY LEVEL <= REGEXP_COUNT(v_ids, ','))) x
+              JOIN SERVICIOS_ADICIONALES s ON s.servicio_id = x.servicio_id
+             ORDER BY x.orden;
+    END calcular;
+
+    PROCEDURE crear (p_clave_hash VARCHAR2, p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER,
+                     p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                     p_observaciones VARCHAR2, p_cotizacion_id OUT NUMBER) IS
+        v_precio NUMBER; v_cupos NUMBER; v_estado VARCHAR2(20); v_faltan NUMBER; v_web NUMBER;
+        v_lista  t_servicios;
+        v_n      NUMBER;
+        v_codigo COTIZACIONES.codigo_cotizacion%TYPE;
+        v_cliente NUMBER;
+        v_adic   NUMBER;
+        v_vence  TIMESTAMP;
+    BEGIN
+        IF p_clave_hash IS NULL OR NOT REGEXP_LIKE(LOWER(p_clave_hash), '^[0-9a-f]{64}$') THEN
+            RAISE_APPLICATION_ERROR(-20511, 'Clave de acceso no valida');
+        END IF;
+        IF p_adultos IS NULL OR p_adultos < 1 THEN
+            RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
+        END IF;
+        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+                      v_precio, v_cupos, v_estado, v_faltan, v_web);
+        v_lista := leer_servicios(p_servicios, p_paquete_id, p_adultos + NVL(p_ninos, 0));
+        v_adic  := total_servicios(v_lista);   -- (funciones privadas: no se usan dentro de SQL)
+        v_vence := vigencia(p_fecha);
+
+        v_n := SEQ_CODIGO_COTIZACION.NEXTVAL;
+        v_codigo := 'KC-' || TO_CHAR(SYSDATE, 'YYYY') || '-' || LPAD(v_n, GREATEST(6, LENGTH(v_n)), '0');
+        IF PKG_SEGURIDAD_ROLES.rol_actual = 'CLIENTE' THEN
+            v_cliente := PKG_SEGURIDAD_ROLES.cliente_actual;
+        ELSE
+            marcar_invitado(v_codigo);
+        END IF;
+
+        INSERT INTO COTIZACIONES (codigo_cotizacion, clave_hash, paquete_id, fecha_viaje, adultos, ninos,
+                                  lugar_recojo_id, precio_unitario, monto_adicionales, estado, vence_en,
+                                  observaciones, cliente_id)
+        VALUES (v_codigo, LOWER(p_clave_hash), p_paquete_id, TRUNC(p_fecha), p_adultos, NVL(p_ninos, 0),
+                p_lugar_recojo_id, v_precio, v_adic, 'GENERADA', v_vence,
+                SUBSTR(TRIM(p_observaciones), 1, 500), v_cliente)
+        RETURNING cotizacion_id INTO p_cotizacion_id;
+        guardar_servicios(p_cotizacion_id, v_lista);
+    END crear;
+
+    FUNCTION acceder (p_codigo VARCHAR2, p_clave_hash VARCHAR2) RETURN NUMBER IS
+        v_id      NUMBER;
+        v_hash    COTIZACIONES.clave_hash%TYPE;
+        v_bloqueo COTIZACIONES.bloqueada_hasta%TYPE;
+    BEGIN
+        BEGIN
+            SELECT cotizacion_id, clave_hash, bloqueada_hasta INTO v_id, v_hash, v_bloqueo
+              FROM COTIZACIONES WHERE codigo_cotizacion = UPPER(TRIM(p_codigo));
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                -- Mismo mensaje que una clave errada: no revela que codigos existen
+                RAISE_APPLICATION_ERROR(-20512, 'Codigo o clave de la cotizacion incorrectos');
+        END;
+        IF v_bloqueo > SYSTIMESTAMP THEN
+            RAISE_APPLICATION_ERROR(-20513, 'Demasiados intentos con este codigo. Intenta de nuevo despues de las '
+                || TO_CHAR(v_bloqueo, 'HH24:MI'));
+        END IF;
+        IF p_clave_hash IS NULL OR v_hash <> LOWER(p_clave_hash) THEN
+            registrar_intento(v_id, FALSE);
+            RAISE_APPLICATION_ERROR(-20512, 'Codigo o clave de la cotizacion incorrectos');
+        END IF;
+        registrar_intento(v_id, TRUE);
+        marcar_invitado(UPPER(TRIM(p_codigo)));
+        RETURN v_id;
+    END acceder;
+
+    PROCEDURE modificar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_fecha DATE, p_adultos NUMBER,
+                         p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2) IS
+        v        COTIZACIONES%ROWTYPE;
+        v_precio NUMBER; v_cupos NUMBER; v_estado VARCHAR2(20); v_faltan NUMBER; v_web NUMBER;
+        v_lista  t_servicios;
+        v_adic   NUMBER;
+        v_vence  TIMESTAMP;
+    BEGIN
+        vencer;
+        v := leer_propia(p_cotizacion_id, p_clave_hash);
+        IF v.estado <> 'GENERADA' THEN
+            RAISE_APPLICATION_ERROR(-20514, 'La cotizacion esta ' || v.estado || ': ya no se puede modificar');
+        END IF;
+        IF p_adultos IS NULL OR p_adultos < 1 THEN
+            RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
+        END IF;
+        marcar_invitado(v.codigo_cotizacion);
+        validar_viaje(v.paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+                      v_precio, v_cupos, v_estado, v_faltan, v_web);
+        v_lista := leer_servicios(p_servicios, v.paquete_id, p_adultos + NVL(p_ninos, 0));
+        v_adic  := total_servicios(v_lista);
+        v_vence := vigencia(p_fecha);
+        -- Una cotizacion modificada se vuelve a calcular con el precio vigente y renueva su vigencia
+        UPDATE COTIZACIONES
+           SET fecha_viaje = TRUNC(p_fecha), adultos = p_adultos, ninos = NVL(p_ninos, 0),
+               lugar_recojo_id = p_lugar_recojo_id, precio_unitario = v_precio,
+               monto_adicionales = v_adic, vence_en = v_vence,
+               observaciones = SUBSTR(TRIM(p_observaciones), 1, 500)
+         WHERE cotizacion_id = p_cotizacion_id;
+        guardar_servicios(p_cotizacion_id, v_lista);
+    END modificar;
+
+    PROCEDURE solicitar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_nombre VARCHAR2, p_tipo_doc VARCHAR2,
+                         p_num_doc VARCHAR2, p_email VARCHAR2, p_telefono VARCHAR2, p_observaciones VARCHAR2) IS
+        v        COTIZACIONES%ROWTYPE;
+        v_tipo   VARCHAR2(10) := UPPER(TRIM(p_tipo_doc));
+        v_doc    VARCHAR2(20) := UPPER(TRIM(p_num_doc));
+        v_precio NUMBER; v_cupos NUMBER; v_estado VARCHAR2(20); v_faltan NUMBER; v_web NUMBER;
+    BEGIN
+        vencer;
+        v := leer_propia(p_cotizacion_id, p_clave_hash);
+        IF v.estado <> 'GENERADA' THEN
+            RAISE_APPLICATION_ERROR(-20514, 'La cotizacion esta ' || v.estado || ': ya no se puede solicitar');
+        END IF;
+        -- Mismas reglas de formato que CLIENTES: asi la reserva podra crear su ficha de cliente
+        IF TRIM(p_nombre) IS NULL OR LENGTH(TRIM(p_nombre)) > 150 THEN
+            RAISE_APPLICATION_ERROR(-20515, 'Ingresa el nombre completo de quien reserva');
+        END IF;
+        IF v_tipo NOT IN ('DNI', 'CE', 'PASAPORTE')
+           OR (v_tipo = 'DNI' AND NOT REGEXP_LIKE(v_doc, '^[0-9]{8}$'))
+           OR (v_tipo IN ('CE', 'PASAPORTE') AND NOT REGEXP_LIKE(v_doc, '^[A-Z0-9]{6,20}$')) THEN
+            RAISE_APPLICATION_ERROR(-20515, 'Documento no valido: DNI de 8 digitos, CE o pasaporte de 6 a 20 letras o numeros');
+        END IF;
+        IF p_email IS NULL OR NOT REGEXP_LIKE(TRIM(p_email), '^[^@ ]+@[^@ ]+\.[^@ ]+$') OR LENGTH(TRIM(p_email)) > 120 THEN
+            RAISE_APPLICATION_ERROR(-20515, 'Ingresa un correo valido para coordinar la reserva');
+        END IF;
+        IF p_telefono IS NULL OR NOT REGEXP_LIKE(TRIM(p_telefono), '^\+?[0-9 ()-]{7,20}$') THEN
+            RAISE_APPLICATION_ERROR(-20515, 'Ingresa un telefono valido (7 a 20 caracteres: numeros, espacios, + ( ) -)');
+        END IF;
+        marcar_invitado(v.codigo_cotizacion);
+        -- La disponibilidad se revisa otra vez: pudo cambiar desde que se cotizo
+        validar_viaje(v.paquete_id, v.fecha_viaje, v.adultos + v.ninos, v.lugar_recojo_id,
+                      v_precio, v_cupos, v_estado, v_faltan, v_web);
+        UPDATE COTIZACIONES
+           SET estado = 'SOLICITADA', fecha_solicitud = SYSTIMESTAMP,
+               nombre_contacto = TRIM(p_nombre), tipo_documento = v_tipo, numero_documento = v_doc,
+               email = LOWER(TRIM(p_email)), telefono = TRIM(p_telefono),
+               observaciones = NVL(SUBSTR(TRIM(p_observaciones), 1, 500), observaciones)
+         WHERE cotizacion_id = p_cotizacion_id;
+    END solicitar;
+
+    PROCEDURE cancelar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2) IS
+        v COTIZACIONES%ROWTYPE;
+    BEGIN
+        v := leer_propia(p_cotizacion_id, p_clave_hash);
+        IF v.estado NOT IN ('GENERADA', 'SOLICITADA') THEN
+            RAISE_APPLICATION_ERROR(-20514, 'La cotizacion esta ' || v.estado || ': ya no se puede cancelar');
+        END IF;
+        marcar_invitado(v.codigo_cotizacion);
+        UPDATE COTIZACIONES SET estado = 'CANCELADA' WHERE cotizacion_id = p_cotizacion_id;
+    END cancelar;
+
+    PROCEDURE confirmar (p_cotizacion_id NUMBER, p_reserva_id OUT NUMBER) IS
+        v     COTIZACIONES%ROWTYPE;
+        v_cli CLIENTES.cliente_id%TYPE;
+    BEGIN
+        PKG_SEGURIDAD_ROLES.exigir('GESTIONAR_COTIZACIONES');
+        vencer;
+        BEGIN
+            SELECT * INTO v FROM COTIZACIONES WHERE cotizacion_id = p_cotizacion_id FOR UPDATE;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20510, 'La cotizacion no existe');
+        END;
+        IF v.estado <> 'SOLICITADA' THEN
+            RAISE_APPLICATION_ERROR(-20514, 'Solo se confirma una cotizacion SOLICITADA (esta ' || v.estado || ')');
+        END IF;
+
+        -- Cliente: el de la cuenta que cotizo o uno existente con ese documento, correo o telefono.
+        -- Si no hay, se crea su ficha SIN cuenta web (como los clientes que registra Ventas).
+        v_cli := v.cliente_id;
+        IF v_cli IS NULL THEN
+            SELECT MIN(cliente_id) INTO v_cli FROM CLIENTES
+             WHERE tipo_documento = v.tipo_documento AND numero_documento = v.numero_documento;
+        END IF;
+        IF v_cli IS NULL THEN
+            SELECT MIN(cliente_id) INTO v_cli FROM CLIENTES WHERE email = LOWER(v.email);
+        END IF;
+        IF v_cli IS NULL THEN
+            SELECT MIN(cliente_id) INTO v_cli FROM CLIENTES
+             WHERE TRANSLATE(telefono, '0+-() ', '0') = TRANSLATE(v.telefono, '0+-() ', '0');
+        END IF;
+        IF v_cli IS NULL THEN
+            INSERT INTO CLIENTES (nombre_completo, tipo_documento, numero_documento, email, telefono)
+            VALUES (v.nombre_contacto, v.tipo_documento, v.numero_documento, v.email, v.telefono)
+            RETURNING cliente_id INTO v_cli;
+        END IF;
+
+        PKG_RESERVAS.reservar(v_cli, v.paquete_id, v.fecha_viaje, v.adultos + v.ninos, p_reserva_id, 'WEB', 0,
+                              SUBSTR('Cotizacion ' || v.codigo_cotizacion
+                                     || CASE WHEN v.ninos > 0 THEN ' (' || v.adultos || ' adulto(s), ' || v.ninos || ' nino(s))' END
+                                     || CASE WHEN v.observaciones IS NOT NULL THEN '. ' || v.observaciones END, 1, 500),
+                              v.lugar_recojo_id, p_cotizacion_id);
+
+        UPDATE COTIZACIONES
+           SET estado = 'RESERVADA', reserva_id = p_reserva_id, cliente_id = v_cli,
+               atendida_por_id = PKG_SEGURIDAD_ROLES.usuario_id_actual, fecha_atencion = SYSTIMESTAMP
+         WHERE cotizacion_id = p_cotizacion_id;
+    END confirmar;
+
+    PROCEDURE rechazar (p_cotizacion_id NUMBER, p_motivo VARCHAR2) IS
+        v_estado COTIZACIONES.estado%TYPE;
+    BEGIN
+        PKG_SEGURIDAD_ROLES.exigir('GESTIONAR_COTIZACIONES');
+        IF TRIM(p_motivo) IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20516, 'Indica el motivo del rechazo para informar al cliente');
+        END IF;
+        BEGIN
+            SELECT estado INTO v_estado FROM COTIZACIONES WHERE cotizacion_id = p_cotizacion_id FOR UPDATE;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20510, 'La cotizacion no existe');
+        END;
+        IF v_estado <> 'SOLICITADA' THEN
+            RAISE_APPLICATION_ERROR(-20514, 'Solo se rechaza una cotizacion SOLICITADA (esta ' || v_estado || ')');
+        END IF;
+        UPDATE COTIZACIONES
+           SET estado = 'RECHAZADA', motivo_rechazo = SUBSTR(TRIM(p_motivo), 1, 300),
+               atendida_por_id = PKG_SEGURIDAD_ROLES.usuario_id_actual, fecha_atencion = SYSTIMESTAMP
+         WHERE cotizacion_id = p_cotizacion_id;
+    END rechazar;
+
+    PROCEDURE vencer IS
+    BEGIN
+        UPDATE COTIZACIONES
+           SET estado = 'VENCIDA'
+         WHERE (estado = 'GENERADA' AND vence_en < SYSTIMESTAMP)
+            OR (estado IN ('GENERADA', 'SOLICITADA') AND fecha_viaje < TRUNC(SYSDATE));
+    END vencer;
+END PKG_COTIZACIONES;
+/
+
+-- ============================================================================
 -- 10. TRIGGERS
 -- ============================================================================
 
@@ -1895,6 +2650,28 @@ BEGIN
 END;
 /
 
+-- (v11) Servicios adicionales y cotizaciones
+CREATE OR REPLACE TRIGGER TRG_SERVICIOS_ADICIONALES_AUD BEFORE INSERT OR UPDATE ON SERVICIOS_ADICIONALES FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        :NEW.creado_por := PKG_SEGURIDAD_ROLES.usuario_actual; :NEW.fecha_creacion := SYSTIMESTAMP;
+    ELSE
+        :NEW.creado_por := :OLD.creado_por; :NEW.fecha_creacion := :OLD.fecha_creacion;
+        :NEW.modificado_por := PKG_SEGURIDAD_ROLES.usuario_actual; :NEW.fecha_modificacion := SYSTIMESTAMP;
+    END IF;
+END;
+/
+CREATE OR REPLACE TRIGGER TRG_COTIZACIONES_AUD BEFORE INSERT OR UPDATE ON COTIZACIONES FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        :NEW.creado_por := PKG_SEGURIDAD_ROLES.usuario_actual; :NEW.fecha_creacion := SYSTIMESTAMP;
+    ELSE
+        :NEW.creado_por := :OLD.creado_por; :NEW.fecha_creacion := :OLD.fecha_creacion;
+        :NEW.modificado_por := PKG_SEGURIDAD_ROLES.usuario_actual; :NEW.fecha_modificacion := SYSTIMESTAMP;
+    END IF;
+END;
+/
+
 -- 10.2 Normalizacion de CLIENTES (permite UNIQUE simples sobre email y documento)
 CREATE OR REPLACE TRIGGER TRG_CLIENTES_NORMALIZAR
 BEFORE INSERT OR UPDATE ON CLIENTES
@@ -1925,6 +2702,64 @@ BEGIN
             PKG_SEGURIDAD_ROLES.auditar('ACTUALIZAR', 'USUARIO', :NEW.usuario_id, 'ESTADO', :OLD.estado, :NEW.estado,
                 'Cambio de acceso de ' || :NEW.username);
         END IF;
+    END IF;
+END;
+/
+
+-- 10.3b (v11) Cuenta del personal de campo: el rol GUIA exige una persona con cargo de
+--       funcion GUIADO; CONDUCTOR, uno de funcion TRANSPORTE. Nunca una persona INACTIVA.
+CREATE OR REPLACE TRIGGER TRG_USUARIOS_PERSONAL
+BEFORE INSERT OR UPDATE OF rol, personal_id, estado ON USUARIOS_SISTEMA
+FOR EACH ROW
+DECLARE
+    v_funcion CARGOS.funcion%TYPE;
+    v_estado  PERSONAL.estado%TYPE;
+    v_nombre  PERSONAL.nombre_completo%TYPE;
+BEGIN
+    IF :NEW.personal_id IS NULL THEN
+        RETURN;
+    END IF;
+    BEGIN
+        SELECT c.funcion, p.estado, p.nombre_completo INTO v_funcion, v_estado, v_nombre
+          FROM PERSONAL p JOIN CARGOS c ON c.codigo = p.cargo
+         WHERE p.personal_id = :NEW.personal_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20098, 'La persona ' || :NEW.personal_id || ' no existe en el personal');
+    END;
+    IF (:NEW.rol = 'GUIA' AND v_funcion <> 'GUIADO') OR (:NEW.rol = 'CONDUCTOR' AND v_funcion <> 'TRANSPORTE') THEN
+        RAISE_APPLICATION_ERROR(-20098, v_nombre || ' no tiene un cargo de '
+            || CASE :NEW.rol WHEN 'GUIA' THEN 'guiado' ELSE 'transporte' END || ' para el rol ' || :NEW.rol);
+    END IF;
+    IF v_estado = 'INACTIVO' AND :NEW.estado = 'ACTIVO' THEN
+        RAISE_APPLICATION_ERROR(-20098, v_nombre || ' esta INACTIVO en el personal: no puede tener una cuenta activa');
+    END IF;
+END;
+/
+
+-- 10.3c (v11) Una persona con cuenta activa no cambia a un cargo de otra funcion
+--       ni queda INACTIVA sin antes desactivar o cambiar su cuenta.
+CREATE OR REPLACE TRIGGER TRG_PERSONAL_CUENTA
+BEFORE UPDATE OF cargo, estado ON PERSONAL
+FOR EACH ROW
+DECLARE
+    v_rol     USUARIOS_SISTEMA.rol%TYPE;
+    v_funcion CARGOS.funcion%TYPE;
+BEGIN
+    BEGIN
+        SELECT rol INTO v_rol FROM USUARIOS_SISTEMA WHERE personal_id = :NEW.personal_id AND estado = 'ACTIVO';
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN;
+    END;
+    SELECT funcion INTO v_funcion FROM CARGOS WHERE codigo = :NEW.cargo;
+    IF (v_rol = 'GUIA' AND v_funcion <> 'GUIADO') OR (v_rol = 'CONDUCTOR' AND v_funcion <> 'TRANSPORTE') THEN
+        RAISE_APPLICATION_ERROR(-20099, :NEW.nombre_completo || ' tiene una cuenta ' || v_rol
+            || ': cambia o desactiva su cuenta antes de cambiarle el cargo');
+    END IF;
+    IF :NEW.estado = 'INACTIVO' AND :OLD.estado <> 'INACTIVO' THEN
+        RAISE_APPLICATION_ERROR(-20099, :NEW.nombre_completo || ' tiene una cuenta ' || v_rol
+            || ' activa: desactivala antes de dar de baja a la persona');
     END IF;
 END;
 /
@@ -2349,8 +3184,9 @@ BEGIN
         :NEW.usuario_anula_id := NULL;
         tomar_cupos(:NEW.salida_id, :NEW.cantidad_pasajeros);
     ELSE
-        :NEW.codigo_reserva  := :OLD.codigo_reserva;
-        :NEW.precio_unitario := :OLD.precio_unitario;          -- precio congelado
+        :NEW.codigo_reserva    := :OLD.codigo_reserva;
+        :NEW.precio_unitario   := :OLD.precio_unitario;        -- precio congelado
+        :NEW.monto_adicionales := :OLD.monto_adicionales;      -- (v11) adicionales congelados
         -- Un UPDATE de fila completa (Hibernate) no puede pisar montos con valores viejos
         IF NOT PKG_RESERVAS.en_recalculo THEN
             :NEW.monto_pagado := :OLD.monto_pagado;
@@ -2742,6 +3578,88 @@ COMPOUND TRIGGER
 END TRG_OPERACIONES_VALIDAR;
 /
 
+-- 10.12 (v11) Cotizaciones: codigo, campos inmutables y ciclo de vida
+--       GENERADA -> SOLICITADA | CANCELADA | VENCIDA
+--       SOLICITADA -> RESERVADA | RECHAZADA | CANCELADA | VENCIDA ; el resto es final.
+--       Viaje, pasajeros y montos solo cambian mientras esta GENERADA (PKG_COTIZACIONES.modificar).
+CREATE OR REPLACE TRIGGER TRG_COTIZACIONES_BIU
+BEFORE INSERT OR UPDATE ON COTIZACIONES
+FOR EACH ROW
+DECLARE
+    v_n NUMBER;
+BEGIN
+    IF INSERTING THEN
+        IF :NEW.codigo_cotizacion IS NULL THEN
+            v_n := SEQ_CODIGO_COTIZACION.NEXTVAL;
+            :NEW.codigo_cotizacion := 'KC-' || TO_CHAR(SYSDATE, 'YYYY') || '-' || LPAD(v_n, GREATEST(6, LENGTH(v_n)), '0');
+        END IF;
+        IF NVL(:NEW.estado, 'GENERADA') <> 'GENERADA' THEN
+            RAISE_APPLICATION_ERROR(-20520, 'Toda cotizacion nace GENERADA');
+        END IF;
+        :NEW.reserva_id := NULL; :NEW.atendida_por_id := NULL; :NEW.fecha_atencion := NULL;
+        :NEW.intentos_fallidos := 0; :NEW.bloqueada_hasta := NULL;
+        RETURN;
+    END IF;
+
+    :NEW.codigo_cotizacion := :OLD.codigo_cotizacion;
+    :NEW.clave_hash        := :OLD.clave_hash;
+    :NEW.paquete_id        := :OLD.paquete_id;
+
+    IF :NEW.estado <> :OLD.estado THEN
+        IF NOT ((:OLD.estado = 'GENERADA'   AND :NEW.estado IN ('SOLICITADA', 'CANCELADA', 'VENCIDA'))
+             OR (:OLD.estado = 'SOLICITADA' AND :NEW.estado IN ('RESERVADA', 'RECHAZADA', 'CANCELADA', 'VENCIDA'))) THEN
+            RAISE_APPLICATION_ERROR(-20521, 'Transicion de cotizacion no permitida: ' || :OLD.estado || ' -> ' || :NEW.estado);
+        END IF;
+    END IF;
+
+    IF (:NEW.fecha_viaje <> :OLD.fecha_viaje OR :NEW.adultos <> :OLD.adultos OR :NEW.ninos <> :OLD.ninos
+        OR NVL(:NEW.lugar_recojo_id, -1) <> NVL(:OLD.lugar_recojo_id, -1)
+        OR :NEW.precio_unitario <> :OLD.precio_unitario OR :NEW.monto_adicionales <> :OLD.monto_adicionales)
+       AND NOT (:OLD.estado = 'GENERADA' AND :NEW.estado = 'GENERADA') THEN
+        RAISE_APPLICATION_ERROR(-20522, 'La cotizacion esta ' || :OLD.estado || ': su viaje y precio ya no cambian');
+    END IF;
+
+    -- Contacto: se fija al solicitar y no se cambia despues
+    IF :OLD.estado <> 'GENERADA' THEN
+        :NEW.nombre_contacto := :OLD.nombre_contacto; :NEW.tipo_documento := :OLD.tipo_documento;
+        :NEW.numero_documento := :OLD.numero_documento; :NEW.email := :OLD.email; :NEW.telefono := :OLD.telefono;
+        :NEW.fecha_solicitud := :OLD.fecha_solicitud;
+    END IF;
+END;
+/
+
+-- 10.13 (v11) Historial de la cotizacion en AUDITORIA (quien: personal, cliente o
+--       "invitado KC-..."): alta, cambios del viaje y cada cambio de estado
+CREATE OR REPLACE TRIGGER TRG_COTIZACIONES_AUDITORIA
+AFTER INSERT OR UPDATE OF estado, fecha_viaje, adultos, ninos, lugar_recojo_id, monto_adicionales ON COTIZACIONES
+FOR EACH ROW
+BEGIN
+    IF INSERTING THEN
+        PKG_SEGURIDAD_ROLES.auditar('CREAR', 'COTIZACION', :NEW.cotizacion_id, 'ESTADO', NULL, :NEW.estado,
+            'Cotizacion ' || :NEW.codigo_cotizacion || ': ' || (:NEW.adultos + :NEW.ninos) || ' pax el '
+            || TO_CHAR(:NEW.fecha_viaje, 'DD/MM/YYYY') || ', total S/ '
+            || TO_CHAR((:NEW.adultos + :NEW.ninos) * :NEW.precio_unitario + :NEW.monto_adicionales, 'FM999999990.00'));
+        RETURN;
+    END IF;
+    IF :NEW.fecha_viaje <> :OLD.fecha_viaje OR :NEW.adultos <> :OLD.adultos OR :NEW.ninos <> :OLD.ninos
+       OR NVL(:NEW.lugar_recojo_id, -1) <> NVL(:OLD.lugar_recojo_id, -1)
+       OR :NEW.monto_adicionales <> :OLD.monto_adicionales THEN
+        PKG_SEGURIDAD_ROLES.auditar('ACTUALIZAR', 'COTIZACION', :NEW.cotizacion_id, 'VIAJE',
+            TO_CHAR(:OLD.fecha_viaje, 'DD/MM/YYYY') || ' ' || (:OLD.adultos + :OLD.ninos) || ' pax S/ '
+                || TO_CHAR((:OLD.adultos + :OLD.ninos) * :OLD.precio_unitario + :OLD.monto_adicionales, 'FM999999990.00'),
+            TO_CHAR(:NEW.fecha_viaje, 'DD/MM/YYYY') || ' ' || (:NEW.adultos + :NEW.ninos) || ' pax S/ '
+                || TO_CHAR((:NEW.adultos + :NEW.ninos) * :NEW.precio_unitario + :NEW.monto_adicionales, 'FM999999990.00'),
+            'Cotizacion ' || :NEW.codigo_cotizacion || ' modificada');
+    END IF;
+    IF :NEW.estado <> :OLD.estado THEN
+        PKG_SEGURIDAD_ROLES.auditar('ACTUALIZAR', 'COTIZACION', :NEW.cotizacion_id, 'ESTADO', :OLD.estado, :NEW.estado,
+            'Cotizacion ' || :NEW.codigo_cotizacion
+            || CASE :NEW.estado WHEN 'RESERVADA' THEN ' -> reserva ' || :NEW.reserva_id
+                                WHEN 'RECHAZADA' THEN ': ' || :NEW.motivo_rechazo END);
+    END IF;
+END;
+/
+
 -- ============================================================================
 -- 11. VISTAS
 --     Las funciones de sesion van en (SELECT ... FROM DUAL): Oracle las evalua
@@ -2935,6 +3853,8 @@ SELECT s.salida_id,
   JOIN PASAJEROS_RESERVA pr ON pr.reserva_id = r.reserva_id
   LEFT JOIN LUGARES l       ON l.lugar_id   = r.lugar_recojo_id
  WHERE (SELECT PKG_SEGURIDAD_ROLES.puede('VER_LOGISTICA') FROM DUAL) = 1
+    -- (v11) El guia ve el manifiesto de SUS salidas
+    OR s.guia_id = (SELECT PKG_SEGURIDAD_ROLES.personal_id_actual FROM DUAL)
 WITH READ ONLY;
 
 -- 11.6 VW_ALERTAS_OPERACION (+v9): salidas de los proximos 15 dias con lo que falta
@@ -3006,7 +3926,65 @@ SELECT s.salida_id,
   LEFT JOIN LUGARES l        ON l.lugar_id   = r.lugar_recojo_id
  WHERE r.estado_reserva IN ('PENDIENTE', 'CONFIRMADA')
    AND s.estado IN ('PROGRAMADA', 'GARANTIZADA')
-   AND (SELECT PKG_SEGURIDAD_ROLES.puede('VER_LOGISTICA') FROM DUAL) = 1
+   AND ((SELECT PKG_SEGURIDAD_ROLES.puede('VER_LOGISTICA') FROM DUAL) = 1
+        -- (v11) El guia de la salida y el conductor de alguno de sus traslados
+        OR s.guia_id = (SELECT PKG_SEGURIDAD_ROLES.personal_id_actual FROM DUAL)
+        OR EXISTS (SELECT 1 FROM OPERACIONES_TRANSPORTE o
+                    WHERE o.salida_id = s.salida_id AND o.estado <> 'CANCELADO'
+                      AND o.conductor_id = (SELECT PKG_SEGURIDAD_ROLES.personal_id_actual FROM DUAL)))
+WITH READ ONLY;
+
+-- 11.8 (v11) VW_MIS_SALIDAS_GUIA: las salidas asignadas al guia con sesion (nada mas).
+--      Sin montos ni datos del cliente; pasajeros = cupos vendidos.
+CREATE OR REPLACE VIEW VW_MIS_SALIDAS_GUIA AS
+SELECT s.salida_id,
+       p.paquete_id,
+       p.nombre                              AS paquete_nombre,
+       p.dias,
+       p.noches,
+       p.hora_inicio,
+       s.fecha_inicio,
+       s.fecha_fin,
+       s.estado,
+       s.cupos_maximos - s.cupos_disponibles AS pasajeros,
+       (SELECT COUNT(*) FROM OPERACIONES_TRANSPORTE o
+         WHERE o.salida_id = s.salida_id AND o.estado <> 'CANCELADO') AS traslados
+  FROM SALIDAS_PROGRAMADAS s
+  JOIN PAQUETES_TOUR p ON p.paquete_id = s.paquete_id
+ WHERE s.estado <> 'CANCELADA'
+   AND (SELECT PKG_SEGURIDAD_ROLES.rol_actual FROM DUAL) = 'GUIA'
+   AND s.guia_id = (SELECT PKG_SEGURIDAD_ROLES.personal_id_actual FROM DUAL)
+WITH READ ONLY;
+
+-- 11.9 (v11) VW_MIS_TRASLADOS_CONDUCTOR: los traslados asignados al conductor con sesion,
+--      con vehiculo, ruta y paquete (sin montos ni datos del cliente).
+CREATE OR REPLACE VIEW VW_MIS_TRASLADOS_CONDUCTOR AS
+SELECT o.operacion_id,
+       o.codigo_operacion,
+       o.salida_id,
+       p.nombre         AS paquete_nombre,
+       o.hora_salida,
+       o.hora_llegada,
+       o.estado,
+       o.pax_programados,
+       lo.nombre        AS origen,
+       lo.direccion     AS origen_direccion,
+       ld.nombre        AS destino,
+       ld.direccion     AS destino_direccion,
+       v.placa,
+       v.tipo_vehiculo,
+       v.marca_modelo,
+       v.capacidad_pax,
+       o.observaciones
+  FROM OPERACIONES_TRANSPORTE o
+  JOIN LUGARES lo                ON lo.lugar_id   = o.origen_id
+  JOIN LUGARES ld                ON ld.lugar_id   = o.destino_id
+  LEFT JOIN VEHICULOS v          ON v.vehiculo_id = o.vehiculo_id
+  LEFT JOIN SALIDAS_PROGRAMADAS s ON s.salida_id  = o.salida_id
+  LEFT JOIN PAQUETES_TOUR p      ON p.paquete_id  = s.paquete_id
+ WHERE o.estado <> 'CANCELADO'
+   AND (SELECT PKG_SEGURIDAD_ROLES.rol_actual FROM DUAL) = 'CONDUCTOR'
+   AND o.conductor_id = (SELECT PKG_SEGURIDAD_ROLES.personal_id_actual FROM DUAL)
 WITH READ ONLY;
 
 -- ============================================================================
@@ -3062,6 +4040,18 @@ GRANT SELECT ON KAMPU_BD.VW_PAQUETES_CLIENTE         TO ROL_CLIENTE;
 GRANT SELECT ON KAMPU_BD.VW_ALERTAS_OPERACION        TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR;
 GRANT SELECT ON KAMPU_BD.VW_RECOJOS_SALIDA           TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR;
 GRANT SELECT ON KAMPU_BD.SOLICITUDES_ANULACION       TO ROL_ADMIN, ROL_VENTAS;
+-- (v11) Personal de campo: solo sus asignaciones (las vistas filtran por la sesion)
+GRANT SELECT ON KAMPU_BD.VW_MIS_SALIDAS_GUIA         TO ROL_CAMPO;
+GRANT SELECT ON KAMPU_BD.VW_MIS_TRASLADOS_CONDUCTOR  TO ROL_CAMPO;
+GRANT SELECT ON KAMPU_BD.VW_MANIFIESTO_SALIDA        TO ROL_CAMPO;
+GRANT SELECT ON KAMPU_BD.VW_RECOJOS_SALIDA           TO ROL_CAMPO;
+GRANT SELECT ON KAMPU_BD.PAQUETE_ITINERARIO          TO ROL_CAMPO;
+
+-- (v11) Servicios adicionales (catalogo publico) y cotizaciones
+GRANT SELECT         ON KAMPU_BD.SERVICIOS_ADICIONALES TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE;
+GRANT INSERT, UPDATE ON KAMPU_BD.SERVICIOS_ADICIONALES TO ROL_ADMIN, ROL_VENTAS;
+GRANT SELECT         ON KAMPU_BD.COTIZACIONES          TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR;
+GRANT SELECT         ON KAMPU_BD.COTIZACION_SERVICIOS  TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR;
 
 -- PL/SQL (el cliente NO recibe PKG_SEGURIDAD_ROLES: entra solo por PKG_GESTION_PAQUETES_CLIENTE)
 GRANT EXECUTE ON KAMPU_BD.PKG_SEGURIDAD_ROLES          TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR;
@@ -3069,11 +4059,14 @@ GRANT EXECUTE ON KAMPU_BD.PKG_RESERVAS                 TO ROL_ADMIN, ROL_VENTAS;
 GRANT EXECUTE ON KAMPU_BD.FN_ESTADO_PAGO_PAQUETE       TO ROL_ADMIN, ROL_VENTAS;
 GRANT EXECUTE ON KAMPU_BD.PKG_GESTION_PAQUETES_CLIENTE TO ROL_ADMIN, ROL_VENTAS, ROL_CLIENTE;
 GRANT EXECUTE ON KAMPU_BD.SP_REGISTRAR_CLIENTE_EXTERNO TO ROL_CLIENTE;
+-- (v11) Toda la cotizacion pasa por el paquete (el visitante entra por el canal web, como el registro)
+GRANT EXECUTE ON KAMPU_BD.PKG_COTIZACIONES             TO ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE;
+GRANT EXECUTE ON KAMPU_BD.PKG_SEGURIDAD_ROLES          TO ROL_CAMPO;
 
 -- Roles a usuarios de base de datos
 -- (adaptado) Solo roles: la conexion del backend recibe los cuatro; el nivel de cada
 -- peticion lo fija PKG_SEGURIDAD_ROLES (personal) o PKG_GESTION_PAQUETES_CLIENTE (cliente).
-GRANT ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE TO KAMPU_APP;
+GRANT ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR, ROL_CLIENTE, ROL_CAMPO TO KAMPU_APP;
 
 -- ============================================================================
 -- 13. DATOS SEMILLA
@@ -3183,6 +4176,36 @@ VALUES ('Chazuta Ancestral 2D/1N', 'Ceramica y cascadas de Chazuta (fuera de tem
 UPDATE PAQUETES_TOUR SET hora_inicio = '10:00' WHERE nombre = 'Tarapoto Clasico 3D/2N';
 UPDATE PAQUETES_TOUR SET hora_inicio = '08:30' WHERE nombre = 'Laguna Azul Full Day';
 UPDATE PAQUETES_TOUR SET hora_inicio = '09:00' WHERE nombre = 'Ruta del Alto Mayo 4D/3N';
+-- (v11) Lo que incluye cada paquete (uno por linea)
+UPDATE PAQUETES_TOUR SET servicios_incluidos = 'Traslado aeropuerto - hotel - aeropuerto' || CHR(10)
+    || '2 noches de hotel con desayuno' || CHR(10) || 'Guia de turismo' || CHR(10) || 'Entradas a Lamas y Ahuashiyacu'
+ WHERE nombre = 'Tarapoto Clasico 3D/2N';
+UPDATE PAQUETES_TOUR SET servicios_incluidos = 'Movilidad ida y vuelta desde Tarapoto' || CHR(10)
+    || 'Paseo en bote' || CHR(10) || 'Almuerzo campestre' || CHR(10) || 'Guia de turismo'
+ WHERE nombre = 'Laguna Azul Full Day';
+UPDATE PAQUETES_TOUR SET servicios_incluidos = 'Transporte Tarapoto - Moyobamba' || CHR(10)
+    || '3 noches de hotel con desayuno' || CHR(10) || 'Guia de turismo' || CHR(10) || 'Entrada a Tingana y orquidearios'
+ WHERE nombre = 'Ruta del Alto Mayo 4D/3N';
+
+-- (v11) Servicios adicionales: generales (paquete_id NULL) y propios de un paquete
+INSERT INTO SERVICIOS_ADICIONALES (nombre, descripcion, precio, modalidad)
+VALUES ('Seguro de viaje', 'Asistencia medica y de accidentes durante el tour.', 25.00, 'POR_PERSONA');
+INSERT INTO SERVICIOS_ADICIONALES (nombre, descripcion, precio, modalidad)
+VALUES ('Fotografia profesional', 'Fotografo durante el tour y album digital del grupo.', 150.00, 'POR_GRUPO');
+INSERT INTO SERVICIOS_ADICIONALES (paquete_id, nombre, descripcion, precio, modalidad)
+SELECT paquete_id, 'Noche adicional de hotel', 'Una noche mas en el hotel del paquete, con desayuno.', 120.00, 'POR_PERSONA'
+  FROM PAQUETES_TOUR WHERE nombre = 'Tarapoto Clasico 3D/2N';
+INSERT INTO SERVICIOS_ADICIONALES (paquete_id, nombre, descripcion, precio, modalidad)
+SELECT paquete_id, 'Traslado privado', 'Movilidad solo para el grupo en los traslados del aeropuerto.', 80.00, 'POR_GRUPO'
+  FROM PAQUETES_TOUR WHERE nombre = 'Tarapoto Clasico 3D/2N';
+INSERT INTO SERVICIOS_ADICIONALES (paquete_id, nombre, descripcion, precio, modalidad)
+SELECT paquete_id, 'Kayak en la laguna', 'Una hora de kayak con chaleco salvavidas.', 35.00, 'POR_PERSONA'
+  FROM PAQUETES_TOUR WHERE nombre = 'Laguna Azul Full Day';
+INSERT INTO SERVICIOS_ADICIONALES (paquete_id, nombre, descripcion, precio, modalidad)
+SELECT paquete_id, 'Banos termales de San Mateo', 'Entrada y traslado a los banos termales.', 20.00, 'POR_PERSONA'
+  FROM PAQUETES_TOUR WHERE nombre = 'Ruta del Alto Mayo 4D/3N';
+INSERT INTO SERVICIOS_ADICIONALES (nombre, descripcion, precio, modalidad, estado)
+VALUES ('Cena show', 'Fuera de temporada.', 60.00, 'POR_PERSONA', 'INACTIVO');
 
 DECLARE
     PROCEDURE dia (p_paquete VARCHAR2, p_dia NUMBER, p_orden NUMBER, p_lugar VARCHAR2,
@@ -3439,6 +4462,56 @@ BEGIN
      WHERE fecha_inicio = TRUNC(SYSDATE) - 10
        AND paquete_id = (SELECT paquete_id FROM PAQUETES_TOUR WHERE nombre = 'Tarapoto Clasico 3D/2N');
 
+    PKG_SEGURIDAD_ROLES.cerrar_sesion;
+END;
+/
+COMMIT;
+
+-- 13.8 (v11) Personal de campo con cuenta (opcional): la guia Rosa y el conductor Luis.
+--      Carlos (guia) y el conductor del proveedor siguen sin cuenta: no la necesitan.
+BEGIN
+    PKG_SEGURIDAD_ROLES.iniciar_sesion('kadmin', 'ADMIN');
+    INSERT INTO USUARIOS_SISTEMA (username, nombre_completo, email, password_hash, rol, personal_id)
+    SELECT 'kguia', nombre_completo, 'guia@kamputours.example.com',
+           '$2a$10$NSTkq.4KGGMW2n/pGRKbheNC7yGh9AozUxoSQvv3ToKBgelPb8IIe', 'GUIA', personal_id
+      FROM PERSONAL WHERE numero_documento = '45123678';
+    INSERT INTO USUARIOS_SISTEMA (username, nombre_completo, email, password_hash, rol, personal_id)
+    SELECT 'kconductor', nombre_completo, 'conductor@kamputours.example.com',
+           '$2a$10$NSTkq.4KGGMW2n/pGRKbheNC7yGh9AozUxoSQvv3ToKBgelPb8IIe', 'CONDUCTOR', personal_id
+      FROM PERSONAL WHERE numero_documento = '44345890';
+    PKG_SEGURIDAD_ROLES.cerrar_sesion;
+END;
+/
+
+-- 13.9 (v11) Cotizaciones de visitantes SIN cuenta (claves de demostracion):
+--      KC-...-000001 GENERADA   clave DEMO-2026-KAMP (Laguna Azul, 2 adultos y 1 nino, kayak y seguro)
+--      KC-...-000002 SOLICITADA clave SOLI-2026-KAMP (Tarapoto, pide reservar: la atiende el personal)
+--      La clave se guarda como SHA-256 del texto sin guiones y en mayusculas.
+DECLARE
+    v_id      NUMBER;
+    v_laguna  NUMBER;
+    v_tarapoto NUMBER;
+    v_kayak   NUMBER;
+    v_seguro  NUMBER;
+    v_privado NUMBER;
+    v_hash1   VARCHAR2(64);
+    v_hash2   VARCHAR2(64);
+BEGIN
+    SELECT paquete_id INTO v_laguna   FROM PAQUETES_TOUR WHERE nombre = 'Laguna Azul Full Day';
+    SELECT paquete_id INTO v_tarapoto FROM PAQUETES_TOUR WHERE nombre = 'Tarapoto Clasico 3D/2N';
+    SELECT servicio_id INTO v_kayak   FROM SERVICIOS_ADICIONALES WHERE nombre = 'Kayak en la laguna';
+    SELECT servicio_id INTO v_seguro  FROM SERVICIOS_ADICIONALES WHERE nombre = 'Seguro de viaje';
+    SELECT servicio_id INTO v_privado FROM SERVICIOS_ADICIONALES WHERE nombre = 'Traslado privado';
+    SELECT LOWER(RAWTOHEX(STANDARD_HASH('DEMO2026KAMP', 'SHA256'))),
+           LOWER(RAWTOHEX(STANDARD_HASH('SOLI2026KAMP', 'SHA256'))) INTO v_hash1, v_hash2 FROM DUAL;
+
+    PKG_SEGURIDAD_ROLES.cerrar_sesion;   -- visitante: sin sesion
+    PKG_COTIZACIONES.crear(v_hash1, v_laguna, TRUNC(SYSDATE) + 6, 2, 1, NULL,
+                           v_kayak || ':3,' || v_seguro || ':3', 'Viajamos con un nino de 8 anios', v_id);
+    PKG_SEGURIDAD_ROLES.cerrar_sesion;
+    PKG_COTIZACIONES.crear(v_hash2, v_tarapoto, TRUNC(SYSDATE) + 10, 2, 0, NULL, v_privado || ':1', NULL, v_id);
+    PKG_COTIZACIONES.solicitar(v_id, v_hash2, 'Lucia Ramirez Soto', 'DNI', '70112233',
+                               'lucia.ramirez@example.com', '+51 987 222 333', 'Llegamos en el vuelo de la manana');
     PKG_SEGURIDAD_ROLES.cerrar_sesion;
 END;
 /
@@ -3730,11 +4803,202 @@ BEGIN
         THEN '[OK] Reserva sin punto elegido -> se cita al cliente en la oficina'
         ELSE '[FALLA] La reserva no quedo con la oficina como punto de encuentro' END);
 
+    -- Cotizaciones (v11) -----------------------------------------------------
+    DECLARE
+        v_hash   VARCHAR2(64);
+        v_cot    NUMBER;
+        v_total  NUMBER;
+        v_srv    NUMBER;
+        v_kayak  NUMBER;
+        v_grupo  NUMBER;
+        v_otro   NUMBER;
+        v_res    NUMBER;
+        v_n      NUMBER;
+        v_pw     CLIENTES.password_hash%TYPE;
+        v_est    VARCHAR2(20);
+        v_monto  NUMBER;
+        v_codigo COTIZACIONES.codigo_cotizacion%TYPE;
+    BEGIN
+        SELECT LOWER(RAWTOHEX(STANDARD_HASH('PRUEBA2026XX', 'SHA256'))) INTO v_hash FROM DUAL;
+        SELECT servicio_id INTO v_srv   FROM SERVICIOS_ADICIONALES WHERE nombre = 'Seguro de viaje';
+        SELECT servicio_id INTO v_kayak FROM SERVICIOS_ADICIONALES WHERE nombre = 'Kayak en la laguna';
+        SELECT servicio_id INTO v_grupo FROM SERVICIOS_ADICIONALES WHERE nombre = 'Fotografia profesional';
+        SELECT servicio_id INTO v_otro  FROM SERVICIOS_ADICIONALES WHERE nombre = 'Noche adicional de hotel';
+
+        PKG_SEGURIDAD_ROLES.cerrar_sesion;
+        PKG_COTIZACIONES.crear(v_hash, v_laguna, TRUNC(SYSDATE) + 5, 2, 1, NULL,
+                               v_srv || ':3,' || v_grupo || ':1', NULL, v_cot);
+        SELECT monto_total INTO v_total FROM COTIZACIONES WHERE cotizacion_id = v_cot;
+        -- 3 x 120 + 3 x 25 + 150 = 585
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_total = 585
+            THEN '[OK] Visitante sin cuenta cotiza: la BD calcula S/ 585 (paquete + adicionales)'
+            ELSE '[FALLA] Total de cotizacion inesperado: ' || v_total END);
+
+        SELECT codigo_cotizacion INTO v_codigo FROM COTIZACIONES WHERE cotizacion_id = v_cot;
+        BEGIN
+            v_n := PKG_COTIZACIONES.acceder(v_codigo, RPAD('a', 64, 'a'));
+            resultado('Abrir una cotizacion con otra clave', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Abrir una cotizacion con otra clave', SQLERRM);
+        END;
+        BEGIN
+            PKG_COTIZACIONES.modificar(v_cot, NULL, TRUNC(SYSDATE) + 5, 1, 0, NULL, NULL, NULL);
+            resultado('Modificar una cotizacion sin clave', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Modificar una cotizacion sin clave', SQLERRM);
+        END;
+        BEGIN
+            PKG_COTIZACIONES.modificar(v_cot, v_hash, TRUNC(SYSDATE) + 5, 2, 0, NULL, v_grupo || ':2', NULL);
+            resultado('Servicio por grupo con cantidad 2', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Servicio por grupo con cantidad 2', SQLERRM);
+        END;
+        BEGIN
+            PKG_COTIZACIONES.modificar(v_cot, v_hash, TRUNC(SYSDATE) + 5, 2, 0, NULL, v_otro || ':1', NULL);
+            resultado('Servicio adicional de otro paquete', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Servicio adicional de otro paquete', SQLERRM);
+        END;
+        BEGIN
+            PKG_COTIZACIONES.modificar(v_cot, v_hash, TRUNC(SYSDATE) + 5, 40, 0, NULL, NULL, NULL);
+            resultado('Cotizar mas pasajeros que cupos', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Cotizar mas pasajeros que cupos', SQLERRM);
+        END;
+
+        PKG_COTIZACIONES.modificar(v_cot, v_hash, TRUNC(SYSDATE) + 6, 3, 0, NULL, v_kayak || ':2', 'Cambio de fecha');
+        SELECT monto_total INTO v_total FROM COTIZACIONES WHERE cotizacion_id = v_cot;
+        SELECT COUNT(*) INTO v_n FROM AUDITORIA WHERE entidad = 'COTIZACION' AND entidad_id = v_cot
+           AND campo = 'VIAJE' AND rol_usuario = 'INVITADO';
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_total = 430 AND v_n = 1
+            THEN '[OK] Modificar recalcula (3 x 120 + 2 x 35 = 430) y queda en el historial como INVITADO'
+            ELSE '[FALLA] Modificacion: total ' || v_total || ', historial ' || v_n END);
+
+        BEGIN
+            PKG_COTIZACIONES.solicitar(v_cot, v_hash, 'Ana Torres', 'DNI', '1234', 'ana@example.com', '987654321', NULL);
+            resultado('Solicitar reserva con un DNI invalido', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Solicitar reserva con un DNI invalido', SQLERRM);
+        END;
+        PKG_COTIZACIONES.solicitar(v_cot, v_hash, 'Ana Torres Paz', 'DNI', '71234567', 'ana.torres@example.com',
+                                   '+51 999 111 222', NULL);
+        BEGIN
+            PKG_COTIZACIONES.modificar(v_cot, v_hash, TRUNC(SYSDATE) + 6, 1, 0, NULL, NULL, NULL);
+            resultado('Modificar una cotizacion ya solicitada', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Modificar una cotizacion ya solicitada', SQLERRM);
+        END;
+        BEGIN
+            PKG_COTIZACIONES.confirmar(v_cot, v_res);
+            resultado('Visitante (sin sesion) confirma su propia reserva', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Visitante (sin sesion) confirma su propia reserva', SQLERRM);
+        END;
+        PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente('valeria.huaman@example.com', v_cli);
+        BEGIN
+            PKG_RESERVAS.reservar(v_cli, v_laguna, TRUNC(SYSDATE) + 6, 3, v_res, p_cotizacion_id => v_cot);
+            resultado('Cliente usa una cotizacion ajena para reservar', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Cliente usa una cotizacion ajena para reservar', SQLERRM);
+        END;
+
+        -- El operador atiende la solicitud: crea el cliente (sin cuenta web) y la reserva PENDIENTE
+        PKG_SEGURIDAD_ROLES.iniciar_sesion('koperador', 'OPERADOR');
+        PKG_COTIZACIONES.confirmar(v_cot, v_res);
+        SELECT r.estado_reserva, r.monto_total, c.password_hash INTO v_est, v_monto, v_pw
+          FROM RESERVAS r JOIN CLIENTES c ON c.cliente_id = r.cliente_id WHERE r.reserva_id = v_res;
+        SELECT estado INTO v_txt FROM COTIZACIONES WHERE cotizacion_id = v_cot;
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_est = 'PENDIENTE' AND v_monto = 430 AND v_pw IS NULL AND v_txt = 'RESERVADA'
+            THEN '[OK] Operador confirma la solicitud -> reserva PENDIENTE de S/ 430 y cliente SIN cuenta web'
+            ELSE '[FALLA] Confirmacion: ' || v_est || ' ' || v_monto || ' ' || v_txt
+                 || CASE WHEN v_pw IS NOT NULL THEN ' (se creo una cuenta)' END END);
+        BEGIN
+            UPDATE COTIZACIONES SET estado = 'GENERADA' WHERE cotizacion_id = v_cot;
+            resultado('Volver una cotizacion RESERVADA a GENERADA', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Volver una cotizacion RESERVADA a GENERADA', SQLERRM);
+        END;
+        BEGIN
+            UPDATE RESERVAS SET monto_adicionales = 0 WHERE reserva_id = v_res;
+            SELECT monto_total INTO v_monto FROM RESERVAS WHERE reserva_id = v_res;
+            DBMS_OUTPUT.PUT_LINE(CASE WHEN v_monto = 430
+                THEN '[OK] Los adicionales de la reserva quedan congelados'
+                ELSE '[FALLA] Se pudieron borrar los adicionales de la reserva' END);
+        END;
+
+        -- Personal de campo (v11) ---------------------------------------------
+        PKG_SEGURIDAD_ROLES.iniciar_sesion('kguia', 'GUIA');
+        SELECT COUNT(*) INTO v_n FROM VW_MIS_SALIDAS_GUIA;
+        SELECT COUNT(*) INTO v_r FROM VW_MIS_SALIDAS_GUIA v JOIN SALIDAS_PROGRAMADAS s ON s.salida_id = v.salida_id
+         WHERE s.guia_id <> (SELECT personal_id FROM PERSONAL WHERE numero_documento = '45123678');
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_n > 0 AND v_r = 0
+            THEN '[OK] La guia ve solo sus salidas (' || v_n || ')'
+            ELSE '[FALLA] Salidas de la guia: ' || v_n || ', ajenas: ' || v_r END);
+        SELECT COUNT(*) INTO v_n FROM VW_MIS_TRASLADOS_CONDUCTOR;
+        SELECT COUNT(*) INTO v_r FROM VW_RESUMEN_PAQUETES_POR_ROL;
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_n = 0 AND PKG_SEGURIDAD_ROLES.puede('VER_RESERVAS') = 0
+                                       AND PKG_SEGURIDAD_ROLES.puede('VER_MONTOS') = 0
+            THEN '[OK] La guia no ve traslados de conductor, reservas ni montos'
+            ELSE '[FALLA] La guia ve informacion que no le corresponde' END);
+        BEGIN
+            PKG_COTIZACIONES.rechazar(v_cot, 'prueba');
+            resultado('Guia atiende cotizaciones', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Guia atiende cotizaciones', SQLERRM);
+        END;
+        PKG_SEGURIDAD_ROLES.iniciar_sesion('kconductor', 'CONDUCTOR');
+        SELECT COUNT(*) INTO v_n FROM VW_MIS_TRASLADOS_CONDUCTOR;
+        SELECT COUNT(*) INTO v_r FROM VW_MIS_TRASLADOS_CONDUCTOR v JOIN OPERACIONES_TRANSPORTE o ON o.operacion_id = v.operacion_id
+         WHERE o.conductor_id <> (SELECT personal_id FROM PERSONAL WHERE numero_documento = '44345890');
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN v_n > 0 AND v_r = 0
+            THEN '[OK] El conductor ve solo sus traslados (' || v_n || ')'
+            ELSE '[FALLA] Traslados del conductor: ' || v_n || ', ajenos: ' || v_r END);
+
+        PKG_SEGURIDAD_ROLES.iniciar_sesion('kadmin', 'ADMIN');
+        BEGIN
+            -- Carlos es GUIA: no puede tener una cuenta de CONDUCTOR
+            UPDATE USUARIOS_SISTEMA SET personal_id = (SELECT personal_id FROM PERSONAL WHERE numero_documento = '46234789')
+             WHERE username = 'kconductor';
+            resultado('Cuenta CONDUCTOR ligada a un guia', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Cuenta CONDUCTOR ligada a un guia', SQLERRM);
+        END;
+        BEGIN
+            UPDATE PERSONAL SET cargo = 'CONDUCTOR', num_licencia = 'Q45123678', cat_licencia = 'A-IIb',
+                                venc_licencia = ADD_MONTHS(TRUNC(SYSDATE), 12)
+             WHERE numero_documento = '45123678';
+            resultado('Cambiar de cargo a una guia con cuenta activa', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Cambiar de cargo a una guia con cuenta activa', SQLERRM);
+        END;
+        BEGIN
+            INSERT INTO USUARIOS_SISTEMA (username, nombre_completo, email, password_hash, rol)
+            VALUES ('kguia2', 'Sin ficha', 'sinficha@example.com', RPAD('$2a$10$', 60, 'x'), 'GUIA');
+            resultado('Cuenta GUIA sin ficha de personal', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Cuenta GUIA sin ficha de personal', SQLERRM);
+        END;
+    END;
+
     PKG_SEGURIDAD_ROLES.cerrar_sesion;
     ROLLBACK TO pruebas;
 END;
 /
 ROLLBACK;
+
+-- (v11) Bloqueo por claves erradas (lo registra una transaccion autonoma: se prueba
+--       sobre la cotizacion de demostracion y luego se le quita el bloqueo)
+DECLARE
+    v_id NUMBER;
+BEGIN
+    FOR i IN 1 .. 10 LOOP
+        BEGIN
+            v_id := PKG_COTIZACIONES.acceder('KC-' || TO_CHAR(SYSDATE, 'YYYY') || '-000001', RPAD('b', 64, 'b'));
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+    END LOOP;
+    DECLARE
+        v_hash VARCHAR2(64);
+    BEGIN
+        SELECT LOWER(RAWTOHEX(STANDARD_HASH('DEMO2026KAMP', 'SHA256'))) INTO v_hash FROM DUAL;
+        v_id := PKG_COTIZACIONES.acceder('KC-' || TO_CHAR(SYSDATE, 'YYYY') || '-000001', v_hash);
+        DBMS_OUTPUT.PUT_LINE('[FALLA] Tras 10 claves erradas el codigo no se bloqueo');
+    EXCEPTION WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE(CASE WHEN SQLCODE = -20513
+            THEN '[OK] 10 claves erradas bloquean el codigo -> ' || SQLERRM
+            ELSE '[FALLA] Error inesperado: ' || SQLERRM END);
+    END;
+END;
+/
+UPDATE COTIZACIONES SET intentos_fallidos = 0, bloqueada_hasta = NULL
+ WHERE codigo_cotizacion = 'KC-' || TO_CHAR(SYSDATE, 'YYYY') || '-000001';
+COMMIT;
 
 -- ============================================================================
 -- 15. CONSULTAS DE VERIFICACION

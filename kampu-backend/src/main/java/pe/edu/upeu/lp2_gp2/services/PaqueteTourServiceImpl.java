@@ -69,7 +69,7 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_tours_v10.sql no otorga DELETE sobre PAQUETES_TOUR: se retira de la venta (INACTIVO)
+        // kampu_tours_v11.sql no otorga DELETE sobre PAQUETES_TOUR: se retira de la venta (INACTIVO)
         PaqueteTour p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El paquete ya está INACTIVO.");
         p.setEstado("INACTIVO");
@@ -110,5 +110,7 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         if (dto.diasOperacion() != null) p.setDiasOperacion(dto.diasOperacion());
         if (dto.anticipacionMinHoras() != null) p.setAnticipacionMinHoras(dto.anticipacionMinHoras());
         if (dto.horaInicio() != null) p.setHoraInicio(dto.horaInicio());
+        p.setServiciosIncluidos(dto.serviciosIncluidos() == null || dto.serviciosIncluidos().isBlank() ? null
+                : dto.serviciosIncluidos().trim().replace("\r\n", "\n"));
     }
 }

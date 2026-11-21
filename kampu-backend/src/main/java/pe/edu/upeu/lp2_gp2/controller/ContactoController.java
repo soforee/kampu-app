@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
  * KAMPU_CONTACTO_INSTAGRAM y KAMPU_CONTACTO_FACEBOOK (sin redes no aparece su botón).
  */
 @RestController
+@Publico
 @RequestMapping("/api/v1/contacto")
 public class ContactoController {
     public record ContactoDTO(String email, String telefono, String ciudad, String instagram, String facebook) {}

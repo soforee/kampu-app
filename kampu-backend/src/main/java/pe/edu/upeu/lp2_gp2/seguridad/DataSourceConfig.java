@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import javax.sql.DataSource;
 
 /**
- * Una sola conexión, KAMPU_APP, con los cuatro roles de kampu_tours_v10.sql
+ * Una sola conexión, KAMPU_APP, con los cuatro roles de kampu_tours_v11.sql
  * (ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR y ROL_CLIENTE). Trabaja sobre el esquema
  * dueño KAMPU_BD (ALTER SESSION SET CURRENT_SCHEMA). El nivel de cada petición lo
  * fija PKG_SEGURIDAD_ROLES (SesionOracleDataSource) y, en el portal,

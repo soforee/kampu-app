@@ -79,7 +79,7 @@ public class PersonalServiceImpl implements IPersonalService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_tours_v10.sql no otorga DELETE sobre PERSONAL: la baja es lógica (estado INACTIVO)
+        // kampu_tours_v11.sql no otorga DELETE sobre PERSONAL: la baja es lógica (estado INACTIVO)
         Personal p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("La persona ya está INACTIVA.");
         p.setEstado("INACTIVO");

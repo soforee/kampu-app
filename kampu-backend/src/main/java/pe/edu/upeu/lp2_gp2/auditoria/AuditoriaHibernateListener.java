@@ -41,7 +41,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
 
     // Ya auditados por Oracle o que son bitácoras en sí mismas
     private static final Set<Class<?>> EXCLUIDAS = Set.of(Auditoria.class, HistorialOperacion.class);
-    // Campos que ya audita kampu_tours_v10.sql (TRG_AUDITORIA_ESTADO_PAQUETE, TRG_VALIDAR_PAGO_PAQUETE,
+    // Campos que ya audita kampu_tours_v11.sql (TRG_AUDITORIA_ESTADO_PAQUETE, TRG_VALIDAR_PAGO_PAQUETE,
     // TRG_USUARIOS_AUDITORIA) y datos técnicos del login que no son cambios de negocio
     private static final Set<String> CAMPOS_TRIGGER = Set.of("RESERVA.ESTADO_RESERVA", "RESERVA.ESTADO_PAGO",
             "PAGO.ESTADO_TRANSACCION", "USUARIO.ROL", "USUARIO.ESTADO", "USUARIO.INTENTOS_FALLIDOS", "USUARIO.ULTIMO_ACCESO");
@@ -113,7 +113,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
             AuditoriaService.insertar(sesion.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection(), r);
         } catch (SQLException ex) {
             // Sin bitácora no se confirma el cambio (falla la transacción completa)
-            throw new IllegalStateException("No se pudo registrar la auditoría (¿ejecutaste kampu_tours_v10.sql?): "
+            throw new IllegalStateException("No se pudo registrar la auditoría (¿ejecutaste kampu_tours_v11.sql?): "
                     + ex.getMessage(), ex);
         }
     }

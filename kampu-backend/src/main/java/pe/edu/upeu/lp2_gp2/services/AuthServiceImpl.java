@@ -23,7 +23,7 @@ import java.sql.Types;
 import java.util.Optional;
 
 /**
- * Login único (kampu_tours_v10.sql):
+ * Login único (kampu_tours_v11.sql):
  *  - Personal interno (USUARIOS_SISTEMA, por usuario): clave BCrypt. Cada intento fallido suma
  *    intentos_fallidos y a los 5 la cuenta queda BLOQUEADA; un ingreso correcto los reinicia y
  *    guarda ultimo_acceso.
@@ -41,9 +41,12 @@ public class AuthServiceImpl implements IAuthService {
     private final PortalJdbc portal;
     private final PkgSeguridadRepository seguridad;
     private final AuditoriaService auditoria;
+    private final pe.edu.upeu.lp2_gp2.seguridad.TokenSesion tokens;
 
     public AuthServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
-                           PortalJdbc portal, PkgSeguridadRepository seguridad, AuditoriaService auditoria) {
+                           PortalJdbc portal, PkgSeguridadRepository seguridad, AuditoriaService auditoria,
+                           pe.edu.upeu.lp2_gp2.seguridad.TokenSesion tokens) {
+        this.tokens = tokens;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.portal = portal;
@@ -152,6 +155,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     private SesionDTO sesion(Long usuarioId, Long clienteId, String username, String nombre, String rol, String estado) {
-        return new SesionDTO(usuarioId, clienteId, username, nombre, rol, estado, seguridad.permisos(rol));
+        String token = tokens.emitir(new SesionUsuario(usuarioId, clienteId, username, rol));
+        return new SesionDTO(usuarioId, clienteId, username, nombre, rol, estado, seguridad.permisos(rol), token);
     }
 }
