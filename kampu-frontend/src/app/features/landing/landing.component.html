@@ -5,7 +5,7 @@
 
   <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()" [contacto]="contacto()"
                      [categoria]="filtro().tipo" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()"
-                     (cotizar)="cotizando.set($event)">
+                     (cotizar)="cotizar($event)">
     <app-landing-search [destinos]="destinos()" (buscar)="buscar($event)" />
   </app-landing-tours>
 
@@ -42,10 +42,3 @@
 
 <app-landing-footer [contacto]="contacto()" />
 
-<!-- Cotización en línea para visitantes sin cuenta -->
-<!-- Se descarga recién al primer clic en "Cotizar" (no pesa en la carga inicial de la página) -->
-@if (cotizando(); as p) {
-  @defer {
-    <app-landing-cotizar [paquete]="p" [contacto]="contacto()" (cerrar)="cotizando.set(null)" />
-  }
-}

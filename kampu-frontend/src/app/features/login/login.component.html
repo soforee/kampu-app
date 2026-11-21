@@ -76,6 +76,9 @@
           @else if (mayusculas()) { <p class="hint aviso inline-flex items-center gap-1 !text-amber-700"><app-icon name="alert" size="w-3.5 h-3.5" /> Bloq Mayús está activado.</p> }
         </div>
 
+        @if (vencida && !error()) {
+          <p class="alert-info aviso" role="status">Tu sesión terminó (venció o tu cuenta cambió). Inicia sesión otra vez.</p>
+        }
         @if (error()) {
           <p class="alert-error aviso sacudir" role="alert"><app-icon name="alert" size="w-4 h-4" />{{ error() }}</p>
         }

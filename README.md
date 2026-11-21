@@ -1,4 +1,4 @@
-# KAMPU · Tour Manager v5 — sistema integrado (Angular + Spring Boot + Oracle)
+# KAMPU · Tour Manager v11 — sistema integrado (Angular + Spring Boot + Oracle)
 
 Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos, tráfico/transporte y, desde la v4,
 **portal del cliente** con **seguridad por roles** aplicada en la base de datos.
@@ -9,24 +9,84 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 | Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
 | Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind CSS 3 (compilado con Angular) · SweetAlert2 |
 
-## Versión 10.1 — usuarios del sistema y cotización sin cuenta
+## Versión 11 — cotización sin cuenta, roles de campo y seguridad real
+
+Diagnóstico, decisiones y resultados de las pruebas: [`docs/AUDITORIA_V11.md`](docs/AUDITORIA_V11.md).
+
+**Base de datos** — instalación nueva: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`.
+Base v10 con datos: **`migracion_v10_a_v11.sql`** (no borra nada, se puede volver a correr, deja el esquema igual al de una
+instalación nueva; verificado en Oracle 23 Free).
+
+### Cotizar sin registrarse (visitante)
+| Qué | Dónde |
+|---|---|
+| Explorar el paquete: descripción, **lo que incluye**, itinerario día por día | `/cotizar/:paqueteId` |
+| Personalizar: fecha (calendario real), adultos y niños, punto de recojo, **servicios adicionales** | `/cotizar/:paqueteId` |
+| Precio **calculado por el servidor** al instante (`PKG_COTIZACIONES`): el navegador solo elige | `POST /api/v1/cotizaciones/calcular` |
+| Guardar → **código** `KC-2026-000123` + **clave** de 12 caracteres (la BD guarda solo su SHA-256) | `POST /api/v1/cotizaciones` |
+| Volver a verla, **modificarla**, descargar **PDF**, imprimir, cancelar | `/cotizacion/:codigo`, `/seguimiento` |
+| **Solicitar la reserva** sin cuenta (nombre, documento, correo, teléfono) | `POST /cotizaciones/{codigo}/solicitud` |
+| Seguir el estado con el código: generada → solicitud → confirmada por la agencia → reserva pagada | `/seguimiento` |
+
+- No se crean usuarios: al **confirmar** la solicitud, el personal busca o crea al cliente **sin cuenta web** (como los
+  que registra Ventas). Si luego el visitante se registra con el mismo documento y correo, su reserva aparece sola.
+- Cotización ≠ reserva: una cotización no toma cupos. Estados: `GENERADA → SOLICITADA → RESERVADA | RECHAZADA`,
+  `CANCELADA` (la retira el visitante) y `VENCIDA` (7 días o la fecha del viaje). Desde `RESERVADA` manda el estado de la
+  reserva (pendiente de pago, confirmada, anulada): no se duplica.
+- Seguridad del acceso: la clave viaja en el cuerpo, nunca en la URL; 10 claves erradas bloquean el código 30 minutos
+  (en la BD) y hay un límite de solicitudes por IP. El PDF lleva el código pero no la clave.
+- Historial de cada cotización en `AUDITORIA` (el visitante aparece como `INVITADO`).
+- El cliente con cuenta también cotiza (queda a su nombre) y abre sus cotizaciones sin clave.
+
+### Personal
+- **Cotizaciones** (`/cotizaciones`): Admin, Ventas y Operador ven las solicitudes y las **confirman** (crea la reserva
+  PENDIENTE con el precio cotizado; los adicionales entran en `RESERVAS.monto_total`) o las **rechazan** con un motivo.
+- **Adicionales** (`/servicios-adicionales`, quien gestiona el catálogo): por persona o por grupo, de un paquete o de todos.
+- **Paquetes → Incluye**: lo que incluye cada paquete (uno por línea).
+
+### Roles: guía y conductor
+Antes **no existían** como roles (solo como fichas de `PERSONAL`). Ahora son ambas cosas:
+- Toda persona del personal sigue existiendo **sin cuenta**. La cuenta es **opcional** y la crea el administrador en
+  *Usuarios* eligiendo a la persona: `USUARIOS_SISTEMA.personal_id` la liga a su ficha y la BD exige que el cargo
+  corresponda (GUIA → función de guiado, CONDUCTOR → transporte).
+- Guía y conductor solo ven **Mis asignaciones** (`/mis-asignaciones`): sus salidas (itinerario, manifiesto, recojos) o
+  sus traslados (vehículo, ruta, recojos). Lo filtra la base de datos (`VW_MIS_SALIDAS_GUIA`, `VW_MIS_TRASLADOS_CONDUCTOR`).
+
+### Seguridad (corrección importante)
+Hasta v10 el backend confiaba en las cabeceras `X-Usuario`/`X-Rol` que envía el navegador: **cualquiera podía declararse
+ADMIN** y casi ningún endpoint validaba permisos. Ahora:
+- el login entrega una **sesión firmada** (HMAC-SHA256) que viaja como `Authorization: Bearer`; en cada petición se
+  comprueba en la BD que la cuenta siga activa y se usa su rol actual (una baja o un cambio de rol rigen al instante);
+- **todos** los endpoints declaran `@Publico` o `@Permiso("...")` (misma matriz `PKG_SEGURIDAD_ROLES`): 401 sin sesión,
+  403 sin permiso;
+- define `KAMPU_SESION_SECRETO` (32+ caracteres) en producción; sin ella las sesiones se cierran al reiniciar.
+
+### Cuentas nuevas de la demo (clave `Kampu2026*`)
+| Usuario | Rol | Ficha de personal |
+|---|---|---|
+| `kguia` | GUIA | Rosa Pinedo Vasquez |
+| `kconductor` | CONDUCTOR | Luis Tapullima Shapiama |
+
+Cotizaciones de visitantes de la demo: `KC-<año>-000001` (clave `DEMO-2026-KAMP`, generada) y `KC-<año>-000002`
+(clave `SOLI-2026-KAMP`, solicitud pendiente para que la atienda el personal).
+
+### Pruebas
+`pruebas/` trae las dos baterías usadas para validar esta versión contra Oracle 23 Free real: `api_v11.py` (64 casos de
+API y seguridad) y `e2e_v11.js` (23 casos en navegador: visitante → operador → guía/conductor → admin → regresiones).
+El script de BD ejecuta además sus propias 52 pruebas de reglas (`[OK]` en la salida).
+
+## Versión 10.1 — usuarios del sistema
 
 - **Módulo de usuarios (solo administrador)** — menú *Usuarios* (`/usuarios`, permiso `GESTIONAR_USUARIOS`):
-  - crea cuentas del personal y **elige su rol** (Administrador, Ventas u Operador), con contraseña BCrypt;
-  - cambia el rol (`PKG_SEGURIDAD_ROLES.asignar_rol`), desactiva / reactiva / desbloquea (`revocar_acceso`, `restablecer_acceso`) y asigna una contraseña nueva;
-  - el backend responde **403** a cualquier rol sin `GESTIONAR_USUARIOS`; Oracle impide dejar el sistema sin administradores y `TRG_USUARIOS_AUDITORIA` registra cada alta y cambio.
-  - API: `GET/POST /api/v1/usuarios`, `PATCH /usuarios/{id}/rol`, `PATCH /usuarios/{id}/acceso`, `PATCH /usuarios/{id}/clave`.
+  - crea cuentas y **elige su rol** (en v11 también Guía y Conductor), con contraseña BCrypt;
+  - cambia el rol (`PKG_SEGURIDAD_ROLES.asignar_rol` / `asignar_rol_campo`), desactiva / reactiva / desbloquea y asigna una contraseña nueva;
+  - Oracle impide dejar el sistema sin administradores y `TRG_USUARIOS_AUDITORIA` registra cada alta y cambio.
   - Las cuentas de clientes no se crean aquí: el cliente usa *Registrarse*.
-- **Cotizar sin cuenta** desde la página principal: el botón *Cotizar* de cada tour abre una ventana donde el visitante
-  elige fecha (calendario real del paquete), pasajeros y punto de recojo y obtiene el total al instante.
-  - API pública `POST /api/v1/cotizaciones`: aplica las reglas de `PKG_RESERVAS.calendario` (día de operación, cupos,
-    estado de la salida, anticipación web) y el precio que congela la reserva. **No guarda nada** en la base de datos.
-  - Con la cotización puede escribir a la agencia por **WhatsApp o correo** (mensaje ya armado) o **crear su cuenta /
-    iniciar sesión**: la reserva se abre en *Mis paquetes* con el paquete, la fecha y los pasajeros cotizados.
+- *(La cotización "sin guardar" de la v10.1 —WhatsApp/correo— fue reemplazada por la cotización completa de la v11.)*
 
 ## Versión 10 — backend y frontend alineados con `kampu_tours_v10.sql`
 
-La base de datos manda: el script `kampu-backend/src/main/resources/db/kampu_tours_v10.sql` define el flujo y la
+La base de datos manda: el script `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` define el flujo y la
 aplicación lo sigue (solo funcionalidad; el diseño visual es el mismo). Detalle y diagnóstico en
 [`docs/MIGRACION_BACKEND_v10.md`](docs/MIGRACION_BACKEND_v10.md).
 
@@ -80,6 +140,7 @@ Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.m
 | `kadmin` | `Kampu2026*` | ADMIN | Panel completo |
 | `kventas` | `Kampu2026*` | VENDEDOR | Panel comercial |
 | `koperador` | `Kampu2026*` | OPERADOR | Panel operativo |
+| `kguia` · `kconductor` | `Kampu2026*` | GUIA · CONDUCTOR (v11) | Mis asignaciones |
 | `maria.rios@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
 | `emma.schneider@example.com` · `jose.vela@example.com` · `valeria.huaman@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
 
@@ -158,12 +219,12 @@ Solo frontend; además, los datos de demostración cargan una foto del paquete M
 (`PKG_ASIGNACION`, `PKG_RUTAS`, `trg_*`, `DOMINIO_ESTADOS`) y dependencias de prueba comentadas en `pom.xml`.
 Los estados `SUSPENDIDO`, `MANTENIMIENTO` y `OCUPADO` ahora tienen color y texto propios.
 
-**Datos de demostración:** sección 13 de `kampu_tours_v10.sql` (fechas relativas a hoy). Las claves de las cuentas
+**Datos de demostración:** sección 13 de `kampu_tours_v11.sql` (fechas relativas a hoy). Las claves de las cuentas
 de la aplicación las fija `UsuarioInicialConfig` al arrancar el backend.
 
 ## Objetos críticos de backend (2 por categoría) y su justificación
 
-Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`, comentados (la v10 suma `PKG_RESERVAS`, `TRG_RESERVAS_BIU`, `TRG_OPERACIONES_VALIDAR` y las vistas `VW_MANIFIESTO_SALIDA`, `VW_RECOJOS_SALIDA`, `VW_ALERTAS_OPERACION`, `VW_METRICAS_ESTADOS`, `VW_RESUMEN_CLIENTES`: ver `docs/MIGRACION_BACKEND_v10.md`).
+Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`, comentados (la v10 suma `PKG_RESERVAS`, `TRG_RESERVAS_BIU`, `TRG_OPERACIONES_VALIDAR` y las vistas `VW_MANIFIESTO_SALIDA`, `VW_RECOJOS_SALIDA`, `VW_ALERTAS_OPERACION`, `VW_METRICAS_ESTADOS`, `VW_RESUMEN_CLIENTES`: ver `docs/MIGRACION_BACKEND_v10.md`).
 
 | Categoría | Objeto | Qué hace | Por qué este y no otro |
 |---|---|---|---|
@@ -219,9 +280,9 @@ ingresos fallidos usan una transacción propia para que queden). Las contraseña
 La pantalla permite filtrar por texto, rango de fechas (atajos Hoy / 7 días / 30 días), rol, acción, entidad y usuario;
 ver el **historial completo de un registro**; paginar en el servidor (50 por página) y **exportar a CSV** con los mismos filtros.
 
-## Roles de Oracle por nivel de usuario (incluidos en `kampu_tours_v10.sql`)
+## Roles de Oracle por nivel de usuario (incluidos en `kampu_tours_v11.sql`)
 
-El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`, todos otorgados a `KAMPU_APP`; no crea usuarios de prueba
+El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` y (v11) `ROL_CAMPO` (guías y conductores), todos otorgados a `KAMPU_APP`; no crea usuarios de prueba
 ni una conexión aparte para el portal. El nivel de cada petición lo fija `PKG_SEGURIDAD_ROLES` con la identidad validada de la sesión. La v10 no usa particionamiento (funciona en cualquier XE).
 
 Requisito: ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz.
@@ -320,12 +381,13 @@ Las mismas reglas se aplican en ambos lados: `kampu-frontend/src/app/core/utils/
   (por ejemplo letras o la "e" en campos numéricos) y los mensajes aparecen debajo de cada campo.
 - En el backend, Bean Validation rechaza los datos con estado 400 y un mensaje claro; si llega un tipo incorrecto
   (letras o decimales en un campo entero, fechas mal escritas) se indica qué campo falló.
-- Los tipos y longitudes coinciden con `kampu_tours_v10.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
+- Los tipos y longitudes coinciden con `kampu_tours_v11.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
   horario, transiciones, capacidad) las valida la base de datos con sus triggers.
 
 ## 1. Base de datos (Oracle Database 21c XE, PDB `XEPDB1`)
 
-Un solo script: `kampu-backend/src/main/resources/db/kampu_tours_v10.sql`.
+Instalación nueva: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` (borra y recrea el esquema).
+Base v10 con datos que deben conservarse: `migracion_v10_a_v11.sql` en el mismo directorio (respalda antes).
 
 1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`).
 2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
@@ -388,7 +450,7 @@ cd kampu-backend
 El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
 esquema, contenedor y servicio se conectó. Opciones:
 
-1. Ejecuta `kampu_tours_v10.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
+1. Ejecuta `kampu_tours_v11.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
 2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
    las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
 

@@ -215,6 +215,7 @@
         <div class="flex justify-between"><dt class="text-zinc-500">Viajeros</dt><dd class="tabular-nums text-zinc-900">{{ r.numeroViajeros }}</dd></div>
         <div class="flex justify-between"><dt class="text-zinc-500">Precio por persona</dt><dd class="tabular-nums text-zinc-900">{{ r.precioUnitario | currency:'S/' }}</dd></div>
         @if (r.descuento > 0) { <div class="flex justify-between"><dt class="text-zinc-500">Descuento</dt><dd class="tabular-nums text-zinc-900">-{{ r.descuento | currency:'S/' }}</dd></div> }
+        @if (r.montoAdicionales > 0) { <div class="flex justify-between"><dt class="text-zinc-500">Servicios adicionales (cotización)</dt><dd class="tabular-nums text-zinc-900">+{{ r.montoAdicionales | currency:'S/' }}</dd></div> }
         <div class="flex justify-between"><dt class="text-zinc-500">Pagado</dt><dd class="tabular-nums text-zinc-900">{{ r.montoPagado | currency:'S/' }}</dd></div>
       </dl>
       <div class="progress mt-4"><div [style.width.%]="avance()"></div></div>

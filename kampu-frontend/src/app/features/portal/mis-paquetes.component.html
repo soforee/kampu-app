@@ -14,7 +14,10 @@
         <p class="mt-1 text-sm text-zinc-500">Solo ves los paquetes reservados a tu nombre.</p>
       </div>
       @if (!reservando()) {
-        <button type="button" class="btn-dark" (click)="abrirReserva()"><app-icon name="plus" size="w-4 h-4" /> Reservar un tour</button>
+        <div class="flex flex-wrap gap-2">
+          <a routerLink="/seguimiento" class="btn-light">Mis cotizaciones</a>
+          <button type="button" class="btn-dark" (click)="abrirReserva()"><app-icon name="plus" size="w-4 h-4" /> Reservar un tour</button>
+        </div>
       }
       @if (saldoTotal() > 0) {
         <div class="text-right">
