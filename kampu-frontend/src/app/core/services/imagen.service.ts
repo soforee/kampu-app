@@ -10,8 +10,10 @@ const TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
 export class ImagenService {
   private http = inject(HttpClient);
 
+  // La ruta guardada puede venir con o sin "/" inicial (p. ej. "/img/paquetes/x.jpg" en los datos semilla)
   url(ref?: string | null): string | null {
-    return ref ? `${IMAGENES}/${ref}` : null;
+    const ruta = ref?.trim().replace(/^\/+/, '');
+    return ruta ? `${IMAGENES}/${ruta}` : null;
   }
 
   validar(file: File): string {

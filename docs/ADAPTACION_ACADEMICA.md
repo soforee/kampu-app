@@ -185,6 +185,30 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
     6. **Por qué elegirnos:** lista sobre fondo claro y foto a sangre a la derecha.
     7. **Contacto:** foto a sangre, alineado como la portada.
   - Fotos: Wikimedia Commons, con autor y licencia en `docs/ATRIBUCIONES_FOTOS.md`.
+- **Destinos (revisión con los datos de `kampu_tours_v10.sql`):**
+  - **Fotos:**
+    - se corrigió la doble barra en la URL (`/images//img/...`);
+    - si la foto propia del paquete no existe, se usa una foto real de su destino (Laguna Azul, Ahuashiyacu, Moyobamba…, con su crédito); antes se veía el texto alternativo sobre un recuadro gris;
+    - en el panel de Paquetes y en el portal del cliente, una imagen que no carga se oculta.
+  - **Próxima fecha:**
+    - la tarjeta muestra la salida ya programada con cupos o, si no hay, el próximo día en que opera el paquete (`dias_operacion`);
+    - respeta la anticipación mínima con la misma regla que la base (`(fecha - SYSDATE) * 24 >= anticipacion_min_horas`);
+    - el filtro por fecha ya no oculta paquetes que sí se pueden reservar ese día.
+  - **Reservar y Cotizar (unido con el trabajo v11 de la otra sesión):**
+    - "Reservar": el cliente va a "Mis paquetes" con el paquete elegido (`/mi-cuenta?reservar=<id>`);
+    - sin sesión va al login con `?reservar=<id>`, que después lo lleva a "Mis paquetes" (`reserva-pendiente.ts`);
+    - el personal con permiso de reservas va a "Nueva reserva"; guías y conductores solo ven "Cotizar";
+    - "Cotizar" abre el cotizador en línea sin cuenta (`/cotizar/:id`, de v11).
+  - **Filtros:**
+    - se quitó "Tipo de tour" del buscador, porque duplicaba las pestañas y las desincronizaba;
+    - las pestañas muestran cuántos tours hay en cada categoría;
+    - "Quitar filtros" también vacía el buscador;
+    - la búsqueda ignora tildes.
+  - **Estética:**
+    - separación correcta entre pestañas y tarjetas;
+    - datos de la tarjeta en tres columnas (fecha, cupos, hora de inicio);
+    - aviso de "últimos cupos" con 5 o menos;
+    - el crédito de la foto aparece al pasar el cursor.
 - **Transición entre pantallas (escritorio):**
   - las fotos se descubren con un barrido (`clip-path`);
   - los textos marcados con `data-entra` entran escalonados desde la dirección del movimiento;

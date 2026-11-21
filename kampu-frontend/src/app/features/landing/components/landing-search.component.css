@@ -10,7 +10,7 @@
 }
 
 @media (min-width: 900px) {
-  .buscador { grid-template-columns: 1.3fr 1fr 1fr auto; gap: 0; border-radius: 999px; padding: .5rem; }
+  .buscador { grid-template-columns: 1.4fr 1fr auto; gap: 0; border-radius: 999px; padding: .5rem; }
   .campo + .campo { border-left: 1px solid var(--kp-border); border-radius: 0; }
   .campo:first-of-type { border-radius: 999px 0 0 999px; }
 }
