@@ -19,6 +19,7 @@ import { LogoComponent } from '../../shared/logo.component';
           <a routerLink="/" class="btn-light btn-sm" data-testid="volver-inicio">
             Página principal
           </a>
+          <a routerLink="/seguimiento" class="btn-light btn-sm hidden sm:inline-flex">Mis cotizaciones</a>
           @if (auth.esCliente()) {
             <a routerLink="/mi-cuenta" class="btn-light btn-sm hidden sm:inline-flex">Mis paquetes</a>
             <button type="button" class="btn-light btn-sm" (click)="salir()" title="Cerrar sesión">

@@ -14,11 +14,11 @@ export class BadgeComponent {
   //   aviso -> lima de la hoja (#C4BD45) · error -> terracota · el resto (completado, inactivo...) -> neutro
   private tonos: { [estado: string]: string } = {
     CONFIRMADA: 'correcto', GARANTIZADA: 'correcto', APROBADO: 'correcto', PAGADO: 'correcto', ACTIVO: 'correcto', DISPONIBLE: 'correcto', OPERATIVO: 'correcto',
-    FINALIZADO: 'correcto', PAGADO_COMPLETO: 'correcto', CREAR: 'correcto',
+    FINALIZADO: 'correcto', PAGADO_COMPLETO: 'correcto', CREAR: 'correcto', RESERVADA: 'correcto',
     EN_RUTA: 'curso', EN_CURSO: 'curso', EMBARQUE: 'curso', REGISTRO: 'curso',
-    PARCIAL: 'intermedio', PROGRAMADA: 'intermedio', ASIGNADO: 'intermedio', POR_EMPEZAR: 'intermedio', ACTUALIZAR: 'intermedio',
-    PENDIENTE: 'aviso', OCUPADO: 'aviso', MANTENIMIENTO: 'aviso', FALTA_PAGAR: 'aviso', LOGIN_FALLIDO: 'aviso',
-    ANULADA: 'error', CANCELADA: 'error', RECHAZADO: 'error', SUSPENDIDO: 'error', CANCELADO: 'error', PENDIENTE_PAGO: 'error', ELIMINAR: 'error'
+    PARCIAL: 'intermedio', PROGRAMADA: 'intermedio', GENERADA: 'intermedio', ASIGNADO: 'intermedio', POR_EMPEZAR: 'intermedio', ACTUALIZAR: 'intermedio',
+    PENDIENTE: 'aviso', OCUPADO: 'aviso', SOLICITADA: 'aviso', MANTENIMIENTO: 'aviso', FALTA_PAGAR: 'aviso', LOGIN_FALLIDO: 'aviso',
+    ANULADA: 'error', CANCELADA: 'error', BLOQUEADO: 'error', VENCIDA: 'error', RECHAZADA: 'error', RECHAZADO: 'error', SUSPENDIDO: 'error', CANCELADO: 'error', PENDIENTE_PAGO: 'error', ELIMINAR: 'error'
   };
   private puntos: { [tono: string]: string } = {
     correcto: 'bg-brand-600', curso: 'bg-brand-400', intermedio: 'bg-brand-200 ring-1 ring-brand-400',

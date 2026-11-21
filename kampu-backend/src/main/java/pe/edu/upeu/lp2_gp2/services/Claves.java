@@ -2,7 +2,7 @@ package pe.edu.upeu.lp2_gp2.services;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
-/** BCrypt ($2a$10$...), el formato que exige kampu_tours_v10.sql (chk_usu_hash y SP_REGISTRAR_CLIENTE_EXTERNO) */
+/** BCrypt ($2a$10$...), el formato que exige kampu_tours_v11.sql (chk_usu_hash y SP_REGISTRAR_CLIENTE_EXTERNO) */
 public final class Claves {
     private static final BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder(10);
 

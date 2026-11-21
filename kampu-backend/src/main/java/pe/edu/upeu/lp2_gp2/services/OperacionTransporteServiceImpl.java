@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  *    DISPONIBLE con licencia vigente, sin cruces de horario (30 min de margen) y con
  *    máximo 10 h de conducción por día.
  *  - Embarque: el tramo debe tener asientos para todos los pasajeros de la salida.
- *  - kampu_tours_v10.sql (TRG_OPERACIONES_VALIDAR) genera el código KMP-###, vuelve a validar recursos,
+ *  - kampu_tours_v11.sql (TRG_OPERACIONES_VALIDAR) genera el código KMP-###, vuelve a validar recursos,
  *    transiciones y cruces, exige el manifiesto completo para embarcar y escribe HISTORIAL_OPERACIONES.
  */
 @Service

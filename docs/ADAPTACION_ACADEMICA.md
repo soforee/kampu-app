@@ -194,11 +194,11 @@ Solo cambia la presentación: no se tocaron la lógica de negocio, la base de da
     - la tarjeta muestra la salida ya programada con cupos o, si no hay, el próximo día en que opera el paquete (`dias_operacion`);
     - respeta la anticipación mínima con la misma regla que la base (`(fecha - SYSDATE) * 24 >= anticipacion_min_horas`);
     - el filtro por fecha ya no oculta paquetes que sí se pueden reservar ese día.
-  - **Reservar:**
-    - el cliente va a su portal con el paquete elegido (`/mi-cuenta?reservar=<id>`, que el portal ya esperaba);
-    - sin sesión pasa por el login y vuelve ahí (`?volver=`, solo rutas internas de `/mi-cuenta`);
-    - el personal va a "Nueva reserva";
-    - "Cotizar por correo" queda como acción secundaria.
+  - **Reservar y Cotizar (unido con el trabajo v11 de la otra sesión):**
+    - "Reservar": el cliente va a "Mis paquetes" con el paquete elegido (`/mi-cuenta?reservar=<id>`);
+    - sin sesión va al login con `?reservar=<id>`, que después lo lleva a "Mis paquetes" (`reserva-pendiente.ts`);
+    - el personal con permiso de reservas va a "Nueva reserva"; guías y conductores solo ven "Cotizar";
+    - "Cotizar" abre el cotizador en línea sin cuenta (`/cotizar/:id`, de v11).
   - **Filtros:**
     - se quitó "Tipo de tour" del buscador, porque duplicaba las pestañas y las desincronizaba;
     - las pestañas muestran cuántos tours hay en cada categoría;

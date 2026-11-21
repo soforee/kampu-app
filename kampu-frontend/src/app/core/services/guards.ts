@@ -11,13 +11,18 @@ export const personalGuard: CanActivateFn = () => {
   return auth.esCliente() ? router.parseUrl('/mi-cuenta') : true;
 };
 
+// (v11) El panel general no es para guías ni conductores: van a sus asignaciones
+export const panelGuard: CanActivateFn = () => {
+  const auth = inject(AuthService);
+  return auth.esCampo() ? inject(Router).parseUrl('/mis-asignaciones') : true;
+};
+
 // Portal del cliente: solo rol CLIENTE
-// (sin sesión va al login, que después lo devuelve aquí, p. ej. /mi-cuenta?reservar=2 desde la página principal)
-export const clienteGuard: CanActivateFn = (_ruta, estado) => {
+export const clienteGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (!auth.autenticado()) return router.createUrlTree(['/login'], { queryParams: { volver: estado.url } });
-  return auth.esCliente() ? true : router.parseUrl('/dashboard');
+  if (!auth.autenticado()) return router.parseUrl('/login');
+  return auth.esCliente() ? true : router.parseUrl(auth.inicio());
 };
 
 // Pantalla que exige un permiso (data.permiso). Mismo permiso que pide el backend
@@ -25,5 +30,5 @@ export const clienteGuard: CanActivateFn = (_ruta, estado) => {
 export const permisoGuard: CanActivateFn = (ruta) => {
   const auth = inject(AuthService);
   const permiso = ruta.data?.['permiso'] as Permiso | undefined;
-  return !permiso || auth.puede(permiso) ? true : inject(Router).parseUrl('/dashboard');
+  return !permiso || auth.puede(permiso) ? true : inject(Router).parseUrl(auth.inicio());
 };

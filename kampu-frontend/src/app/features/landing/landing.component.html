@@ -4,7 +4,8 @@
   <app-landing-hero [totalTours]="totalActivos()" [totalSalidas]="totalSalidas()" />
 
   <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()" [contacto]="contacto()"
-                     [categoria]="filtro().tipo" [conteos]="conteos()" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()">
+                     [categoria]="filtro().tipo" [conteos]="conteos()" (categoriaChange)="cambiarCategoria($event)" (limpiar)="limpiar()"
+                     (cotizar)="cotizar($event)">
     <app-landing-search [destinos]="destinos()" [valores]="filtro()" (buscar)="buscar($event)" />
   </app-landing-tours>
 
@@ -40,3 +41,4 @@
 }
 
 <app-landing-footer [contacto]="contacto()" />
+

@@ -95,12 +95,16 @@
               </dl>
 
               <div class="mt-auto flex items-center gap-2 pt-3.5">
-                <a [routerLink]="reservar(t).ruta" [queryParams]="reservar(t).params" class="tour-reservar">
-                  Reservar <app-icon name="arrow-right" size="w-4 h-4" />
-                </a>
-                <a [href]="cotizar(t)" class="tour-cotizar" [attr.aria-label]="'Cotizar ' + t.paquete.nombre + ' por correo'" data-tip="Cotizar por correo">
-                  <app-icon name="mail" size="w-4 h-4" />
-                </a>
+                @if (reservar(t); as r) {
+                  <a [routerLink]="r.ruta" [queryParams]="r.params" class="tour-reservar">
+                    Reservar <app-icon name="arrow-right" size="w-4 h-4" />
+                  </a>
+                }
+                <!-- Cotizador en línea (sin cuenta): /cotizar/:id -->
+                <button type="button" class="tour-cotizar" (click)="cotizar.emit(t.paquete)" [attr.aria-label]="'Cotizar ' + t.paquete.nombre"
+                        title="Cotiza al instante, sin crear cuenta" data-testid="cotizar">
+                  Cotizar
+                </button>
               </div>
             </div>
           </article>

@@ -14,6 +14,7 @@ import { LandingPresentacionComponent } from './components/landing-presentacion.
 import { LandingPasosComponent } from './components/landing-pasos.component';
 import { LandingGaleriaComponent } from './components/landing-galeria.component';
 import { LandingCtaComponent } from './components/landing-cta.component';
+import { Router } from '@angular/router';
 import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
 
 @Component({
@@ -203,6 +204,9 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   whatsapp = computed(() => this.contacto().telefono.replace(/\D/g, ''));
 
   paquetes = signal<PaqueteTour[]>([]);
+  // (v11) "Cotizar" abre el cotizador completo: sin cuenta, con adicionales, guardado y seguimiento
+  private router = inject(Router);
+  cotizar(p: PaqueteTour) { this.router.navigate(['/cotizar', p.paqueteId]); }
   salidas = signal<SalidaProgramada[]>([]);
   cargando = signal(true);
   filtro = signal<FiltroBusqueda>({ destino: '', fecha: '', tipo: '' });

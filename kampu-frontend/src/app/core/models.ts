@@ -7,8 +7,8 @@ export type TipoDocumento = 'DNI' | 'CE' | 'PASAPORTE';
 // Los clientes también pueden ser empresas (RUC); los pasajeros no
 export type TipoDocumentoCliente = TipoDocumento | 'RUC';
 export type Moneda = 'PEN' | 'USD' | 'EUR';
-// chk_usu_rol (personal interno) + CLIENTE (portal web)
-export type Rol = 'ADMIN' | 'VENDEDOR' | 'OPERADOR' | 'CLIENTE';
+// chk_usu_rol (personal interno y, desde v11, personal de campo) + CLIENTE (portal web)
+export type Rol = 'ADMIN' | 'VENDEDOR' | 'OPERADOR' | 'GUIA' | 'CONDUCTOR' | 'CLIENTE';
 export type EstadoRegistro = 'ACTIVO' | 'INACTIVO';
 export type CategoriaLicencia = 'A-I' | 'A-IIa' | 'A-IIb' | 'A-IIIa' | 'A-IIIb' | 'A-IIIc';
 export type EstadoProveedor = 'ACTIVO' | 'INACTIVO' | 'SUSPENDIDO';
@@ -45,6 +45,7 @@ export interface PaqueteTour {
   anticipacionMinHoras: number;
   horaInicio: string;             // HH:MM del día 1
   estado: EstadoRegistro;
+  serviciosIncluidos: string;     // (v11) uno por línea
 }
 
 // Día del calendario de un paquete (PKG_RESERVAS.calendario)
@@ -261,6 +262,7 @@ export interface Reserva {
   pasajerosRegistrados: number;
   precioUnitario: number;
   descuento: number;
+  montoAdicionales: number;       // (v11) servicios adicionales de la cotización (entran en el total)
   montoTotal: number;
   montoPagado: number;
   saldo: number;
@@ -471,6 +473,7 @@ export interface PaqueteForm {
   diasOperacion: string;
   anticipacionMinHoras: number | null;
   horaInicio: string;
+  serviciosIncluidos: string;     // (v11) uno por línea
 }
 
 
@@ -567,6 +570,8 @@ export interface Sesion {
   estado: string;
   // Acciones permitidas por PKG_SEGURIDAD_ROLES (VER_LOGISTICA, GESTIONAR_RESERVAS, ...)
   permisos: Permiso[];
+  // (v11) Sesión firmada por el backend: viaja como "Authorization: Bearer <token>"
+  token: string;
 }
 
 export type Permiso =
@@ -574,7 +579,8 @@ export type Permiso =
   | 'VER_CLIENTES' | 'GESTIONAR_CLIENTES' | 'VER_RESERVAS' | 'GESTIONAR_RESERVAS' | 'VER_MONTOS' | 'REGISTRAR_PAGO'
   | 'GESTIONAR_CATALOGO' | 'ACTUALIZAR_EJECUCION' | 'VER_RESUMEN'
   | 'VER_LOGISTICA' | 'GESTIONAR_LOGISTICA' | 'VER_OPERACIONES' | 'GESTIONAR_OPERACIONES'
-  | 'VER_PAQUETES_PROPIOS' | 'INFORMAR_PAGO';
+  | 'VER_PAQUETES_PROPIOS' | 'INFORMAR_PAGO'
+  | 'VER_COTIZACIONES' | 'GESTIONAR_COTIZACIONES' | 'VER_ASIGNACIONES_PROPIAS';
 
 // ---------- Auditoría (solo ADMIN) ----------
 export type AccionAuditoria = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'REGISTRO' | 'LOGIN' | 'LOGOUT' | 'LOGIN_FALLIDO';
@@ -610,4 +616,136 @@ export interface Pagina<T> {
   total: number;
   pagina: number;
   tamanio: number;
+}
+
+// ---------- Usuarios del sistema (solo ADMIN) ----------
+export type RolInterno = 'ADMIN' | 'VENDEDOR' | 'OPERADOR' | 'GUIA' | 'CONDUCTOR';
+export type EstadoUsuario = 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO';
+
+export interface UsuarioSistema {
+  usuarioId: number;
+  username: string;
+  nombreCompleto: string;
+  email: string;
+  rol: RolInterno;
+  estado: EstadoUsuario;
+  intentosFallidos: number;
+  ultimoAcceso: string | null;
+  personalId: number | null;        // (v11) GUIA / CONDUCTOR: su ficha de personal
+  personalNombre: string | null;
+}
+
+// (v11) Guía o conductor del personal que aún no tiene cuenta
+export interface PersonalSinCuenta {
+  personalId: number;
+  nombreCompleto: string;
+  cargo: string;
+  cargoNombre: string;
+  rol: 'GUIA' | 'CONDUCTOR';
+  proveedor: string | null;
+}
+
+export interface UsuarioForm {
+  username: string;
+  nombreCompleto: string;
+  email: string;
+  rol: RolInterno;
+  personalId: number | null;
+  password: string;
+  confirmacion: string;
+}
+
+// ---------- Cotizaciones (v11): visitante sin cuenta, cliente y personal ----------
+export type EstadoCotizacion = 'GENERADA' | 'SOLICITADA' | 'RESERVADA' | 'RECHAZADA' | 'CANCELADA' | 'VENCIDA';
+
+export interface ServicioAdicional {
+  servicioId: number;
+  paqueteId: number | null;       // null = para todos los paquetes
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  modalidad: 'POR_PERSONA' | 'POR_GRUPO';
+  estado: EstadoRegistro;
+}
+
+export interface ServicioElegido { servicioId: number; cantidad: number; }
+
+// Lo que el visitante elige (los montos los calcula siempre el servidor)
+export interface DatosCotizacion {
+  paqueteId: number;
+  fecha: string;
+  adultos: number;
+  ninos: number;
+  lugarRecojoId: number | null;
+  servicios: ServicioElegido[];
+  observaciones: string;
+}
+
+export interface LineaCotizacion {
+  servicioId: number;
+  nombre: string;
+  modalidad: 'POR_PERSONA' | 'POR_GRUPO';
+  cantidad: number;
+  precioUnitario: number;
+  subtotal: number;
+}
+
+export interface CalculoCotizacion {
+  paqueteId: number; paquete: string; dias: number; noches: number;
+  fechaInicio: string; fechaFin: string; horaInicio: string;
+  adultos: number; ninos: number; cantidad: number;
+  precioUnitario: number; montoPaquete: number; montoAdicionales: number; total: number;
+  cuposDisponibles: number; estadoSalida: 'SIN_SALIDA' | 'PROGRAMADA' | 'GARANTIZADA'; faltanParaGarantizar: number;
+  reservableWeb: boolean; anticipacionMinHoras: number;
+  puntoRecojo: string | null; horaRecojo: string | null;
+  servicios: LineaCotizacion[];
+}
+
+export interface EventoCotizacion {
+  fecha: string; campo: string; anterior: string | null; nuevo: string | null; detalle: string | null; actor: string;
+}
+
+export interface Cotizacion {
+  cotizacionId: number | null;      // solo para el personal
+  codigo: string;
+  estado: EstadoCotizacion;
+  origen: 'INVITADO' | 'CLIENTE';
+  paqueteId: number; paquete: string; dias: number; noches: number; imagen: string | null;
+  fechaViaje: string; fechaFin: string; horaInicio: string;
+  adultos: number; ninos: number; cantidad: number;
+  lugarRecojoId: number | null; puntoRecojo: string | null; horaRecojo: string | null;
+  precioUnitario: number; montoPaquete: number; montoAdicionales: number; total: number;
+  servicios: LineaCotizacion[];
+  venceEn: string | null; observaciones: string | null;
+  nombreContacto: string | null; tipoDocumento: string | null; numeroDocumento: string | null;
+  email: string | null; telefono: string | null;
+  fechaCreacion: string; fechaSolicitud: string | null; fechaAtencion: string | null;
+  atendidaPor: string | null; motivoRechazo: string | null;
+  reservaId: number | null; codigoReserva: string | null; estadoReserva: EstadoReserva | null; estadoPago: string | null;
+  totalReserva: number | null; montoPagado: number | null;
+  historial: EventoCotizacion[];
+}
+
+export interface CotizacionCreada { codigo: string; clave: string; cotizacion: Cotizacion; }
+
+export interface SolicitudReserva {
+  nombreCompleto: string; tipoDocumento: TipoDocumento; numeroDocumento: string;
+  email: string; telefono: string; observaciones: string;
+}
+
+// ---------- Mis asignaciones (v11: guía y conductor) ----------
+export interface MisAsignaciones {
+  rol: 'GUIA' | 'CONDUCTOR';
+  persona: { personalId: number; nombreCompleto: string; telefono: string | null; cargo: string; proveedor: string | null };
+  salidas: {
+    salidaId: number; paqueteId: number; paqueteNombre: string; dias: number; noches: number; horaInicio: string;
+    fechaInicio: string; fechaFin: string; estado: EstadoSalida; pasajeros: number; traslados: number;
+  }[];
+  traslados: {
+    operacionId: number; codigoOperacion: string; salidaId: number | null; paqueteNombre: string | null;
+    horaSalida: string; horaLlegada: string; estado: EstadoOperacion; paxProgramados: number;
+    origen: string; origenDireccion: string | null; destino: string; destinoDireccion: string | null;
+    placa: string | null; tipoVehiculo: string | null; marcaModelo: string | null; capacidadPax: number | null;
+    observaciones: string | null;
+  }[];
 }

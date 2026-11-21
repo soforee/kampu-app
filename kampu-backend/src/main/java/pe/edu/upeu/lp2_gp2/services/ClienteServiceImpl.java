@@ -70,7 +70,7 @@ public class ClienteServiceImpl implements IClienteService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_tours_v10.sql no otorga DELETE sobre CLIENTES: la cuenta se desactiva (estado_cuenta INACTIVO)
+        // kampu_tours_v11.sql no otorga DELETE sobre CLIENTES: la cuenta se desactiva (estado_cuenta INACTIVO)
         Cliente c = obtener(id);
         if ("INACTIVO".equals(c.getEstadoCuenta())) throw new BusinessException("El cliente ya está INACTIVO.");
         c.setEstadoCuenta("INACTIVO");

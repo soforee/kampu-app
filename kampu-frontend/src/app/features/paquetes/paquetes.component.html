@@ -87,6 +87,10 @@
           </div>@if (v.error('diasOperacion'); as e) { <p class="field-error">{{ e }}</p> }
           <p class="hint">Al reservar una fecha sin salida, la base de datos la crea con este cupo; queda garantizada al llegar al mínimo. La hora de inicio define la hora de recojo.</p>
         </div>
+        <div>
+          <label class="label" for="paq-incluye">Incluye <span class="opt">Uno por línea · lo ve el visitante al cotizar</span></label>
+          <textarea id="paq-incluye" class="field min-h-[96px]" maxlength="1000" [(ngModel)]="form.serviciosIncluidos" placeholder="Traslado aeropuerto - hotel&#10;2 noches de hotel con desayuno&#10;Guía de turismo"></textarea>
+        </div>
       </div>
 
       @if (editId) {

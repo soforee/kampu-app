@@ -2,6 +2,7 @@ import { CurrencyPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
+import { PaqueteTour } from '../../../core/models';
 import { ImagenService } from '../../../core/services/imagen.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
@@ -60,6 +61,8 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   @Input() hayFiltro = false;
   @Input({ required: true }) contacto!: Contacto;
   @Output() limpiar = new EventEmitter<void>();
+  // "Cotizar": abre la cotización en línea (sin cuenta) del paquete
+  @Output() cotizar = new EventEmitter<PaqueteTour>();
   // Categoría activa (por duración del tour) y aviso al cambiarla
   @Input() categoria: TipoTour = '';
   // Cantidad de tours por categoría con el destino y la fecha actuales
@@ -100,18 +103,13 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
     this.fallidas.set(new Set(this.fallidas()).add(id));
   }
 
-  // Reservar: el cliente va a su portal con el paquete elegido; el personal, a "Nueva reserva";
-  // sin sesión, al login, que después lo devuelve al portal con el mismo paquete
-  reservar(t: TourCard): { ruta: string; params: Record<string, string | number> } {
+  // Reservar: el cliente va a "Mis paquetes" con el paquete elegido; sin sesión, al login con ?reservar=
+  // (el login lo lleva después a "Mis paquetes", ver reserva-pendiente.ts); el personal de ventas, a "Nueva reserva".
+  // Guías y conductores no venden: solo ven "Cotizar".
+  reservar(t: TourCard): { ruta: string; params: Record<string, number> } | null {
     const id = t.paquete.paqueteId;
-    if (!this.auth.autenticado()) return { ruta: '/login', params: { volver: `/mi-cuenta?reservar=${id}` } };
+    if (!this.auth.autenticado()) return { ruta: '/login', params: { reservar: id } };
     if (this.auth.esCliente()) return { ruta: '/mi-cuenta', params: { reservar: id } };
-    return { ruta: '/reservas/nueva', params: { paquete: id } };
-  }
-
-
-  cotizar(t: TourCard): string {
-    const asunto = encodeURIComponent('Cotización: ' + t.paquete.nombre);
-    return `mailto:${this.contacto.email}?subject=${asunto}`;
+    return this.auth.puede('GESTIONAR_RESERVAS') ? { ruta: '/reservas/nueva', params: { paquete: id } } : null;
   }
 }

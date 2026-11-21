@@ -42,6 +42,11 @@ public class GlobalExceptionHandler {
         return responder(HttpStatus.FORBIDDEN, e.getMessage());
     }
 
+    @ExceptionHandler(DemasiadasSolicitudesException.class)
+    public ResponseEntity<ErrorDTO> demasiadas(DemasiadasSolicitudesException e) {
+        return responder(HttpStatus.TOO_MANY_REQUESTS, e.getMessage());
+    }
+
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorDTO> negocio(BusinessException e) {
         return responder(HttpStatus.BAD_REQUEST, e.getMessage());
