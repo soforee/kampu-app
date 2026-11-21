@@ -85,7 +85,7 @@
       </div>
 
       <div class="flex flex-col-reverse items-stretch gap-3 border-t border-zinc-100 bg-zinc-50/60 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-center text-sm text-zinc-500 sm:text-left">¿Ya tienes cuenta? <a routerLink="/login" class="link">Inicia sesión</a></p>
+        <p class="text-center text-sm text-zinc-500 sm:text-left">¿Ya tienes cuenta? <a routerLink="/login" queryParamsHandling="preserve" class="link">Inicia sesión</a></p>
         <button type="submit" class="btn-dark" [disabled]="cargando()">
           @if (cargando()) { Creando cuenta… } @else { <app-icon name="check" size="w-4 h-4" /> Crear cuenta }
         </button>

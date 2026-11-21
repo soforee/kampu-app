@@ -1,5 +1,6 @@
 import { CurrencyPipe } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
+import { PaqueteTour } from '../../../core/models';
 import { ImagenService } from '../../../core/services/imagen.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
@@ -58,6 +59,8 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   @Input() hayFiltro = false;
   @Input({ required: true }) contacto!: Contacto;
   @Output() limpiar = new EventEmitter<void>();
+  // "Cotizar": abre la cotización en línea (sin cuenta) del paquete
+  @Output() cotizar = new EventEmitter<PaqueteTour>();
   // Categoría activa (por duración del tour) y aviso al cambiarla
   @Input() categoria: TipoTour = '';
   @Output() categoriaChange = new EventEmitter<TipoTour>();
@@ -87,8 +90,5 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
     return foto ? { src: foto.src, referencial: true } : null;
   }
 
-  cotizar(t: TourCard): string {
-    const asunto = encodeURIComponent('Cotización: ' + t.paquete.nombre);
-    return `mailto:${this.contacto.email}?subject=${asunto}`;
-  }
+
 }

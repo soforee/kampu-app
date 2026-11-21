@@ -1,7 +1,7 @@
 // Textos para los códigos de los CHECK de la base de datos
 export const ETIQUETAS: { [codigo: string]: string } = {
   // Proveedores, personal y vehículos
-  SUSPENDIDO: 'Suspendido', DISPONIBLE: 'Disponible', OCUPADO: 'Ocupado', INACTIVO: 'Inactivo',
+  SUSPENDIDO: 'Suspendido', BLOQUEADO: 'Bloqueado', DISPONIBLE: 'Disponible', OCUPADO: 'Ocupado', INACTIVO: 'Inactivo',
   OPERATIVO: 'Operativo', MANTENIMIENTO: 'En mantenimiento',
   GUIA: 'Guía', CONDUCTOR: 'Conductor', AMBOS: 'Guía y conductor',
   // Lugares
