@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,7 @@ public class ResumenPaquetesController {
     }
 
     // ADMIN/VENDEDOR: todas las salidas con montos; OPERADOR: su cola (por empezar / en curso) sin montos
+    @Permiso("VER_RESUMEN")
     @GetMapping("/api/v1/resumen-paquetes")
     @Transactional(readOnly = true)
     public ResponseEntity<List<ResumenPaqueteDTO>> resumen() {

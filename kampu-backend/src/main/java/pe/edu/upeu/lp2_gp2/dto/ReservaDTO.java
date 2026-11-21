@@ -18,6 +18,8 @@ public record ReservaDTO(
         Integer pasajerosRegistrados,
         BigDecimal precioUnitario,
         BigDecimal descuento,
+        // (v11) servicios adicionales de la cotización (entran en montoTotal)
+        BigDecimal montoAdicionales,
         BigDecimal montoTotal,
         BigDecimal montoPagado,
         BigDecimal saldo,
@@ -45,7 +47,8 @@ public record ReservaDTO(
         BigDecimal saldo = "ANULADA".equals(r.getEstadoReserva()) ? BigDecimal.ZERO : total.subtract(pagado).max(BigDecimal.ZERO);
         return new ReservaDTO(r.getReservaId(), r.getCodigoReserva(), r.getClienteId(), r.getSalidaId(), paqueteId,
                 r.getFechaReserva(), r.getCantidadPasajeros(), pasajeros, r.getPrecioUnitario(),
-                r.getDescuento() == null ? BigDecimal.ZERO : r.getDescuento(), total, pagado, saldo,
+                r.getDescuento() == null ? BigDecimal.ZERO : r.getDescuento(),
+                r.getMontoAdicionales() == null ? BigDecimal.ZERO : r.getMontoAdicionales(), total, pagado, saldo,
                 r.getEstadoReserva(), r.getEstadoPago(), r.getCanal(), r.getObservaciones() == null ? "" : r.getObservaciones(),
                 r.getFormaReembolso(), r.getMotivoAnulacion(), r.getFechaAnulacion(), r.getUsuarioAnulaId(), usuarioAnula,
                 usuarioRegistra, r.getLugarRecojoId(), puntoRecojo, r.getBoletaEnviadaEn(), solicitudPendienteId);

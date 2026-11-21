@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,44 +22,52 @@ public class PortalClienteController {
         this.portalService = portalService;
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @GetMapping("/paquetes")
     public ResponseEntity<List<PortalPaqueteDTO>> misPaquetes() {
         return ResponseEntity.ok(portalService.misPaquetes());
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @GetMapping("/paquetes/{reservaId}")
     public ResponseEntity<PortalDetalleDTO> detalle(@PathVariable Long reservaId) {
         return ResponseEntity.ok(portalService.detalle(reservaId));
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @PostMapping("/reservas")
     public ResponseEntity<PortalPaqueteDTO> reservar(@Valid @RequestBody PortalReservaRequestDTO dto) {
         return new ResponseEntity<>(portalService.reservar(dto), HttpStatus.CREATED);
     }
 
+    @Permiso("INFORMAR_PAGO")
     @PostMapping("/paquetes/{reservaId}/pagos")
     public ResponseEntity<PagoDTO> informarPago(@PathVariable Long reservaId, @Valid @RequestBody InformarPagoRequestDTO dto) {
         return new ResponseEntity<>(portalService.informarPago(reservaId, dto), HttpStatus.CREATED);
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @PostMapping("/paquetes/{reservaId}/pasajeros")
     public ResponseEntity<PortalDetalleDTO.PortalPasajeroDTO> registrarPasajero(@PathVariable Long reservaId,
                                                                                @Valid @RequestBody PasajeroRequestDTO dto) {
         return new ResponseEntity<>(portalService.registrarPasajero(reservaId, dto), HttpStatus.CREATED);
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @DeleteMapping("/pasajeros/{pasajeroId}")
     public ResponseEntity<Void> eliminarPasajero(@PathVariable Long pasajeroId) {
         portalService.eliminarPasajero(pasajeroId);
         return ResponseEntity.noContent().build();
     }
 
+    @Permiso("VER_PAQUETES_PROPIOS")
     @PatchMapping("/paquetes/{reservaId}/recojo")
     public ResponseEntity<PortalPaqueteDTO> cambiarRecojo(@PathVariable Long reservaId, @RequestBody RecojoRequestDTO dto) {
         return ResponseEntity.ok(portalService.cambiarRecojo(reservaId, dto.lugarRecojoId()));
     }
 
     // Respuesta: {"resultado": "ANULADA"} o {"resultado": "SOLICITUD_REGISTRADA"}
+    @Permiso("VER_PAQUETES_PROPIOS")
     @PostMapping("/paquetes/{reservaId}/anulacion")
     public ResponseEntity<Map<String, String>> solicitarAnulacion(@PathVariable Long reservaId, @Valid @RequestBody MotivoRequestDTO dto) {
         return ResponseEntity.ok(Map.of("resultado", portalService.solicitarAnulacion(reservaId, dto.motivo())));

@@ -9,6 +9,8 @@ public record SesionDTO(
         String rol,
         String estado,
         // Acciones permitidas (PKG_SEGURIDAD_ROLES.permisos): el frontend arma menú, rutas y botones con esto
-        java.util.List<String> permisos
+        java.util.List<String> permisos,
+        // (v11) Sesión firmada: el frontend la envía como "Authorization: Bearer <token>"
+        String token
 ) {
 }

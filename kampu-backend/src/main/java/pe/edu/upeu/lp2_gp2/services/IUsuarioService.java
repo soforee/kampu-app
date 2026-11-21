@@ -12,7 +12,10 @@ public interface IUsuarioService {
 
     UsuarioDTO crear(UsuarioRequestDTO dto);
 
-    UsuarioDTO cambiarRol(Long usuarioId, String rol);
+    UsuarioDTO cambiarRol(Long usuarioId, String rol, Long personalId);
+
+    // (v11) Guías y conductores sin cuenta (pueden recibir una)
+    List<pe.edu.upeu.lp2_gp2.dto.PersonalCuentaDTO> personalSinCuenta();
 
     UsuarioDTO cambiarAcceso(Long usuarioId, boolean activo);
 

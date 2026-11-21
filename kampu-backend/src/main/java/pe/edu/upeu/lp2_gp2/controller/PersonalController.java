@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,32 +21,38 @@ public class PersonalController {
         this.personalService = personalService;
     }
 
+    @Permiso("VER_LOGISTICA")
     @GetMapping
     public ResponseEntity<List<PersonalDTO>> listar() {
         return ResponseEntity.ok(personalService.listarTodo());
     }
 
     // Catálogo CARGOS (v10): GUIA, CONDUCTOR y los que agregue el administrador
+    @Permiso("VER_LOGISTICA")
     @GetMapping("/cargos")
     public ResponseEntity<List<pe.edu.upeu.lp2_gp2.dto.CargoDTO>> cargos() {
         return ResponseEntity.ok(personalService.cargos());
     }
 
+    @Permiso("VER_LOGISTICA")
     @GetMapping("/{id}")
     public ResponseEntity<PersonalDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(personalService.buscarPorId(id));
     }
 
+    @Permiso("GESTIONAR_LOGISTICA")
     @PostMapping
     public ResponseEntity<PersonalDTO> crear(@Valid @RequestBody PersonalRequestDTO dto) {
         return new ResponseEntity<>(personalService.crear(dto), HttpStatus.CREATED);
     }
 
+    @Permiso("GESTIONAR_LOGISTICA")
     @PutMapping("/{id}")
     public ResponseEntity<PersonalDTO> actualizar(@PathVariable Long id, @Valid @RequestBody PersonalRequestDTO dto) {
         return ResponseEntity.ok(personalService.actualizar(id, dto));
     }
 
+    @Permiso("GESTIONAR_LOGISTICA")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         personalService.eliminar(id);

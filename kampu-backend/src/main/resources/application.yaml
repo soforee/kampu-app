@@ -1,7 +1,7 @@
 spring:
   application:
     name: lp2_gp2
-  # Base de datos: kampu-backend/src/main/resources/db/kampu_tours_v10.sql (ejecutar como SYSTEM en XEPDB1).
+  # Base de datos: kampu-backend/src/main/resources/db/kampu_tours_v11.sql (ejecutar como SYSTEM en XEPDB1).
   # El script crea (o conserva) el dueño KAMPU_BD y el usuario de conexión KAMPU_APP, que recibe
   # los roles ROL_ADMIN, ROL_VENTAS, ROL_OPERADOR y ROL_CLIENTE (personal interno y portal de clientes).
   datasource:

@@ -43,7 +43,7 @@ export function iconoLugar(tipo?: string | null): string {
   return ({ AEROPUERTO: 'plane', TERMINAL: 'train', HOTEL: 'bed', ATRACTIVO: 'mountain', CIUDAD: 'building', OFICINA: 'building' } as { [t: string]: string })[tipo ?? ''] ?? 'map-pin';
 }
 
-// Listas de los CHECK de kampu_tours_v10.sql
+// Listas de los CHECK de kampu_tours_v11.sql
 export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'YAPE', 'PLIN', 'TARJETA', 'PASARELA'] as const;
 export const FORMAS_REEMBOLSO = ['EFECTIVO', 'TRANSFERENCIA', 'YAPE', 'PLIN', 'TARJETA', 'NOTA_CREDITO'] as const;
 export const CANALES_VENTA = ['PRESENCIAL', 'TELEFONO', 'WHATSAPP'] as const;
