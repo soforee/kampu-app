@@ -1,6 +1,6 @@
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { mensajeError } from '../../core/utils/api';
 import { AuthService } from '../../core/services/auth.service';
 import { LogoComponent } from '../../shared/logo.component';
@@ -17,6 +17,8 @@ import { FOTOS_DESTINOS } from '../landing/landing.models';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  // ?volver=/mi-cuenta?reservar=2: al entrar, el cliente vuelve a donde iba (solo rutas internas del portal)
+  private volver = inject(ActivatedRoute).snapshot.queryParamMap.get('volver');
 
   username = '';
   password = '';
@@ -32,12 +34,18 @@ export class LoginComponent {
   foto = signal(0);
 
   constructor() {
-    if (this.auth.autenticado()) this.router.navigateByUrl(this.auth.inicio());
+    if (this.auth.autenticado()) this.router.navigateByUrl(this.destino());
     const reducido = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (!reducido) {
       const id = setInterval(() => this.foto.set((this.foto() + 1) % this.fotos.length), 7000);
       inject(DestroyRef).onDestroy(() => clearInterval(id));
     }
+  }
+
+  private destino(): string {
+    const v = this.volver;
+    const interna = !!v && v.startsWith('/mi-cuenta') && !v.startsWith('//');
+    return interna && this.auth.esCliente() ? v! : this.auth.inicio();
   }
 
   faltaUsuario() { return this.enviado() && !this.username.trim(); }
@@ -60,8 +68,8 @@ export class LoginComponent {
     this.auth.login(this.username, this.password).subscribe({
       next: (sesion) => {
         this.auth.guardarSesion(sesion);
-        // Personal interno -> panel · Cliente -> "Mis paquetes"
-        this.router.navigateByUrl(this.auth.inicio());
+        // Personal interno -> panel · Cliente -> "Mis paquetes" (o a donde iba antes de iniciar sesión)
+        this.router.navigateByUrl(this.destino());
       },
       error: (err) => {
         this.error.set(mensajeError(err));

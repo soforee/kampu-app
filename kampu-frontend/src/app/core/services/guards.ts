@@ -12,10 +12,11 @@ export const personalGuard: CanActivateFn = () => {
 };
 
 // Portal del cliente: solo rol CLIENTE
-export const clienteGuard: CanActivateFn = () => {
+// (sin sesión va al login, que después lo devuelve aquí, p. ej. /mi-cuenta?reservar=2 desde la página principal)
+export const clienteGuard: CanActivateFn = (_ruta, estado) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  if (!auth.autenticado()) return router.parseUrl('/login');
+  if (!auth.autenticado()) return router.createUrlTree(['/login'], { queryParams: { volver: estado.url } });
   return auth.esCliente() ? true : router.parseUrl('/dashboard');
 };
 
