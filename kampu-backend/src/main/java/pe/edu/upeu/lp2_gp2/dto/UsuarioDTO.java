@@ -12,11 +12,15 @@ public record UsuarioDTO(
         String rol,
         String estado,
         Integer intentosFallidos,
-        LocalDateTime ultimoAcceso
+        LocalDateTime ultimoAcceso,
+        // (v11) GUIA / CONDUCTOR: ficha de personal a la que está ligada la cuenta
+        Long personalId,
+        String personalNombre
 ) {
-    public static UsuarioDTO desde(UsuarioSistema u) {
+    public static UsuarioDTO desde(UsuarioSistema u, String personalNombre) {
         return new UsuarioDTO(u.getUsuarioId(), u.getUsername(), u.getNombreCompleto() == null ? "" : u.getNombreCompleto(),
                 u.getEmail() == null ? "" : u.getEmail(), u.getRol(), u.getEstado(),
-                u.getIntentosFallidos() == null ? 0 : u.getIntentosFallidos(), u.getUltimoAcceso());
+                u.getIntentosFallidos() == null ? 0 : u.getIntentosFallidos(), u.getUltimoAcceso(),
+                u.getPersonalId(), personalNombre);
     }
 }

@@ -22,7 +22,10 @@ export const ETIQUETAS: { [codigo: string]: string } = {
   POR_EMPEZAR: 'Por empezar', EN_CURSO: 'En curso', TERMINADO: 'Terminado',
   PAGADO_COMPLETO: 'Pagado completo', FALTA_PAGAR: 'Falta pagar', PENDIENTE_PAGO: 'Pendiente de pago', ANULADO: 'Anulado',
   // Roles
-  ADMIN: 'Administrador', VENDEDOR: 'Ventas', OPERADOR: 'Operador', CLIENTE: 'Cliente'
+  ADMIN: 'Administrador', VENDEDOR: 'Ventas', OPERADOR: 'Operador', CLIENTE: 'Cliente', INVITADO: 'Visitante',
+  // (v11) Cotizaciones y servicios adicionales
+  GENERADA: 'Generada', SOLICITADA: 'Solicitud pendiente', RESERVADA: 'Reservada', VENCIDA: 'Vencida',
+  POR_PERSONA: 'Por persona', POR_GRUPO: 'Por grupo'
 };
 
 export function etiqueta(codigo?: string | null): string {
@@ -43,7 +46,7 @@ export function iconoLugar(tipo?: string | null): string {
   return ({ AEROPUERTO: 'plane', TERMINAL: 'train', HOTEL: 'bed', ATRACTIVO: 'mountain', CIUDAD: 'building', OFICINA: 'building' } as { [t: string]: string })[tipo ?? ''] ?? 'map-pin';
 }
 
-// Listas de los CHECK de kampu_tours_v10.sql
+// Listas de los CHECK de kampu_tours_v11.sql
 export const METODOS_PAGO = ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'YAPE', 'PLIN', 'TARJETA', 'PASARELA'] as const;
 export const FORMAS_REEMBOLSO = ['EFECTIVO', 'TRANSFERENCIA', 'YAPE', 'PLIN', 'TARJETA', 'NOTA_CREDITO'] as const;
 export const CANALES_VENTA = ['PRESENCIAL', 'TELEFONO', 'WHATSAPP'] as const;

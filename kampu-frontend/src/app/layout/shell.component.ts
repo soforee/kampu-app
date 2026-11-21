@@ -38,10 +38,13 @@ export class ShellComponent {
 
   // Menú según los permisos de la sesión (mismos que exigen app.routes.ts y el backend)
   private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso }[] = [
-    { ruta: '/dashboard', texto: 'Panel', icono: 'chart' },
+    { ruta: '/dashboard', texto: 'Panel', icono: 'chart', permiso: 'VER_RESUMEN' },
+    { ruta: '/mis-asignaciones', texto: 'Mis asignaciones', icono: 'flag', permiso: 'VER_ASIGNACIONES_PROPIAS' },
+    { ruta: '/cotizaciones', texto: 'Cotizaciones', icono: 'inbox', permiso: 'VER_COTIZACIONES' },
     { ruta: '/reservas', texto: 'Reservas', icono: 'ticket', permiso: 'VER_RESERVAS' },
     { ruta: '/salidas', texto: 'Salidas', icono: 'calendar', permiso: 'VER_RESUMEN' },
     { ruta: '/paquetes', texto: 'Paquetes', icono: 'package', permiso: 'GESTIONAR_CATALOGO' },
+    { ruta: '/servicios-adicionales', texto: 'Adicionales', icono: 'tag', permiso: 'GESTIONAR_CATALOGO' },
     { ruta: '/pagos', texto: 'Pagos', icono: 'card', permiso: 'VER_MONTOS' },
     { ruta: '/clientes', texto: 'Clientes', icono: 'users', permiso: 'VER_CLIENTES' },
     { ruta: '/operaciones', texto: 'Tráfico', icono: 'truck', permiso: 'VER_OPERACIONES' },

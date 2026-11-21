@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 /**
  * Traduce los errores de Oracle a mensajes para el usuario:
  *  - ORA-20000..20999: RAISE_APPLICATION_ERROR de los triggers, paquetes y procedimientos
- *    de kampu_tours_v10.sql; su texto ya está en español y se devuelve tal cual.
+ *    de kampu_tours_v11.sql; su texto ya está en español y se devuelve tal cual.
  *  - ORA-00001 / 02290 / 02291 / 02292: restricciones UNIQUE, CHECK y FK, con un
  *    mensaje por nombre de restricción.
  */
@@ -18,7 +18,7 @@ public final class ErroresOracle {
 
     private static final Pattern RESTRICCION = Pattern.compile("\\(([A-Za-z0-9_$#]+)\\.([A-Za-z0-9_$#]+)\\)");
 
-    // Nombres de restricciones e índices únicos de kampu_tours_v10.sql
+    // Nombres de restricciones e índices únicos de kampu_tours_v11.sql
     private static final Map<String, String> MENSAJES = Map.ofEntries(
             // UNIQUE
             Map.entry("UQ_CLI_EMAIL", "Ese correo ya está registrado para otro cliente."),
@@ -26,6 +26,9 @@ public final class ErroresOracle {
             Map.entry("UQ_CLI_TELEFONO", "Ese teléfono ya está registrado para otro cliente."),
             Map.entry("UQ_USU_USERNAME", "Ese nombre de usuario ya existe."),
             Map.entry("UQ_USU_EMAIL", "Ese correo ya está registrado para otro usuario."),
+            Map.entry("UQ_USU_PERSONAL", "Esa persona del personal ya tiene una cuenta de acceso."),
+            Map.entry("UQ_SRV_NOMBRE", "Ya existe un servicio adicional con ese nombre para ese paquete."),
+            Map.entry("UQ_COT_RESERVA", "Esa reserva ya está ligada a otra cotización."),
             Map.entry("UQ_PROV_RUC", "Ya existe un proveedor con ese RUC."),
             Map.entry("UQ_PROV_TELEFONO", "Ese teléfono ya está registrado para otro proveedor."),
             Map.entry("UQ_PERS_TELEFONO", "Ese teléfono ya está registrado para otra persona del personal."),
@@ -43,7 +46,11 @@ public final class ErroresOracle {
             // CHECK
             Map.entry("CHK_PROV_RUC", "El RUC tiene 11 dígitos y empieza con 10, 15, 17 o 20."),
             Map.entry("CHK_PROV_SERVICIO", "El proveedor debe brindar al menos un soporte (transporte, guiado, hospedaje o alimentación)."),
-            Map.entry("CHK_USU_ROL", "Rol no válido (ADMIN, VENDEDOR u OPERADOR)."),
+            Map.entry("CHK_USU_ROL", "Rol no válido (ADMIN, VENDEDOR, OPERADOR, GUIA o CONDUCTOR)."),
+            Map.entry("CHK_USU_PERSONAL", "Guía y Conductor van ligados a una persona del personal; los demás roles no."),
+            Map.entry("CHK_SRV_PRECIO", "El precio del servicio debe ser mayor a 0."),
+            Map.entry("CHK_COT_PAX", "Debe viajar al menos un adulto y como máximo 99 pasajeros."),
+            Map.entry("CHK_COT_CONTACTO", "Para solicitar la reserva completa nombre, documento, correo y teléfono."),
             Map.entry("CHK_USU_HASH", "La contraseña debe guardarse cifrada (BCrypt)."),
             Map.entry("CHK_CLI_FORMATO_DOC", pe.edu.upeu.lp2_gp2.dto.Reglas.MSG_DOCUMENTO),
             Map.entry("CHK_PAS_FORMATO_DOC", pe.edu.upeu.lp2_gp2.dto.Reglas.MSG_DOCUMENTO),

@@ -20,7 +20,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Salidas programadas según kampu_tours_v10.sql (TRG_SALIDAS_VALIDAR y PKG_RESERVAS):
+ * Salidas programadas según kampu_tours_v11.sql (TRG_SALIDAS_VALIDAR y PKG_RESERVAS):
  *  - Una salida es un paquete en una fecha. La crea la BD al reservar una fecha nueva (origen RESERVA)
  *    o Ventas/Operaciones a mano (origen MANUAL). fecha_fin y cupos_disponibles los calcula la BD.
  *  - Estados: PROGRAMADA -> GARANTIZADA (llegó al mínimo de pasajeros; la BD lo hace sola al reservar)

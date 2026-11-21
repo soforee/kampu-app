@@ -1,0 +1,96 @@
+<app-page-header titulo="Cotizaciones">
+  <p detalle class="page-sub">Solicitudes de reserva que llegan desde la web, con o sin cuenta</p>
+  <button type="button" class="btn-light" (click)="cargar()"><app-icon name="refresh" size="w-4 h-4" /> Actualizar</button>
+</app-page-header>
+
+<div class="toolbar flex flex-wrap items-center gap-3">
+  <app-buscador [(valor)]="texto" placeholder="Código, paquete, nombre, correo o documento" />
+  <div class="seg" role="tablist" aria-label="Filtrar por estado">
+    @for (f of filtros; track f.valor) {
+      <button type="button" class="seg-btn" [class.on]="filtro() === f.valor" (click)="filtro.set(f.valor)">{{ f.texto }} <span class="ml-1 text-zinc-400">{{ contar(f.valor) }}</span></button>
+    }
+  </div>
+</div>
+
+<div class="card overflow-hidden">
+  <div class="relative overflow-x-auto">
+    <table class="tbl tbl-tarjetas">
+      <thead><tr><th class="th">Cotización</th><th class="th">Paquete y fecha</th><th class="th">Contacto</th><th class="th text-right">Total</th><th class="th">Estado</th><th class="th col-acciones"></th></tr></thead>
+      <tbody>
+        @for (c of visibles(); track c.codigo) {
+          <tr>
+            <td data-label="Cotización" class="td">
+              <div class="font-mono text-sm font-medium text-zinc-900">{{ c.codigo }}</div>
+              <div class="text-xs text-zinc-500">{{ c.fechaSolicitud ? 'Solicitada ' + (c.fechaSolicitud | date:'dd/MM HH:mm') : 'Creada ' + (c.fechaCreacion | date:'dd/MM HH:mm') }}</div>
+            </td>
+            <td data-label="Paquete" class="td text-zinc-800">{{ c.paquete }}<div class="text-xs text-zinc-500">{{ c.fechaViaje | date:'EEE d MMM y' }} · {{ c.cantidad }} pax</div></td>
+            <td data-label="Contacto" class="td text-zinc-700">
+              @if (c.nombreContacto) { {{ c.nombreContacto }}<div class="text-xs text-zinc-500">{{ c.telefono }}</div> }
+              @else { <span class="text-zinc-400">Aún sin solicitud</span> }
+              <span class="chip mt-1">{{ c.origen === 'CLIENTE' ? 'Cliente con cuenta' : 'Visitante' }}</span>
+            </td>
+            <td data-label="Total" class="td text-right font-medium tabular-nums text-zinc-900">S/ {{ c.total | number:'1.2-2' }}</td>
+            <td data-label="Estado" class="td whitespace-nowrap"><app-badge [estado]="c.estado" />
+              @if (c.codigoReserva) { <div class="text-xs text-zinc-500">{{ c.codigoReserva }} · {{ etiqueta(c.estadoReserva) }}</div> }</td>
+            <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+              <div class="actions">
+                <button type="button" class="icon-btn" data-tip="Ver detalle" aria-label="Ver detalle" (click)="ver(c)" [attr.data-testid]="'ver-' + c.codigo"><app-icon name="eye" size="w-4 h-4" /></button>
+                <button type="button" class="icon-btn" data-tip="PDF" aria-label="Descargar PDF" (click)="pdf(c)"><app-icon name="download" size="w-4 h-4" /></button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr><td colspan="6"><div class="empty">{{ cargando() ? 'Cargando…' : error() || 'No hay cotizaciones con este estado.' }}</div></td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <app-paginacion [(pagina)]="pagina" [total]="filas().length" />
+</div>
+
+@if (abierta(); as c) {
+  <app-modal icono="inbox" [titulo]="'Cotización ' + c.codigo" [subtitulo]="c.paquete" ancho="lg" (cerrar)="abierta.set(null)">
+    <div class="space-y-5">
+      <div class="flex flex-wrap items-center gap-2">
+        <app-badge [estado]="c.estado" /><span class="chip">{{ c.origen === 'CLIENTE' ? 'Cliente con cuenta' : 'Visitante sin cuenta' }}</span>
+        @if (c.atendidaPor) { <span class="text-xs text-zinc-500">Atendida por {{ c.atendidaPor }} · {{ c.fechaAtencion | date:'dd/MM/yyyy HH:mm' }}</span> }
+      </div>
+      <dl class="grid gap-3 text-sm sm:grid-cols-2">
+        <div><dt class="text-xs text-zinc-500">Viaje</dt><dd class="font-medium text-zinc-900">{{ c.fechaViaje | date:'EEEE d MMM y' }} · {{ c.adultos }} adulto(s)@if (c.ninos) { y {{ c.ninos }} niño(s) }</dd></div>
+        <div><dt class="text-xs text-zinc-500">Recojo</dt><dd class="font-medium text-zinc-900">{{ c.puntoRecojo ?? 'Oficina' }}@if (c.horaRecojo) { · {{ c.horaRecojo }} }</dd></div>
+        @if (c.nombreContacto) {
+          <div class="sm:col-span-2"><dt class="text-xs text-zinc-500">Contacto</dt>
+            <dd class="text-zinc-900">{{ c.nombreContacto }} · {{ c.tipoDocumento }} {{ c.numeroDocumento }} · <a class="link" [href]="'mailto:' + c.email">{{ c.email }}</a> · {{ c.telefono }}</dd></div>
+        }
+        @if (c.observaciones) { <div class="sm:col-span-2"><dt class="text-xs text-zinc-500">Comentarios</dt><dd class="text-zinc-800">{{ c.observaciones }}</dd></div> }
+        @if (c.motivoRechazo) { <div class="sm:col-span-2"><dt class="text-xs text-zinc-500">Motivo del rechazo</dt><dd class="text-rose-700">{{ c.motivoRechazo }}</dd></div> }
+      </dl>
+      <table class="w-full text-sm">
+        <tr class="border-b border-zinc-100"><td class="py-1.5">Paquete · {{ c.cantidad }} × S/ {{ c.precioUnitario | number:'1.2-2' }}</td><td class="text-right tabular-nums">S/ {{ c.montoPaquete | number:'1.2-2' }}</td></tr>
+        @for (l of c.servicios; track l.servicioId) {
+          <tr class="border-b border-zinc-100"><td class="py-1.5">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</td><td class="text-right tabular-nums">S/ {{ l.subtotal | number:'1.2-2' }}</td></tr>
+        }
+        <tr><td class="pt-2 font-semibold">Total</td><td class="pt-2 text-right text-lg font-semibold">S/ {{ c.total | number:'1.2-2' }}</td></tr>
+      </table>
+      @if (c.codigoReserva) {
+        <div class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm">Reserva <b>{{ c.codigoReserva }}</b> · {{ etiqueta(c.estadoReserva) }}
+          @if (veReservas && c.reservaId) { · <a class="link" [routerLink]="['/reservas', c.reservaId]" (click)="abierta.set(null)">Abrir reserva</a> }</div>
+      }
+      <div>
+        <h3 class="form-section-title">Historial</h3>
+        <ol class="mt-2 space-y-1.5 text-sm">
+          @for (h of c.historial; track $index) {
+            <li class="text-zinc-700"><span class="text-xs tabular-nums text-zinc-400">{{ h.fecha | date:'dd/MM HH:mm' }}</span> · {{ h.campo === 'VIAJE' ? 'Modificada: ' + h.anterior + ' → ' + h.nuevo : (h.anterior ? h.anterior + ' → ' : '') + h.nuevo }} <span class="text-xs text-zinc-500">· {{ h.actor }}</span></li>
+          }
+        </ol>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn-light" (click)="pdf(c)"><app-icon name="download" size="w-4 h-4" /> PDF</button>
+        @if (gestiona && c.estado === 'SOLICITADA') {
+          <button type="button" class="btn-danger" (click)="rechazar(c)" data-testid="rechazar">Rechazar</button>
+          <button type="button" class="btn-dark" (click)="confirmar(c)" [disabled]="ocupado()" data-testid="confirmar"><app-icon name="check" size="w-4 h-4" /> Confirmar y crear reserva</button>
+        }
+      </div>
+    </div>
+  </app-modal>
+}
