@@ -11,10 +11,7 @@ spring:
     username: ${DB_USERNAME:KAMPU_APP}
     password: ${DB_PASSWORD:Kampu_App_2026}
     driver-class-name: oracle.jdbc.OracleDriver
-    hikari:
-      pool-name: app-kampu
-      # Consultas nativas, secuencias y PL/SQL sin prefijo de esquema
-      connection-init-sql: ALTER SESSION SET CURRENT_SCHEMA=${DB_SCHEMA:KAMPU_BD}
+    # Las tablas viven en el esquema KAMPU_BD (variable DB_SCHEMA): SesionOracleDataSource lo fija en cada conexión
 
   jpa:
     open-in-view: false

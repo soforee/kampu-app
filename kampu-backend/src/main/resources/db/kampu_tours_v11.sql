@@ -98,7 +98,7 @@
 
    SPRING BOOT
      spring.jpa.hibernate.ddl-auto=none
-     spring.datasource.hikari.connection-init-sql=ALTER SESSION SET CURRENT_SCHEMA=KAMPU_BD
+     El backend fija CURRENT_SCHEMA=KAMPU_BD en cada conexion (SesionOracleDataSource)
      Por cada request: PKG_SEGURIDAD_ROLES.iniciar_sesion(usuario, rol) y al
      devolver la conexion al pool: PKG_SEGURIDAD_ROLES.cerrar_sesion.
      Reservas: llamar a PKG_RESERVAS.reservar (no hacer INSERT directo).
