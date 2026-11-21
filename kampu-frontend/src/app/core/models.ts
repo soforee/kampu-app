@@ -611,3 +611,49 @@ export interface Pagina<T> {
   pagina: number;
   tamanio: number;
 }
+
+// ---------- Usuarios del sistema (solo ADMIN) ----------
+export type RolInterno = 'ADMIN' | 'VENDEDOR' | 'OPERADOR';
+export type EstadoUsuario = 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO';
+
+export interface UsuarioSistema {
+  usuarioId: number;
+  username: string;
+  nombreCompleto: string;
+  email: string;
+  rol: RolInterno;
+  estado: EstadoUsuario;
+  intentosFallidos: number;
+  ultimoAcceso: string | null;
+}
+
+export interface UsuarioForm {
+  username: string;
+  nombreCompleto: string;
+  email: string;
+  rol: RolInterno;
+  password: string;
+  confirmacion: string;
+}
+
+// ---------- Cotización pública (visitante sin cuenta) ----------
+export interface Cotizacion {
+  paqueteId: number;
+  paquete: string;
+  dias: number;
+  noches: number;
+  fechaInicio: string;
+  fechaFin: string;
+  horaInicio: string;
+  cantidad: number;
+  precioUnitario: number;
+  total: number;
+  cuposDisponibles: number;
+  estadoSalida: 'SIN_SALIDA' | 'PROGRAMADA' | 'GARANTIZADA';
+  faltanParaGarantizar: number;
+  reservableWeb: boolean;
+  anticipacionMinHoras: number;
+  puntoRecojo: string | null;
+  horaRecojo: string | null;
+  emitida: string;
+}

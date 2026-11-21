@@ -9,6 +9,21 @@ Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos,
 | Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
 | Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind CSS 3 (compilado con Angular) · SweetAlert2 |
 
+## Versión 10.1 — usuarios del sistema y cotización sin cuenta
+
+- **Módulo de usuarios (solo administrador)** — menú *Usuarios* (`/usuarios`, permiso `GESTIONAR_USUARIOS`):
+  - crea cuentas del personal y **elige su rol** (Administrador, Ventas u Operador), con contraseña BCrypt;
+  - cambia el rol (`PKG_SEGURIDAD_ROLES.asignar_rol`), desactiva / reactiva / desbloquea (`revocar_acceso`, `restablecer_acceso`) y asigna una contraseña nueva;
+  - el backend responde **403** a cualquier rol sin `GESTIONAR_USUARIOS`; Oracle impide dejar el sistema sin administradores y `TRG_USUARIOS_AUDITORIA` registra cada alta y cambio.
+  - API: `GET/POST /api/v1/usuarios`, `PATCH /usuarios/{id}/rol`, `PATCH /usuarios/{id}/acceso`, `PATCH /usuarios/{id}/clave`.
+  - Las cuentas de clientes no se crean aquí: el cliente usa *Registrarse*.
+- **Cotizar sin cuenta** desde la página principal: el botón *Cotizar* de cada tour abre una ventana donde el visitante
+  elige fecha (calendario real del paquete), pasajeros y punto de recojo y obtiene el total al instante.
+  - API pública `POST /api/v1/cotizaciones`: aplica las reglas de `PKG_RESERVAS.calendario` (día de operación, cupos,
+    estado de la salida, anticipación web) y el precio que congela la reserva. **No guarda nada** en la base de datos.
+  - Con la cotización puede escribir a la agencia por **WhatsApp o correo** (mensaje ya armado) o **crear su cuenta /
+    iniciar sesión**: la reserva se abre en *Mis paquetes* con el paquete, la fecha y los pasajeros cotizados.
+
 ## Versión 10 — backend y frontend alineados con `kampu_tours_v10.sql`
 
 La base de datos manda: el script `kampu-backend/src/main/resources/db/kampu_tours_v10.sql` define el flujo y la

@@ -10,6 +10,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ImagenService } from '../../core/services/imagen.service';
 import { PortalService } from '../../core/services/portal.service';
 import { mensajeError } from '../../core/utils/api';
+import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { cuentaRegresiva, porcentajePagado } from '../../core/utils/viaje';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
@@ -51,23 +52,27 @@ export class MisPaquetesComponent {
   fechasWeb = computed(() => this.calendario().filter(d => d.reservableWeb));
   get paqueteElegido() { return this.store.getPaquete(this.nueva.paqueteId); }
 
-  abrirReserva(paqueteId: number | null = null) {
+  abrirReserva(paqueteId: number | null = null, fecha?: string, cantidad?: number) {
     this.store.cargar();
-    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: 1, lugarRecojoId: null };
+    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: cantidad ?? 1, lugarRecojoId: null };
     this.calendario.set([]);
     this.puntos.set([]);
     this.reservando.set(true);
-    if (paqueteId) this.elegirPaquete();
+    if (paqueteId) this.elegirPaquete(fecha);
   }
 
-  elegirPaquete() {
+  // fecha: la que el cliente cotizó en la página principal (si sigue disponible por la web)
+  elegirPaquete(fecha?: string) {
     const id = this.nueva.paqueteId;
     this.calendario.set([]);
     this.puntos.set([]);
     this.nueva.fecha = '';
     if (!id) return;
     this.store.calendario(id, hoy(), 60).subscribe({
-      next: d => { this.calendario.set(d); this.nueva.fecha = this.fechasWeb()[0]?.fecha ?? ''; }
+      next: d => {
+        this.calendario.set(d);
+        this.nueva.fecha = this.fechasWeb().find(x => x.fecha === fecha)?.fecha ?? this.fechasWeb()[0]?.fecha ?? '';
+      }
     });
     this.store.puntosRecojo(id).subscribe({ next: p => this.puntos.set(p) });
   }
@@ -104,9 +109,9 @@ export class MisPaquetesComponent {
 
   constructor() {
     this.cargar();
-    // ?reservar=<paqueteId>: llega desde el catálogo de la página principal
-    const reservar = Number(this.ruta.get('reservar'));
-    if (reservar) this.abrirReserva(reservar);
+    // ?reservar=<paqueteId>&fecha=&cantidad=: llega desde una cotización de la página principal
+    const pendiente = leerReservaPendiente(this.ruta);
+    if (pendiente) this.abrirReserva(pendiente.reservar, pendiente.fecha, pendiente.cantidad);
   }
 
   cargar() {

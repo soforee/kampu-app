@@ -18,7 +18,7 @@ export class BadgeComponent {
     EN_RUTA: 'curso', EN_CURSO: 'curso', EMBARQUE: 'curso', REGISTRO: 'curso',
     PARCIAL: 'intermedio', PROGRAMADA: 'intermedio', ASIGNADO: 'intermedio', POR_EMPEZAR: 'intermedio', ACTUALIZAR: 'intermedio',
     PENDIENTE: 'aviso', OCUPADO: 'aviso', MANTENIMIENTO: 'aviso', FALTA_PAGAR: 'aviso', LOGIN_FALLIDO: 'aviso',
-    ANULADA: 'error', CANCELADA: 'error', RECHAZADO: 'error', SUSPENDIDO: 'error', CANCELADO: 'error', PENDIENTE_PAGO: 'error', ELIMINAR: 'error'
+    ANULADA: 'error', CANCELADA: 'error', BLOQUEADO: 'error', RECHAZADO: 'error', SUSPENDIDO: 'error', CANCELADO: 'error', PENDIENTE_PAGO: 'error', ELIMINAR: 'error'
   };
   private puntos: { [tono: string]: string } = {
     correcto: 'bg-brand-600', curso: 'bg-brand-400', intermedio: 'bg-brand-200 ring-1 ring-brand-400',
