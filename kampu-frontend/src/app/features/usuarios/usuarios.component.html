@@ -21,7 +21,7 @@
           <tr [class.fila-nueva]="resaltado() === u.usuarioId">
             <td data-label="Usuario" class="td">
               <div class="font-medium text-zinc-900">{{ u.nombreCompleto || u.username }} @if (esYo(u)) { <span class="chip ml-1">Tú</span> }</div>
-              <div class="text-xs text-zinc-500">{{ u.username }}</div>
+              <div class="text-xs text-zinc-500">{{ u.username }}@if (u.personalNombre) { · ficha de personal: {{ u.personalNombre }} }</div>
             </td>
             <td data-label="Correo" class="td text-zinc-700">{{ u.email || '—' }}</td>
             <td data-label="Rol" class="td whitespace-nowrap">
@@ -79,10 +79,11 @@
         <div class="form-section-title">Rol en el sistema</div>
         <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Rol del usuario">
           @for (r of roles; track r.valor) {
+            @if (r.valor === 'GUIA') { <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:col-span-3">Personal de campo (cuenta opcional)</p> }
             <label class="flex cursor-pointer flex-col gap-1 rounded-xl border p-3 transition-colors"
                    [class]="form.rol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 hover:border-zinc-300'">
               <span class="flex items-center gap-2 text-sm font-semibold text-zinc-900">
-                <input type="radio" name="u-rol" class="sr-only" [value]="r.valor" [(ngModel)]="form.rol">
+                <input type="radio" name="u-rol" class="sr-only" [value]="r.valor" [ngModel]="form.rol" (ngModelChange)="elegirRol($event)" [attr.data-testid]="'rol-' + r.valor">
                 <app-icon [name]="r.icono" size="w-4 h-4" /> {{ r.texto }}
                 @if (form.rol === r.valor) { <span class="ml-auto text-brand-600"><app-icon name="check-circle" size="w-4 h-4" /></span> }
               </span>
@@ -90,6 +91,18 @@
             </label>
           }
         </div>
+        @if (esCampo(form.rol)) {
+          <div class="mt-3">
+            <label class="label req" for="u-personal">Persona del personal</label>
+            <select id="u-personal" class="field" [ngModel]="form.personalId" (ngModelChange)="elegirPersona($event)" [class.field-invalid]="v.error('personal')" data-testid="u-personal">
+              <option [ngValue]="null" disabled>Elige a quién pertenece la cuenta</option>
+              @for (p of personalPara(form.rol); track p.personalId) { <option [ngValue]="p.personalId">{{ p.nombreCompleto }} · {{ p.cargoNombre }}@if (p.proveedor) { · {{ p.proveedor }} }</option> }
+            </select>
+            @if (v.error('personal'); as e) { <p class="field-error">{{ e }}</p> }
+            @else if (!personalPara(form.rol).length) { <p class="hint">Todas las personas con ese cargo ya tienen cuenta (o no hay ninguna). Regístrala primero en Logística.</p> }
+            @else { <p class="hint">Solo aparecen quienes aún no tienen cuenta. Las demás personas del personal pueden seguir sin cuenta.</p> }
+          </div>
+        }
       </div>
 
       <div class="form-section">
@@ -138,11 +151,21 @@
           </label>
         }
       </div>
+      @if (esCampo(nuevoRol)) {
+        <div>
+          <label class="label req" for="u-nuevo-personal">Persona del personal</label>
+          <select id="u-nuevo-personal" class="field" [(ngModel)]="nuevoPersonal">
+            <option [ngValue]="null" disabled>Elige a quién pertenece la cuenta</option>
+            @if (u.personalId && u.rol === nuevoRol) { <option [ngValue]="u.personalId">{{ u.personalNombre }} (actual)</option> }
+            @for (p of personalPara(nuevoRol); track p.personalId) { <option [ngValue]="p.personalId">{{ p.nombreCompleto }} · {{ p.cargoNombre }}</option> }
+          </select>
+        </div>
+      }
       @if (esYo(u)) { <p class="hint">No puedes quitarte a ti mismo el rol de administrador.</p> }
       <p class="hint">El cambio se aplica en su próximo inicio de sesión y queda registrado en la auditoría.</p>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="editando.set(null)">Cancelar</button>
-        <button type="button" class="btn-dark" [disabled]="ocupado() || nuevoRol === u.rol" (click)="guardarRol()"><app-icon name="check" size="w-4 h-4" /> Guardar rol</button>
+        <button type="button" class="btn-dark" [disabled]="ocupado() || (nuevoRol === u.rol && (!esCampo(nuevoRol) || nuevoPersonal === u.personalId))" (click)="guardarRol()"><app-icon name="check" size="w-4 h-4" /> Guardar rol</button>
       </div>
     </div>
   </app-modal>

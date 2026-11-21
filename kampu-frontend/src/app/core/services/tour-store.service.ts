@@ -255,6 +255,10 @@ export class TourStore {
   puntosRecojo(paqueteId: number): Observable<PuntoRecojo[]> {
     return this.http.get<PuntoRecojo[]>(`${API}/paquetes/${paqueteId}/puntos-recojo`);
   }
+  // (v11) Un paquete del catálogo público (cotizador)
+  paquete(paqueteId: number): Observable<PaqueteTour> {
+    return this.http.get<PaqueteTour>(`${API}/paquetes/${paqueteId}`);
+  }
   itinerario(paqueteId: number): Observable<ActividadItinerario[]> {
     return this.http.get<ActividadItinerario[]>(`${API}/paquetes/${paqueteId}/itinerario`);
   }

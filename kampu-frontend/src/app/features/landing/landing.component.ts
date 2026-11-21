@@ -14,7 +14,7 @@ import { LandingPresentacionComponent } from './components/landing-presentacion.
 import { LandingPasosComponent } from './components/landing-pasos.component';
 import { LandingGaleriaComponent } from './components/landing-galeria.component';
 import { LandingCtaComponent } from './components/landing-cta.component';
-import { LandingCotizarComponent } from './components/landing-cotizar.component';
+import { Router } from '@angular/router';
 import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
 
 @Component({
@@ -22,7 +22,7 @@ import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
   standalone: true,
   imports: [LandingNavbarComponent, LandingHeroComponent, LandingSearchComponent, LandingToursComponent,
     LandingBeneficiosComponent, LandingFooterComponent, IconComponent,
-    LandingPresentacionComponent, LandingPasosComponent, LandingGaleriaComponent, LandingCtaComponent, LandingCotizarComponent],
+    LandingPresentacionComponent, LandingPasosComponent, LandingGaleriaComponent, LandingCtaComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.css'
 })
@@ -86,11 +86,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   // Rueda del ratón o panel táctil: un gesto = una página. Si la sección es más alta que la ventana, primero se recorre.
   // Se registra a mano con passive: false (con @HostListener el navegador la trata como pasiva y no se puede detener)
   private rueda = (e: WheelEvent) => {
-    // Con la ventana de cotización abierta solo se desplaza su contenido, no las páginas de fondo
-    if (this.cotizando()) {
-      if (!(e.target as HTMLElement).closest('[data-panel]')) e.preventDefault();
-      return;
-    }
     if (!this.modoPaginas() || e.ctrlKey) return;
     if ((e.target as HTMLElement).closest('.carrusel') && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
     e.preventDefault();
@@ -100,7 +95,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   tecla(e: KeyboardEvent) {
-    if (!this.modoPaginas() || this.cotizando()) return;
+    if (!this.modoPaginas()) return;
     const objetivo = e.target as HTMLElement;
     if (objetivo.closest('input, textarea, select, [contenteditable], [role="dialog"]')) return;
     const abajo = ['ArrowDown', 'PageDown'].includes(e.key) || (e.key === ' ' && !e.shiftKey);
@@ -119,7 +114,7 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 
   @HostListener('window:touchend', ['$event'])
   toqueFin(e: TouchEvent) {
-    if (!this.modoPaginas() || this.toqueY === null || this.animando || this.cotizando()) return;
+    if (!this.modoPaginas() || this.toqueY === null || this.animando) return;
     const dy = this.toqueY - (e.changedTouches[0]?.clientY ?? this.toqueY);
     this.toqueY = null;
     if (Math.abs(dy) > 50) this.paso(dy > 0 ? 1 : -1);
@@ -209,8 +204,9 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   whatsapp = computed(() => this.contacto().telefono.replace(/\D/g, ''));
 
   paquetes = signal<PaqueteTour[]>([]);
-  // Paquete que el visitante está cotizando (ventana de cotización abierta)
-  cotizando = signal<PaqueteTour | null>(null);
+  // (v11) "Cotizar" abre el cotizador completo: sin cuenta, con adicionales, guardado y seguimiento
+  private router = inject(Router);
+  cotizar(p: PaqueteTour) { this.router.navigate(['/cotizar', p.paqueteId]); }
   salidas = signal<SalidaProgramada[]>([]);
   cargando = signal(true);
   filtro = signal<FiltroBusqueda>({ destino: '', fecha: '', tipo: '' });

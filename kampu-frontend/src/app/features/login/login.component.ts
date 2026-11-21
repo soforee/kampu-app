@@ -19,7 +19,10 @@ export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
   // ?reservar=<paqueteId>: llega desde una cotización de la página principal; el cliente sigue a reservar ese paquete
-  private pendiente = leerReservaPendiente(inject(ActivatedRoute).snapshot.queryParamMap);
+  private consulta = inject(ActivatedRoute).snapshot.queryParamMap;
+  private pendiente = leerReservaPendiente(this.consulta);
+  // (v11) La sesión venció o la cuenta se desactivó (el backend respondió 401)
+  vencida = this.consulta.get('vencida') === '1';
 
   username = '';
   password = '';

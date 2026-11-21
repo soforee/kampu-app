@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,27 +28,32 @@ public class SalidaProgramadaController {
         this.seguridad = seguridad;
     }
 
+    @Publico
     @GetMapping
     public ResponseEntity<List<SalidaProgramadaDTO>> listar() {
         return ResponseEntity.ok(salidaService.listarTodo());
     }
 
+    @Permiso("VER_RESUMEN")
     @GetMapping("/{id}")
     public ResponseEntity<SalidaProgramadaDTO> obtener(@PathVariable Long id) {
         return ResponseEntity.ok(salidaService.buscarPorId(id));
     }
 
+    @Permiso("GESTIONAR_CATALOGO")
     @PostMapping
     public ResponseEntity<SalidaProgramadaDTO> crear(@Valid @RequestBody SalidaProgramadaRequestDTO dto) {
         return new ResponseEntity<>(salidaService.crear(dto), HttpStatus.CREATED);
     }
 
+    @Permiso("GESTIONAR_CATALOGO")
     @PutMapping("/{id}")
     public ResponseEntity<SalidaProgramadaDTO> actualizar(@PathVariable Long id, @Valid @RequestBody SalidaProgramadaRequestDTO dto) {
         return ResponseEntity.ok(salidaService.actualizar(id, dto));
     }
 
     // Ciclo de la salida (v10): GARANTIZADA o COMPLETADA
+    @Permiso("ACTUALIZAR_EJECUCION")
     @PatchMapping("/{id}/ejecucion")
     public ResponseEntity<SalidaProgramadaDTO> ejecucion(@PathVariable Long id, @Valid @RequestBody EjecucionRequestDTO dto) {
         return ResponseEntity.ok(salidaService.actualizarEjecucion(id, dto.estado()));
@@ -54,12 +61,14 @@ public class SalidaProgramadaController {
 
     // PKG_RESERVAS.cancelar_salida: anula y reembolsa sus reservas y cancela sus traslados.
     // (v10 no otorga DELETE sobre SALIDAS_PROGRAMADAS: una salida no se borra, se cancela)
+    @Permiso("GESTIONAR_RESERVAS")
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<SalidaProgramadaDTO> cancelar(@PathVariable Long id, @Valid @RequestBody AnulacionRequestDTO dto) {
         return ResponseEntity.ok(salidaService.cancelar(id, dto.motivo(), dto.formaReembolso()));
     }
 
     // Manifiesto: pasajeros de la salida. Los datos de pago solo van a quien puede ver montos.
+    @Permiso("VER_RESUMEN")
     @GetMapping("/{id}/manifiesto")
     public ResponseEntity<ManifiestoDTO> manifiesto(@PathVariable Long id) {
         boolean conMontos = seguridad.puede(SesionActual.rol(), "VER_MONTOS");

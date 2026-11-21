@@ -1,4 +1,5 @@
 import { computed, inject, Injectable } from '@angular/core';
+import { AuthService } from './auth.service';
 import { Alerta } from '../models';
 import { cuando, diasHasta } from '../utils/date.util';
 import { TourStore } from './tour-store.service';
@@ -14,9 +15,12 @@ const DIAS_MANTENIMIENTO = 15;
 @Injectable({ providedIn: 'root' })
 export class AlertasService {
   private store = inject(TourStore);
+  private auth = inject(AuthService);
 
   lista = computed<Alerta[]>(() => {
     const alertas: Alerta[] = [];
+    // (v11) Avisos de gestión de salidas: no aplican a guías ni conductores (no gestionan salidas)
+    if (!this.auth.puede('VER_RESUMEN')) return alertas;
     const activa = (estado: string) => estado === 'PROGRAMADA' || estado === 'GARANTIZADA';
 
     // v10: solicitudes de anulación del portal pendientes (Ventas aprueba con reembolso o rechaza)

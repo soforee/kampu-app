@@ -1,5 +1,7 @@
 package pe.edu.upeu.lp2_gp2.controller;
 
+import pe.edu.upeu.lp2_gp2.seguridad.Permiso;
+import pe.edu.upeu.lp2_gp2.seguridad.Publico;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import java.util.Map;
 
 // Usuarios del sistema (personal interno). Solo ADMIN: el servicio responde 403 a cualquier otro rol.
 @RestController
+@Permiso("GESTIONAR_USUARIOS")
 @RequestMapping("/api/v1/usuarios")
 public class UsuarioController {
     private final IUsuarioService usuarioService;
@@ -34,9 +37,15 @@ public class UsuarioController {
         return new ResponseEntity<>(usuarioService.crear(dto), HttpStatus.CREATED);
     }
 
+    // (v11) Guías y conductores del personal que aún no tienen cuenta
+    @GetMapping("/personal-sin-cuenta")
+    public ResponseEntity<List<pe.edu.upeu.lp2_gp2.dto.PersonalCuentaDTO>> personalSinCuenta() {
+        return ResponseEntity.ok(usuarioService.personalSinCuenta());
+    }
+
     @PatchMapping("/{id}/rol")
     public ResponseEntity<UsuarioDTO> cambiarRol(@PathVariable Long id, @Valid @RequestBody CambioRolRequestDTO dto) {
-        return ResponseEntity.ok(usuarioService.cambiarRol(id, dto.rol()));
+        return ResponseEntity.ok(usuarioService.cambiarRol(id, dto.rol(), dto.personalId()));
     }
 
     // {"activo": false} revoca el acceso (INACTIVO); {"activo": true} lo restablece y desbloquea

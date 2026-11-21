@@ -50,6 +50,18 @@ public class PaqueteTour {
     @Column(name = "estado")
     private String estado;
 
+    // (v11) Lo que incluye el paquete, uno por línea
+    @Column(name = "servicios_incluidos")
+    private String serviciosIncluidos;
+
+    public String getServiciosIncluidos() {
+        return serviciosIncluidos;
+    }
+
+    public void setServiciosIncluidos(String serviciosIncluidos) {
+        this.serviciosIncluidos = serviciosIncluidos;
+    }
+
     public PaqueteTour() {
     }
 

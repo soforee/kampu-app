@@ -37,6 +37,14 @@ public class Reserva {
     @Column(name = "monto_total", insertable = false, updatable = false)
     private BigDecimal montoTotal;
 
+    // (v11) Servicios adicionales de la cotizacion: los fija PKG_RESERVAS.reservar y no cambian
+    @Column(name = "monto_adicionales", insertable = false, updatable = false)
+    private BigDecimal montoAdicionales;
+
+    public BigDecimal getMontoAdicionales() {
+        return montoAdicionales;
+    }
+
     @Column(name = "canal", insertable = false, updatable = false)
     private String canal;
 

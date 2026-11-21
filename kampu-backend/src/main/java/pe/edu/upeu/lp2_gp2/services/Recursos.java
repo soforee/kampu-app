@@ -11,7 +11,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Reglas de kampu_tours_v10.sql sobre personal y flota:
+ * Reglas de kampu_tours_v11.sql sobre personal y flota:
  *  - proveedor_id NULL = recurso propio de Kampu Tours (PROVEEDORES solo guarda terceros).
  *  - Lo que hace una persona lo define la "funcion" de su cargo (CARGOS): GUIADO = guía,
  *    TRANSPORTE = conductor (requiere licencia), APOYO = otro personal.

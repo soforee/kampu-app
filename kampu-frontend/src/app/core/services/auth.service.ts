@@ -13,6 +13,8 @@ export class AuthService {
   usuario = computed(() => this.sesion());
   autenticado = computed(() => this.sesion() !== null);
   esCliente = computed(() => this.sesion()?.rol === 'CLIENTE');
+  // (v11) Guía o conductor con cuenta: solo ven sus asignaciones
+  esCampo = computed(() => this.sesion()?.rol === 'GUIA' || this.sesion()?.rol === 'CONDUCTOR');
   rol = computed(() => this.sesion()?.rol ?? null);
   // Permisos de la sesión (PKG_SEGURIDAD_ROLES.permisos): menú, rutas y botones dependen de esto
   permisos = computed(() => new Set<string>(this.sesion()?.permisos ?? []));
@@ -26,7 +28,8 @@ export class AuthService {
     if (!texto) return null;
     try {
       const s = JSON.parse(texto);
-      return s && s.username && s.rol ? { ...s, permisos: Array.isArray(s.permisos) ? s.permisos : [] } : null;
+      // Sesiones guardadas antes de v11 no tienen token firmado: hay que volver a entrar
+      return s && s.username && s.rol && s.token ? { ...s, permisos: Array.isArray(s.permisos) ? s.permisos : [] } : null;
     } catch {
       return null;
     }
@@ -49,7 +52,7 @@ export class AuthService {
 
   // Ruta de inicio según el rol
   inicio(): string {
-    return this.esCliente() ? '/mi-cuenta' : '/dashboard';
+    return this.esCliente() ? '/mi-cuenta' : this.esCampo() ? '/mis-asignaciones' : '/dashboard';
   }
 
   logout() {

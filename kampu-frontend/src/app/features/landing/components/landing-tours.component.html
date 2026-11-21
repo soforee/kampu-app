@@ -80,7 +80,7 @@
                   <app-icon name="calendar" size="w-3.5 h-3.5" />
                   {{ t.proximaSalida ? 'Sale el ' + fecha(t.proximaSalida) : 'Salidas a pedido' }}
                 </span>
-                <button type="button" class="tour-btn" (click)="cotizar.emit(t.paquete)" [attr.aria-label]="'Cotizar ' + t.paquete.nombre" title="Cotizar sin crear cuenta" data-testid="cotizar">
+                <button type="button" class="tour-btn" (click)="cotizar.emit(t.paquete)" [attr.aria-label]="'Cotizar ' + t.paquete.nombre" title="Cotiza al instante, sin crear cuenta" data-testid="cotizar">
                   Cotizar <app-icon name="arrow-right" size="w-4 h-4" />
                 </button>
               </div>

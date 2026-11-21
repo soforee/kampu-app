@@ -24,7 +24,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Catálogo público de un paquete (kampu_tours_v10.sql):
+ * Catálogo público de un paquete (kampu_tours_v11.sql):
  *  - Calendario de fechas: PKG_RESERVAS.calendario (días que opera, cupos, si se garantiza, si se reserva por la web).
  *  - Puntos de recojo y hora: PKG_GESTION_PAQUETES_CLIENTE.puntos_recojo.
  *  - Itinerario por días: PAQUETE_ITINERARIO (TRG_ITINERARIO_VALIDAR).

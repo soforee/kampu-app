@@ -38,7 +38,7 @@ public record RegistroAuditoria(
         };
     }
 
-    // Las columnas VARCHAR2 de AUDITORIA en kampu_tours_v10.sql miden BYTES (AL32UTF8): una tilde ocupa 2.
+    // Las columnas VARCHAR2 de AUDITORIA en kampu_tours_v11.sql miden BYTES (AL32UTF8): una tilde ocupa 2.
     // Se recorta por bytes para que la fila siempre quepa (si no, ORA-12899 y falla la operación auditada).
     static String corta(String texto, int maxBytes) {
         if (texto == null) return null;

@@ -19,7 +19,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Reservas según kampu_tours_v10.sql:
+ * Reservas según kampu_tours_v11.sql:
  *  - Venta: PKG_RESERVAS.reservar(cliente, paquete, fecha, cantidad...). La BD busca la salida de ese
  *    paquete en esa fecha o la crea; TRG_RESERVAS_BIU toma los cupos sin sobreventa, congela el precio,
  *    genera el código KR-AAAA-NNNNNN y marca la salida GARANTIZADA al llegar al mínimo.
