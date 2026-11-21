@@ -58,7 +58,7 @@ export class PaquetesComponent {
 
   private vacio(): PaqueteForm {
     return { nombre: '', descripcion: '', precioBase: 0, dias: 1, noches: 0, imagen: '', estado: 'ACTIVO',
-      cupoPorDefecto: 12, minimoPasajeros: 2, diasOperacion: '1111111', anticipacionMinHoras: 48, horaInicio: '08:00' };
+      cupoPorDefecto: 12, minimoPasajeros: 2, diasOperacion: '1111111', anticipacionMinHoras: 48, horaInicio: '08:00', serviciosIncluidos: '' };
   }
 
   // Días de operación: L M M J V S D como '1'/'0'
@@ -159,7 +159,7 @@ export class PaquetesComponent {
       nombre: p.nombre, descripcion: p.descripcion, precioBase: p.precioBase, dias: p.dias, noches: p.noches,
       imagen: this.imagenes.url(p.imagen) ? p.imagen : '', estado: p.estado,
       cupoPorDefecto: p.cupoPorDefecto, minimoPasajeros: p.minimoPasajeros, diasOperacion: p.diasOperacion,
-      anticipacionMinHoras: p.anticipacionMinHoras, horaInicio: p.horaInicio
+      anticipacionMinHoras: p.anticipacionMinHoras, horaInicio: p.horaInicio, serviciosIncluidos: p.serviciosIncluidos ?? ''
     };
     this.itinerario.set([]);
     this.cargarItinerario(p.paqueteId);
@@ -192,7 +192,7 @@ export class PaquetesComponent {
       nombre: f.nombre.trim(), descripcion: (f.descripcion ? f.descripcion : '').trim(), precioBase: f.precioBase,
       dias: f.dias, noches: f.noches, imagen: imagen, estado: f.estado,
       cupoPorDefecto: f.cupoPorDefecto, minimoPasajeros: f.minimoPasajeros, diasOperacion: f.diasOperacion,
-      anticipacionMinHoras: f.anticipacionMinHoras, horaInicio: f.horaInicio
+      anticipacionMinHoras: f.anticipacionMinHoras, horaInicio: f.horaInicio, serviciosIncluidos: (f.serviciosIncluidos ?? '').trim()
     };
     const editando = this.editId !== null;
     this.store.guardarPaquete(datos, this.editId).subscribe({

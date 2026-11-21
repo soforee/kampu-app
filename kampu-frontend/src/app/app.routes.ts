@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { LandingComponent } from './features/landing/landing.component';
 import { LoginComponent } from './features/login/login.component';
 import { ShellComponent } from './layout/shell.component';
-import { clienteGuard, permisoGuard, personalGuard } from './core/services/guards';
+import { clienteGuard, panelGuard, permisoGuard, personalGuard } from './core/services/guards';
 
 // Permiso que exige cada pantalla (PKG_SEGURIDAD_ROLES; el backend vuelve a validarlo en cada petición)
 const permiso = (p: string) => ({ permiso: p });
@@ -10,6 +10,10 @@ const permiso = (p: string) => ({ permiso: p });
 export const routes: Routes = [
   { path: '', component: LandingComponent, pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
+  // (v11) Cotización sin cuenta: cotizador, una cotización (código + clave) y su seguimiento
+  { path: 'cotizar/:paqueteId', loadComponent: () => import('./features/cotizar/cotizador.component').then(m => m.CotizadorComponent) },
+  { path: 'cotizacion/:codigo', loadComponent: () => import('./features/cotizar/cotizacion-detalle.component').then(m => m.CotizacionDetalleComponent) },
+  { path: 'seguimiento', loadComponent: () => import('./features/cotizar/seguimiento.component').then(m => m.SeguimientoComponent) },
   // Módulo de clientes (v4)
   { path: 'registro', loadComponent: () => import('./features/portal/registro.component').then(m => m.RegistroComponent) },
   { path: 'mi-cuenta', loadComponent: () => import('./features/portal/mis-paquetes.component').then(m => m.MisPaquetesComponent), canActivate: [clienteGuard] },
@@ -20,7 +24,11 @@ export const routes: Routes = [
     canActivate: [personalGuard],
     canActivateChild: [permisoGuard],
     children: [
-      { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent) },
+      { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), canActivate: [panelGuard] },
+      // (v11) Solicitudes que llegan por cotización, catálogo de adicionales y asignaciones del personal de campo
+      { path: 'cotizaciones', loadComponent: () => import('./features/cotizaciones/cotizaciones.component').then(m => m.CotizacionesComponent), data: permiso('VER_COTIZACIONES') },
+      { path: 'servicios-adicionales', loadComponent: () => import('./features/servicios/servicios.component').then(m => m.ServiciosComponent), data: permiso('GESTIONAR_CATALOGO') },
+      { path: 'mis-asignaciones', loadComponent: () => import('./features/asignaciones/mis-asignaciones.component').then(m => m.MisAsignacionesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'reservas', loadComponent: () => import('./features/reservas/reservas.component').then(m => m.ReservasComponent), data: permiso('VER_RESERVAS') },
       { path: 'reservas/nueva', loadComponent: () => import('./features/reservas/reserva-nueva.component').then(m => m.ReservaNuevaComponent), data: permiso('GESTIONAR_RESERVAS') },
       { path: 'reservas/:id', loadComponent: () => import('./features/reservas/reserva-detalle.component').then(m => m.ReservaDetalleComponent), data: permiso('VER_RESERVAS') },
