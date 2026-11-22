@@ -3,7 +3,7 @@ import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { Observable } from 'rxjs';
+import { Observable, of, switchMap } from 'rxjs';
 import { EstadoOperacion, EstimacionDuracion, HistorialOperacion, Operacion, OperacionForm, RecursoCandidato } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
@@ -73,6 +73,12 @@ export class OperacionesComponent {
   cargandoCandidatos = signal(false);
   vehiculoSel: number | null = null;
   conductorSel: number | null = null;
+  // Guía de la salida del traslado: se asigna en la misma ventana
+  guiaSel: number | null = null;
+  guiasDisponibles = computed(() => this.store.guias().filter(g => g.estado !== 'INACTIVO'));
+  salidaDe(o: Operacion) { return o.salidaId ? this.store.getSalida(o.salidaId) : undefined; }
+  private guiaCambio(o: Operacion) { return !!o.salidaId && this.guiaSel !== (this.salidaDe(o)?.guiaId ?? null); }
+  puedeAsignar(o: Operacion) { return (!!this.vehiculoSel && !!this.conductorSel) || this.guiaCambio(o); }
 
   // Cambio de estado
   nuevoEstado: EstadoOperacion | null = null;
@@ -214,6 +220,7 @@ export class OperacionesComponent {
     this.actual.set(o);
     this.vehiculoSel = null;
     this.conductorSel = null;
+    this.guiaSel = this.salidaDe(o)?.guiaId ?? null;
     this.candidatos.set([]);
     this.cargandoCandidatos.set(true);
     this.ventana.set('asignar');
@@ -238,12 +245,23 @@ export class OperacionesComponent {
 
   asignarAutomatico() {
     const o = this.actual();
-    if (o) this.ejecutar(this.store.asignarAutomatico(o.operacionId), 'Recursos asignados automáticamente');
+    if (o) this.ejecutar(this.conGuia(o, this.store.asignarAutomatico(o.operacionId)), 'Recursos asignados automáticamente');
   }
   asignarManual() {
     const o = this.actual();
-    if (!o || !this.vehiculoSel || !this.conductorSel) { this.alerts.toast('Elige un vehículo y un conductor', 'error'); return; }
-    this.ejecutar(this.store.asignarRecursos(o.operacionId, this.vehiculoSel, this.conductorSel), 'Recursos asignados');
+    if (!o) return;
+    const recursos = !!this.vehiculoSel && !!this.conductorSel;
+    if (!recursos && !this.guiaCambio(o)) { this.alerts.toast('Elige un vehículo y un conductor', 'error'); return; }
+    const peticion = recursos ? this.store.asignarRecursos(o.operacionId, this.vehiculoSel!, this.conductorSel!) : of(null);
+    this.ejecutar(this.conGuia(o, peticion), recursos ? 'Recursos asignados' : 'Guía asignado');
+  }
+
+  // Si cambió el guía, se guarda en la salida después de asignar vehículo y conductor
+  private conGuia(o: Operacion, peticion: Observable<unknown>): Observable<unknown> {
+    const s = this.salidaDe(o);
+    if (!s || !this.guiaCambio(o)) return peticion;
+    return peticion.pipe(switchMap(() => this.store.guardarSalida({ paqueteId: s.paqueteId, fechaInicio: s.fechaInicio,
+      cuposMaximos: s.cuposMaximos, guiaId: this.guiaSel, estado: s.estado }, s.salidaId)));
   }
 
   // ---------- Estados ----------

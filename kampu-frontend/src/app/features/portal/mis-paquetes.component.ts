@@ -45,7 +45,7 @@ export class MisPaquetesComponent {
   reservando = signal(false);
   enviando = signal(false);
   paquetes$ = computed(() => this.store.paquetes().filter(p => p.estado === 'ACTIVO'));
-  nueva = { paqueteId: null as number | null, fecha: '', cantidad: 1, lugarRecojoId: null as number | null };
+  nueva = { paqueteId: null as number | null, fecha: '', cantidad: 1 };
   calendario = signal<CalendarioDia[]>([]);
   puntos = signal<PuntoRecojo[]>([]);
   // Fechas que se pueden reservar por la web (operan, tienen cupos y cumplen la anticipación mínima)
@@ -54,7 +54,7 @@ export class MisPaquetesComponent {
 
   abrirReserva(paqueteId: number | null = null, fecha?: string, cantidad?: number) {
     this.store.cargar();
-    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: cantidad ?? 1, lugarRecojoId: null };
+    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: cantidad ?? 1 };
     this.calendario.set([]);
     this.puntos.set([]);
     this.reservando.set(true);
@@ -74,7 +74,6 @@ export class MisPaquetesComponent {
         this.nueva.fecha = this.fechasWeb().find(x => x.fecha === fecha)?.fecha ?? this.fechasWeb()[0]?.fecha ?? '';
       }
     });
-    this.store.puntosRecojo(id).subscribe({ next: p => this.puntos.set(p) });
   }
 
   reservar() {
@@ -84,7 +83,7 @@ export class MisPaquetesComponent {
       return;
     }
     this.enviando.set(true);
-    this.portal.reservar(n.paqueteId, n.fecha, n.cantidad, n.lugarRecojoId).subscribe({
+    this.portal.reservar(n.paqueteId, n.fecha, n.cantidad).subscribe({
       next: r => {
         this.enviando.set(false);
         this.reservando.set(false);

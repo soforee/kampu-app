@@ -95,7 +95,8 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
 
 - **Página principal:** secciones a pantalla completa, buscador y catálogo de destinos con la próxima fecha reservable.
   Cada tour tiene dos botones: "Reservar" (con cuenta) y "Cotizar".
-- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, punto de recojo y servicios adicionales. El precio lo calcula
+- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, servicios adicionales y hotel (opcional, de los
+  proveedores de hospedaje). El punto de recojo lo define la agencia. El precio lo calcula
   el servidor. Al guardar se obtiene un código y una clave para volver a verla, descargar el PDF o solicitar la reserva;
   el estado se sigue en `/seguimiento`. Cuando la agencia confirma la solicitud, con el mismo código y clave el
   visitante gestiona su reserva sin crear cuenta (`/cotizacion/:codigo/reserva`): pasajeros, pagos, punto de recojo y

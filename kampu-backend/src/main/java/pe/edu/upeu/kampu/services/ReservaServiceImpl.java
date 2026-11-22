@@ -222,13 +222,8 @@ public class ReservaServiceImpl implements IReservaService {
     @Transactional
     public ReservaDTO cambiarRecojo(Long id, Long lugarRecojoId) {
         Reserva r = obtener(id);
-        Long destino = lugarRecojoId;
-        if (destino == null) {
-            // Sin punto elegido: la oficina (punto de encuentro por defecto, como al reservar)
-            destino = lugarRepository.findAll().stream().filter(l -> "OFICINA".equals(l.getTipoLugar()))
-                    .map(Lugar::getLugarId).findFirst().orElse(null);
-        }
-        r.setLugarRecojoId(destino);   // TRG_RESERVAS_BIU valida que sea punto de recojo y que la reserva siga abierta
+        // null = por definir (la agencia aún no elige dónde recoger al cliente)
+        r.setLugarRecojoId(lugarRecojoId);   // TRG_RESERVAS_BIU valida que sea punto de recojo y que la reserva siga abierta
         reservaRepository.saveAndFlush(r);
         return recargar(id);
     }

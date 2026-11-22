@@ -59,19 +59,10 @@
               <div><dt class="text-xs text-zinc-500">Guía</dt><dd class="font-medium text-zinc-900">{{ detalle()!.guia || 'Por asignar' }}</dd></div>
               <div><dt class="text-xs text-zinc-500">Salida</dt><dd class="font-medium text-zinc-900">{{ p.salidaGarantizada ? 'Garantizada' : 'Por confirmar (mínimo de pasajeros)' }}</dd></div>
               <div class="col-span-2"><dt class="text-xs text-zinc-500">Te recogemos en</dt>
-                <dd class="font-medium text-zinc-900">{{ p.puntoRecojo || 'Oficina de la agencia' }}@if (p.horaRecojo) { · {{ p.horaRecojo | date:'dd/MM HH:mm' }} }</dd>
+                <dd class="font-medium text-zinc-900">{{ p.puntoRecojo || 'Por definir por la agencia' }}@if (p.horaRecojo) { · {{ p.horaRecojo | date:'dd/MM HH:mm' }} }</dd>
                 @if (p.direccionRecojo) { <dd class="text-xs text-zinc-500">{{ p.direccionRecojo }}</dd> }
               </div>
             </dl>
-
-            @if (editable() && puntos().length) {
-              <div class="flex flex-wrap items-end gap-2">
-                <div class="min-w-0 flex-1"><label class="label" for="p-recojo">Cambiar punto de recojo</label>
-                  <select id="p-recojo" class="field" [(ngModel)]="recojoSel">@for (x of puntos(); track x.lugarId) { <option [ngValue]="x.lugarId">{{ x.nombre }} · {{ x.horaRecojo }}</option> }</select>
-                </div>
-                <button type="button" class="btn-light" (click)="cambiarRecojo()">Guardar</button>
-              </div>
-            }
 
             @if (detalle()!.itinerario.length) {
               <div>

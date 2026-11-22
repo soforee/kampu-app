@@ -54,7 +54,7 @@ public class CotizacionService {
                 cs.setDate(2, java.sql.Date.valueOf(d.fecha()));
                 cs.setInt(3, d.adultos());
                 cs.setInt(4, d.ninos() == null ? 0 : d.ninos());
-                numero(cs, 5, d.lugarRecojoId());
+                numero(cs, 5, d.hotelId());
                 cs.setString(6, servicios(d.servicios()));
                 cs.registerOutParameter(7, Types.NUMERIC);
                 cs.registerOutParameter(8, Types.NUMERIC);
@@ -71,16 +71,18 @@ public class CotizacionService {
                 Map<String, Object> p = jdbc.queryForMap("SELECT nombre, dias, noches, hora_inicio, anticipacion_min_horas "
                         + "FROM PAQUETES_TOUR WHERE paquete_id = ?", d.paqueteId());
                 BigDecimal precio = cs.getBigDecimal(7);
-                BigDecimal adicionales = cs.getBigDecimal(8);
+                BigDecimal adicionales = cs.getBigDecimal(8);   // servicios + hotel (calculado por la BD)
                 BigDecimal montoPaquete = precio.multiply(BigDecimal.valueOf(d.cantidad()));
                 int dias = ((Number) p.get("DIAS")).intValue();
-                String[] recojo = recojo(d.paqueteId(), d.lugarRecojoId());
-                return new Calculo(d.paqueteId(), (String) p.get("NOMBRE"), dias, ((Number) p.get("NOCHES")).intValue(),
+                int noches = ((Number) p.get("NOCHES")).intValue();
+                HotelElegido hotel = hotelDe(d.hotelId(), noches, d.cantidad());
+                BigDecimal hospedaje = hotel == null ? BigDecimal.ZERO : hotel.subtotal();
+                return new Calculo(d.paqueteId(), (String) p.get("NOMBRE"), dias, noches,
                         d.fecha(), d.fecha().plusDays(Math.max(0, dias - 1)), (String) p.get("HORA_INICIO"),
                         d.adultos(), d.ninos() == null ? 0 : d.ninos(), d.cantidad(),
-                        precio, montoPaquete, adicionales, montoPaquete.add(adicionales),
+                        precio, montoPaquete, adicionales.subtract(hospedaje), montoPaquete.add(adicionales),
                         cs.getInt(9), cs.getString(10), cs.getInt(11), cs.getInt(12) == 1,
-                        ((Number) p.get("ANTICIPACION_MIN_HORAS")).intValue(), recojo[0], recojo[1], lineas);
+                        ((Number) p.get("ANTICIPACION_MIN_HORAS")).intValue(), hospedaje, hotel, lineas);
             }
         }));
     }
@@ -96,7 +98,7 @@ public class CotizacionService {
                 cs.setDate(3, java.sql.Date.valueOf(d.fecha()));
                 cs.setInt(4, d.adultos());
                 cs.setInt(5, d.ninos() == null ? 0 : d.ninos());
-                numero(cs, 6, d.lugarRecojoId());
+                numero(cs, 6, d.hotelId());
                 cs.setString(7, servicios(d.servicios()));
                 cs.setString(8, texto(d.observaciones()));
                 cs.registerOutParameter(9, Types.NUMERIC);
@@ -126,7 +128,7 @@ public class CotizacionService {
                 cs.setDate(3, java.sql.Date.valueOf(d.fecha()));
                 cs.setInt(4, d.adultos());
                 cs.setInt(5, d.ninos() == null ? 0 : d.ninos());
-                numero(cs, 6, d.lugarRecojoId());
+                numero(cs, 6, d.hotelId());
                 cs.setString(7, servicios(d.servicios()));
                 cs.setString(8, texto(d.observaciones()));
                 cs.execute();
@@ -275,12 +277,11 @@ public class CotizacionService {
     private Cotizacion armar(Long id, boolean personal, boolean completo) {
         List<Map<String, Object>> filas = jdbc.queryForList(
                 "SELECT c.*, p.nombre AS paquete, p.dias, p.noches, p.hora_inicio, p.imagen, "
-                        + "l.nombre AS punto, l.minutos_antes_recojo, "
+                        + "h.nombre AS hotel_nombre, h.ciudad AS hotel_ciudad, h.imagen AS hotel_imagen, "
                         + "r.codigo_reserva, r.estado_reserva, r.estado_pago, r.monto_pagado, r.monto_total AS total_reserva, "
                         + "u.username AS atendida_por "
                         + "FROM COTIZACIONES c JOIN PAQUETES_TOUR p ON p.paquete_id = c.paquete_id "
-                        + "LEFT JOIN LUGARES l ON l.lugar_id = NVL(c.lugar_recojo_id, "
-                        + "     (SELECT MIN(lugar_id) FROM LUGARES WHERE tipo_lugar = 'OFICINA')) "
+                        + "LEFT JOIN LUGARES h ON h.lugar_id = c.hotel_id "
                         + "LEFT JOIN RESERVAS r ON r.reserva_id = c.reserva_id "
                         + "LEFT JOIN USUARIOS_SISTEMA u ON u.usuario_id = c.atendida_por_id "
                         + "WHERE c.cotizacion_id = ?", id);
@@ -293,10 +294,11 @@ public class CotizacionService {
         BigDecimal montoPaquete = precio.multiply(BigDecimal.valueOf(adultos + ninos));
         LocalDate fecha = fecha(f.get("FECHA_VIAJE"));
         String horaInicio = (String) f.get("HORA_INICIO");
-        String horaRecojo = null;
-        if (horaInicio != null && f.get("PUNTO") != null) {
-            horaRecojo = LocalTime.parse(horaInicio).minusMinutes(num(f.get("MINUTOS_ANTES_RECOJO"))).toString();
-        }
+        // Hotel con la tarifa congelada al cotizar
+        BigDecimal hospedaje = f.get("MONTO_HOSPEDAJE") == null ? BigDecimal.ZERO : dec(f.get("MONTO_HOSPEDAJE"));
+        HotelElegido hotel = f.get("HOTEL_ID") == null ? null : new HotelElegido(lng(f.get("HOTEL_ID")),
+                (String) f.get("HOTEL_NOMBRE"), (String) f.get("HOTEL_CIUDAD"), (String) f.get("HOTEL_IMAGEN"),
+                (String) f.get("MODALIDAD_HOTEL"), decONulo(f.get("PRECIO_HOTEL")), num(f.get("NOCHES_HOTEL")), hospedaje);
         List<Linea> lineas = completo ? jdbc.query("SELECT s.servicio_id, s.nombre, s.modalidad, x.cantidad, x.precio_unitario, "
                         + "x.subtotal FROM COTIZACION_SERVICIOS x JOIN SERVICIOS_ADICIONALES s ON s.servicio_id = x.servicio_id "
                         + "WHERE x.cotizacion_id = ? ORDER BY s.nombre", (rs, i) -> linea(rs), id) : List.of();
@@ -311,8 +313,7 @@ public class CotizacionService {
                 origen(f),
                 lng(f.get("PAQUETE_ID")), (String) f.get("PAQUETE"), dias, num(f.get("NOCHES")), (String) f.get("IMAGEN"),
                 fecha, fecha.plusDays(Math.max(0, dias - 1)), horaInicio, adultos, ninos, adultos + ninos,
-                lngONulo(f.get("LUGAR_RECOJO_ID")), (String) f.get("PUNTO"), horaRecojo,
-                precio, montoPaquete, adicionales, montoPaquete.add(adicionales), lineas,
+                hotel, precio, montoPaquete, adicionales.subtract(hospedaje), hospedaje, montoPaquete.add(adicionales), lineas,
                 fechaHora(f.get("VENCE_EN")), (String) f.get("OBSERVACIONES"),
                 (String) f.get("NOMBRE_CONTACTO"), (String) f.get("TIPO_DOCUMENTO"), (String) f.get("NUMERO_DOCUMENTO"),
                 (String) f.get("EMAIL"), (String) f.get("TELEFONO"),
@@ -340,11 +341,28 @@ public class CotizacionService {
                 rs.getBigDecimal("precio_unitario"), rs.getBigDecimal("subtotal"));
     }
 
-    // Nombre del punto de recojo y hora a la que pasa la movilidad (el elegido o el de por defecto)
-    private String[] recojo(Long paqueteId, Long lugarId) {
-        return catalogo.puntosRecojo(paqueteId).stream()
-                .filter(x -> lugarId != null ? x.lugarId().equals(lugarId) : x.porDefecto())
-                .findFirst().map(x -> new String[]{x.nombre(), x.horaRecojo()}).orElse(new String[]{null, null});
+    // Hotel para la vista previa (la BD ya validó que se puede cotizar; misma fórmula que PKG_COTIZACIONES.hospedaje)
+    private HotelElegido hotelDe(Long hotelId, int noches, int cantidad) {
+        if (hotelId == null) return null;
+        Map<String, Object> h = jdbc.queryForMap("SELECT lugar_id, nombre, ciudad, imagen, modalidad_precio, precio_noche "
+                + "FROM LUGARES WHERE lugar_id = ?", hotelId);
+        BigDecimal precio = dec(h.get("PRECIO_NOCHE"));
+        String modalidad = (String) h.get("MODALIDAD_PRECIO");
+        BigDecimal subtotal = precio.multiply(BigDecimal.valueOf((long) noches * ("POR_PERSONA".equals(modalidad) ? cantidad : 1)));
+        return new HotelElegido(hotelId, (String) h.get("NOMBRE"), (String) h.get("CIUDAD"), (String) h.get("IMAGEN"),
+                modalidad, precio, noches, subtotal);
+    }
+
+    /** Hoteles de proveedores de hospedaje activos con tarifa por noche: el visitante elige uno (o ninguno). */
+    @Transactional(readOnly = true)
+    public List<HotelCotizable> hoteles() {
+        return jdbc.query("SELECT l.lugar_id, l.nombre, l.ciudad, l.direccion, pr.nombre_comercial, l.imagen, "
+                        + "l.modalidad_precio, l.precio_noche FROM LUGARES l JOIN PROVEEDORES pr ON pr.proveedor_id = l.proveedor_id "
+                        + "WHERE l.tipo_lugar = 'HOTEL' AND l.precio_noche IS NOT NULL AND pr.estado = 'ACTIVO' "
+                        + "AND pr.ofrece_hospedaje = 1 ORDER BY l.ciudad, l.precio_noche, l.nombre",
+                (rs, i) -> new HotelCotizable(rs.getLong("lugar_id"), rs.getString("nombre"), rs.getString("ciudad"),
+                        rs.getString("direccion"), rs.getString("nombre_comercial"), rs.getString("imagen"),
+                        rs.getString("modalidad_precio"), rs.getBigDecimal("precio_noche")));
     }
 
     // Errores de la base: clave errada -> 403, código bloqueado -> 429; el resto lo traduce ErroresOracle (400)
