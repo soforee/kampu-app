@@ -9,17 +9,18 @@
          [class.-translate-x-full]="!abierto()">
 
     <div class="flex h-[76px] shrink-0 items-center border-b border-zinc-100 px-4">
-      <a routerLink="/" class="flex items-center outline-none" aria-label="Ir a la página principal" title="Página principal">
-        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft"><app-logo variante="isotipo" [alto]="19" /></span>
-        <span class="lbl ml-3 whitespace-nowrap"><span class="block text-[15px] font-semibold leading-tight tracking-tight text-zinc-900">Kampu</span><span class="block text-xs text-zinc-500">Tour Manager</span></span>
+      <!-- Logotipo de la marca: completo con el menú desplegado; solo el ícono con el menú compacto -->
+      <a routerLink="/" class="flex items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30" aria-label="Kampu: ir a la página principal">
+        <span class="logo-completo pl-1"><app-logo variante="horizontal" [alto]="28" /></span>
+        <span class="logo-compacto hidden h-11 w-11 shrink-0 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft"><app-logo variante="isotipo" [alto]="19" /></span>
       </a>
       <button type="button" class="lg:hidden icon-btn ml-auto" aria-label="Cerrar menú" (click)="abierto.set(false)"><app-icon name="x" /></button>
     </div>
 
-    <nav class="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-4 py-5" aria-label="Menú principal">
+    <nav class="flex-1 space-y-1.5 overflow-y-auto overflow-x-hidden px-4 py-5" aria-label="Menú principal" (scroll)="tip.set(null)">
       @for (item of menu(); track item.ruta) {
         <a [routerLink]="item.ruta" (click)="abierto.set(false)" [attr.aria-label]="item.texto"
-           routerLinkActive="nav-active" ariaCurrentWhenActive="page" [attr.data-tip]="compacto() ? item.texto : null"
+           routerLinkActive="nav-active" ariaCurrentWhenActive="page" (mouseenter)="mostrarTip(item.texto, $event)" (mouseleave)="tip.set(null)" (focus)="mostrarTip(item.texto, $event)" (blur)="tip.set(null)"
            class="nav-item relative flex h-11 items-center gap-3 rounded-xl px-[13px] text-sm text-zinc-500 outline-none transition-colors
                   hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30">
           <span class="relative shrink-0">
@@ -39,7 +40,7 @@
     <div class="shrink-0 space-y-1.5 border-t border-zinc-100 px-4 py-4">
     @if (auth.puede('GESTIONAR_RESERVAS')) {
         <a routerLink="/reservas/nueva" (click)="abierto.set(false)" class="flex h-11 items-center gap-3 rounded-xl border border-zinc-200 bg-white px-[12px] text-sm font-medium text-zinc-700 shadow-soft outline-none transition-colors hover:bg-zinc-50 focus-visible:ring-2 focus-visible:ring-brand-600/30"
-           aria-label="Nueva reserva" [attr.data-tip]="compacto() ? 'Nueva reserva' : null">
+           aria-label="Nueva reserva" (mouseenter)="mostrarTip('Nueva reserva', $event)" (mouseleave)="tip.set(null)" (focus)="mostrarTip('Nueva reserva', $event)" (blur)="tip.set(null)">
           <app-icon name="plus" size="w-[18px] h-[18px] shrink-0" />
           <span class="lbl whitespace-nowrap">Nueva reserva</span>
         </a>
@@ -47,12 +48,17 @@
       <!-- Contraer o desplegar el menú (solo escritorio) -->
       <button type="button" class="nav-item hidden h-10 w-full items-center gap-3 rounded-xl px-[13px] text-sm text-zinc-500 outline-none transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30 lg:flex"
               (click)="alternarMenu()" [attr.aria-label]="compacto() ? 'Desplegar menú' : 'Contraer menú'" [attr.aria-expanded]="!compacto()"
-              [attr.data-tip]="compacto() ? 'Desplegar menú' : null">
+              (mouseenter)="mostrarTip('Desplegar menú', $event)" (mouseleave)="tip.set(null)" (focus)="mostrarTip('Desplegar menú', $event)" (blur)="tip.set(null)">
         <app-icon [name]="compacto() ? 'panel-right' : 'panel-left'" size="w-[18px] h-[18px] shrink-0" />
         <span class="lbl whitespace-nowrap">Contraer menú</span>
       </button>
     </div>
   </aside>
+
+  <!-- Nombre de la opción con el menú compacto: flota fuera del menú, así la lista puede desplazarse sin recortarlo -->
+  @if (tip(); as t) {
+    <div class="tip-flotante" role="tooltip" [style.top.px]="t.top">{{ t.texto }}</div>
+  }
 
   <!-- Barra superior única: sección actual, búsqueda, avisos y usuario -->
   <header data-barra class="no-print sticky top-0 z-30 flex h-[76px] items-center gap-3 border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur sm:px-8 lg:px-10">
@@ -61,7 +67,6 @@
       <span class="ico-tile hidden sm:grid"><app-icon [name]="seccion().icono" size="w-[18px] h-[18px]" /></span>
       <div class="min-w-0">
         <div class="truncate text-[15px] font-semibold text-zinc-900">{{ seccion().texto }}</div>
-        <div class="hidden text-xs text-zinc-500 sm:block">Kampu · Tour Manager</div>
       </div>
     </div>
 

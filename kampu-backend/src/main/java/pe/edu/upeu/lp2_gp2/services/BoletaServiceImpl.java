@@ -38,10 +38,13 @@ public class BoletaServiceImpl implements IBoletaService {
     private static final String LOGO = "boleta/logo-kampu.png";
     private static final String LOGO_CID = "logoKampu";
 
-    // Datos de contacto de la agencia que aparecen al pie de la boleta
-    private static final String AGENCIA_EMAIL = "reservas@kampu.pe";
-    private static final String AGENCIA_TELEFONO = "+51 984 000 000";
-    private static final String AGENCIA_CIUDAD = "Cusco, Perú";
+    // Datos de contacto de la agencia (los mismos que muestra la página principal: KAMPU_CONTACTO_*)
+    @Value("${KAMPU_CONTACTO_EMAIL:reservas@kampu.pe}")
+    private String agenciaEmail;
+    @Value("${KAMPU_CONTACTO_TELEFONO:+51 984 000 000}")
+    private String agenciaTelefono;
+    @Value("${KAMPU_CONTACTO_CIUDAD:Tarapoto, San Martín}")
+    private String agenciaCiudad;
 
     private final JavaMailSender mailSender;
     private final ReservaRepository reservaRepository;
@@ -51,6 +54,7 @@ public class BoletaServiceImpl implements IBoletaService {
     private final PersonalRepository guiaRepository;
     private final PasajeroReservaRepository pasajeroRepository;
     private final PagoRepository pagoRepository;
+    private final LugarRepository lugarRepository;
 
     private String logoBase64;
 
@@ -60,7 +64,7 @@ public class BoletaServiceImpl implements IBoletaService {
     public BoletaServiceImpl(JavaMailSender mailSender, ReservaRepository reservaRepository, ClienteRepository clienteRepository,
                              SalidaProgramadaRepository salidaRepository, PaqueteTourRepository paqueteRepository,
                              PersonalRepository guiaRepository, PasajeroReservaRepository pasajeroRepository,
-                             PagoRepository pagoRepository) {
+                             PagoRepository pagoRepository, LugarRepository lugarRepository) {
         this.mailSender = mailSender;
         this.reservaRepository = reservaRepository;
         this.clienteRepository = clienteRepository;
@@ -69,6 +73,7 @@ public class BoletaServiceImpl implements IBoletaService {
         this.guiaRepository = guiaRepository;
         this.pasajeroRepository = pasajeroRepository;
         this.pagoRepository = pagoRepository;
+        this.lugarRepository = lugarRepository;
     }
 
     @Override
@@ -136,6 +141,7 @@ public class BoletaServiceImpl implements IBoletaService {
         Personal guia;
         List<PasajeroReserva> pasajeros;
         List<Pago> pagos;
+        Lugar recojo;          // punto de recojo elegido o, si no eligió, la oficina de la agencia
     }
 
     private Datos datos(Long reservaId) {
@@ -158,13 +164,32 @@ public class BoletaServiceImpl implements IBoletaService {
         d.guia = d.salida.getGuiaId() == null ? null : guiaRepository.findById(d.salida.getGuiaId()).orElse(null);
         d.pasajeros = pasajeroRepository.findByReservaIdOrderByPasajeroIdAsc(reservaId);
         d.pagos = pagoRepository.findByReservaIdAndEstadoTransaccion(reservaId, "APROBADO");
+        // v10: sin punto elegido, se cita en la oficina (tipo OFICINA)
+        d.recojo = d.reserva.getLugarRecojoId() != null
+                ? lugarRepository.findById(d.reserva.getLugarRecojoId()).orElse(null)
+                : lugarRepository.findAll().stream().filter(l -> "OFICINA".equals(l.getTipoLugar())).findFirst().orElse(null);
         return d;
     }
 
     // ---------- Formato ----------
 
+    // Código oficial de la reserva (v11: KR-AAAA-000001); las reservas antiguas sin código usan R-0001
     private String codigo(Reserva r) {
-        return "R-" + String.format("%04d", r.getReservaId());
+        return r.getCodigoReserva() != null && !r.getCodigoReserva().isBlank()
+                ? r.getCodigoReserva() : "R-" + String.format("%04d", r.getReservaId());
+    }
+
+    // Hora de recojo = hora de inicio del paquete - minutos de anticipación del punto
+    private String horaRecojo(Datos d) {
+        String inicio = d.paquete.getHoraInicio();
+        if (inicio == null || !inicio.matches("\\d{1,2}:\\d{2}")) return null;
+        int minutos = d.recojo == null || d.recojo.getMinutosAntesRecojo() == null ? 0 : d.recojo.getMinutosAntesRecojo();
+        java.time.LocalTime h = java.time.LocalTime.parse(inicio.length() == 4 ? "0" + inicio : inicio).minusMinutes(minutos);
+        return String.format("%02d:%02d", h.getHour(), h.getMinute());
+    }
+
+    private String moneda(String m) {
+        return m == null || "PEN".equals(m) ? "S/" : esc(m);
     }
 
     private String soles(BigDecimal monto) {
@@ -202,11 +227,12 @@ public class BoletaServiceImpl implements IBoletaService {
                 + "Salida: " + fechaLarga(d.salida.getFechaInicio()) + "\n"
                 + "Retorno: " + fechaLarga(d.salida.getFechaFin()) + "\n"
                 + "Viajeros: " + d.viajeros + "\n"
+                + (horaRecojo(d) != null && d.recojo != null ? "Recojo: " + d.recojo.getNombre() + " a las " + horaRecojo(d) + "\n" : "")
                 + "Total: " + soles(d.reserva.getMontoTotal()) + "\n"
                 + "Pagado: " + soles(pagado) + "\n"
                 + "Saldo: " + soles(d.reserva.getMontoTotal().subtract(pagado).max(BigDecimal.ZERO)) + "\n\n"
                 + "Documento informativo, no es un comprobante de pago tributario.\n"
-                + "Kampu Tour Manager · " + AGENCIA_EMAIL + " · " + AGENCIA_TELEFONO;
+                + "Kampu Tour Manager · " + agenciaEmail + " · " + agenciaTelefono;
     }
 
     // HTML con estilos en línea y tablas: es lo que mejor soportan Gmail y Outlook.
@@ -236,7 +262,7 @@ public class BoletaServiceImpl implements IBoletaService {
                     .append(celda(p.getFechaPago() == null ? "—" : p.getFechaPago().format(FECHA_HORA), "color:#5D5A4E;"))
                     .append(celda(esc(p.getMetodoPago()), "color:#22231B;"))
                     .append(celda(esc(p.getCodigoTransaccion()), "color:#7A7668;font-family:Consolas,Menlo,monospace;font-size:12px;"))
-                    .append(celda(esc(p.getMoneda()) + " " + String.format(Locale.US, "%,.2f", p.getMonto()), "text-align:right;font-weight:700;color:#22231B;white-space:nowrap;"))
+                    .append(celda(moneda(p.getMoneda()) + " " + String.format(Locale.US, "%,.2f", p.getMonto()), "text-align:right;font-weight:700;color:#22231B;white-space:nowrap;"))
                     .append("</tr>");
         }
 
@@ -344,16 +370,13 @@ public class BoletaServiceImpl implements IBoletaService {
                           </td>
                         </tr></table>
                       </td></tr>
+                      %s
                     </table>
                   </td></tr>
 
                   <!-- Pasajeros -->
                   <tr><td class="px" style="padding:16px 36px 4px;">
                     %s
-                    <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="font-size:13px;">
-                      <tr>%s%s%s%s</tr>
-                      %s
-                    </table>
                   </td></tr>
 
                   %s
@@ -363,8 +386,7 @@ public class BoletaServiceImpl implements IBoletaService {
                     <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="border:1px solid #E6E4DA;border-radius:16px;">
                       <tr><td style="padding:18px 20px 6px;">
                         <table role="presentation" width="100%%" cellpadding="0" cellspacing="0" style="font-size:14px;">
-                          <tr><td style="padding:3px 0;color:#7A7668;">%d viajero(s) × %s</td><td align="right" style="padding:3px 0;color:#22231B;">%s</td></tr>
-                          <tr><td style="padding:3px 0;color:#7A7668;">Pagado</td><td align="right" style="padding:3px 0;color:#3F4C18;font-weight:700;">%s</td></tr>
+                          %s
                         </table>
                       </td></tr>
                       <tr><td style="padding:8px 20px 4px;">
@@ -420,18 +442,69 @@ public class BoletaServiceImpl implements IBoletaService {
                 d.paquete.getDias(), d.paquete.getNoches(), d.guia == null ? "por asignar" : esc(d.guia.getNombreCompleto()),
                 fechaLarga(d.salida.getFechaInicio()), diaSemana(d.salida.getFechaInicio()),
                 fechaLarga(d.salida.getFechaFin()), diaSemana(d.salida.getFechaFin()),
-                titulo("Pasajeros (" + d.pasajeros.size() + ")"),
-                encabezado("#", ""), encabezado("Nombre", ""), encabezado("Documento", ""), encabezado("Nacionalidad", "text-align:right;"),
-                filasPasajeros,
+                bloqueRecojo(d),
+                bloquePasajeros(d, filasPasajeros.toString()),
                 d.pagos.isEmpty() ? "" : bloquePagos(filasPagos.toString()),
-                d.viajeros, soles(d.reserva.getPrecioUnitario()), soles(r.getMontoTotal()),
-                soles(pagado),
+                filasResumen(d, pagado),
                 barraAvance, avance,
                 pagadoTotal ? "Pagado por completo" : "Saldo pendiente",
                 pagadoTotal ? "#3F4C18" : "#22231B",
                 pagadoTotal ? soles(r.getMontoTotal()) : soles(saldo),
-                AGENCIA_EMAIL, AGENCIA_TELEFONO, AGENCIA_CIUDAD,
+                esc(agenciaEmail), esc(agenciaTelefono), esc(agenciaCiudad),
                 r.getFechaReserva() == null ? "—" : r.getFechaReserva().format(FECHA_HORA));
+    }
+
+    // Punto y hora de recojo (v10): lo que el pasajero necesita el día del viaje
+    private String bloqueRecojo(Datos d) {
+        String hora = horaRecojo(d);
+        if (d.recojo == null && d.paquete.getHoraInicio() == null) return "";
+        String lugar = d.recojo == null ? "Oficina de la agencia" : esc(d.recojo.getNombre())
+                + (d.recojo.getDireccion() == null || d.recojo.getDireccion().isBlank() ? "" : " · " + esc(d.recojo.getDireccion()));
+        return """
+                <tr><td style="padding:0 22px 20px;">
+                  <div style="background:#FFFFFF;border-radius:12px;padding:12px 14px;">
+                    <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7A7668;">Recojo</div>
+                    <div style="margin-top:4px;font-size:15px;font-weight:800;color:#22231B;">%s%s</div>
+                    <div style="font-size:12px;color:#7A7668;">%s</div>
+                  </div>
+                </td></tr>
+                """.formatted(hora == null ? "" : hora + " h · ", lugar,
+                d.paquete.getHoraInicio() == null ? "" : "El tour empieza a las " + esc(d.paquete.getHoraInicio()) + " h. Llega unos minutos antes.");
+    }
+
+    // Desglose: paquete, adicionales y descuento (si los hay), total y pagado
+    private String filasResumen(Datos d, BigDecimal pagado) {
+        Reserva r = d.reserva;
+        BigDecimal unitario = r.getPrecioUnitario() == null ? BigDecimal.ZERO : r.getPrecioUnitario();
+        BigDecimal paquete = unitario.multiply(BigDecimal.valueOf(d.viajeros));
+        StringBuilder f = new StringBuilder(fila(d.viajeros + " viajero(s) × " + soles(unitario), soles(paquete), "#22231B", false));
+        if (r.getMontoAdicionales() != null && r.getMontoAdicionales().signum() > 0)
+            f.append(fila("Servicios adicionales", soles(r.getMontoAdicionales()), "#22231B", false));
+        if (r.getDescuento() != null && r.getDescuento().signum() > 0)
+            f.append(fila("Descuento", "− " + soles(r.getDescuento()), "#7D3528", false));
+        f.append(fila("Total", soles(r.getMontoTotal()), "#22231B", true));
+        f.append(fila("Pagado", soles(pagado), "#3F4C18", false));
+        return f.toString();
+    }
+
+    private String fila(String concepto, String monto, String color, boolean total) {
+        String borde = total ? "border-top:1px solid #E6E4DA;padding-top:8px;" : "";
+        String peso = total ? "font-weight:800;" : "";
+        return "<tr><td style=\"padding:3px 0;color:" + (total ? "#22231B" : "#7A7668") + ";" + borde + peso + "\">" + concepto + "</td>"
+                + "<td align=\"right\" style=\"padding:3px 0;color:" + color + ";font-weight:700;white-space:nowrap;" + borde + "\">" + monto + "</td></tr>";
+    }
+
+    // Lista de pasajeros; si aún no se registran, un aviso en lugar de una tabla vacía
+    private String bloquePasajeros(Datos d, String filas) {
+        if (d.pasajeros.isEmpty()) {
+            return titulo("Pasajeros") + "<div style=\"border:1px dashed #E6E4DA;border-radius:12px;padding:12px 16px;font-size:13px;line-height:1.55;color:#7A7668;\">"
+                    + "Aún no hay pasajeros registrados para los " + d.viajeros + " cupo(s) de esta reserva. "
+                    + "Regístralos (nombre y documento) antes del viaje desde tu cuenta o con la agencia.</div>";
+        }
+        return titulo("Pasajeros (" + d.pasajeros.size() + " de " + d.viajeros + ")")
+                + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"font-size:13px;\"><tr>"
+                + encabezado("#", "") + encabezado("Nombre", "") + encabezado("Documento", "") + encabezado("Nacionalidad", "text-align:right;")
+                + "</tr>" + filas + "</table>";
     }
 
     private String bloquePagos(String filas) {

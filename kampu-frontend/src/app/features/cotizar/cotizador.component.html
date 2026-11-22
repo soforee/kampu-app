@@ -1,142 +1,185 @@
-<div class="min-h-screen bg-zinc-50/60">
-  <app-portal-header />
+<!-- Cotizador (visitante o cliente): mismo lenguaje que la página principal — portada con foto, pasos numerados y resumen fijo -->
+<div class="cotizador min-h-screen">
 
-  <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-    <a routerLink="/" fragment="tours" class="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900">
-      <app-icon name="arrow-left" size="w-4 h-4" /> Todos los tours
-    </a>
+  @if (cargando()) {
+    <div class="portada portada-cargando animate-pulse"></div>
+    <div class="mx-auto -mt-10 grid max-w-6xl gap-6 px-5 sm:px-8 lg:grid-cols-[1fr_380px]">
+      <div class="h-96 animate-pulse rounded-[24px] bg-white"></div><div class="h-72 animate-pulse rounded-[24px] bg-white"></div>
+    </div>
+  } @else if (errorCarga()) {
+    <header class="barra barra-clara">
+      <a routerLink="/" aria-label="Kampu: página principal"><app-logo variante="horizontal" [alto]="26" /></a>
+    </header>
+    <div class="mx-auto max-w-lg px-5 pt-32 text-center">
+      <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600"><app-icon name="compass" size="w-7 h-7" /></span>
+      <p class="mt-5 text-lg font-semibold text-zinc-900">{{ errorCarga() }}</p>
+      <div class="mt-6 flex justify-center gap-3">
+        <a routerLink="/" fragment="tours" class="boton-pill-claro">Ver los tours</a>
+        <a routerLink="/seguimiento" class="boton-pill">Seguir mi cotización</a>
+      </div>
+    </div>
+  } @else { @if (paquete(); as p) {
 
-    @if (cargando()) {
-      <div class="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div class="card h-80 animate-pulse bg-zinc-100"></div><div class="card h-64 animate-pulse bg-zinc-100"></div>
-      </div>
-    } @else if (errorCarga()) {
-      <div class="card mt-6 p-8 text-center">
-        <p class="font-semibold text-zinc-900">{{ errorCarga() }}</p>
-        <a routerLink="/seguimiento" class="btn-light btn-sm mt-4">Seguir mi cotización</a>
-      </div>
-    } @else { @if (paquete(); as p) {
-      <div class="mt-4 flex flex-wrap items-center gap-2">
-        <h1 class="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">{{ editar ? 'Modificar ' + editar : 'Cotiza tu viaje' }}</h1>
-        <!-- Visitante o cliente registrado: se distingue a simple vista -->
-        @if (auth.esCliente()) {
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700" data-testid="modo-cliente">
-            <app-icon name="user" size="w-3.5 h-3.5" /> Con tu cuenta · {{ auth.usuario()?.nombre }}
-          </span>
-        } @else {
-          <span class="inline-flex items-center gap-1.5 rounded-full bg-leaf-100 px-3 py-1 text-xs font-semibold text-zinc-800" data-testid="modo-invitado">
-            <app-icon name="sparkles" size="w-3.5 h-3.5" /> Como visitante · sin crear cuenta
-          </span>
-        }
-      </div>
+    <!-- Portada: foto del destino a sangre, nombre del tour y datos clave -->
+    <section class="portada">
+      @if (imagen(); as src) { <img [src]="src" [alt]="p.nombre" class="portada-foto" (error)="sinImagen()"> }
+      <div class="portada-velo"></div>
 
-      <div class="mt-5 grid items-start gap-6 lg:grid-cols-[1fr_380px]">
-        <!-- Columna izquierda: el paquete y lo que elige el visitante -->
-        <div class="space-y-5">
-          <section class="card overflow-hidden">
-            <div class="grid sm:grid-cols-[240px_1fr]">
-              <div class="relative h-48 bg-zinc-100 sm:h-full">
-                @if (imagen(); as src) { <img [src]="src" [alt]="p.nombre" class="h-full w-full object-cover" (error)="sinImagen()"> }
-                @else { <div class="grid h-full place-items-center text-zinc-300"><app-icon name="mountain" size="w-10 h-10" /></div> }
-              </div>
-              <div class="p-5">
-                <h2 class="text-xl font-semibold text-zinc-900">{{ p.nombre }}</h2>
-                <p class="mt-1 text-sm text-zinc-500">{{ p.dias }} {{ p.dias === 1 ? 'día' : 'días' }}@if (p.noches) { · {{ p.noches }} {{ p.noches === 1 ? 'noche' : 'noches' }} } · inicia {{ p.horaInicio }} h · desde <b class="text-zinc-900">S/ {{ p.precioBase | number:'1.2-2' }}</b> por persona</p>
-                @if (p.descripcion) { <p class="mt-3 text-sm leading-relaxed text-zinc-700">{{ p.descripcion }}</p> }
-                @if (incluye().length) {
-                  <h3 class="mt-4 text-xs font-semibold uppercase tracking-wide text-zinc-500">Incluye</h3>
-                  <ul class="mt-2 grid gap-1.5 sm:grid-cols-2">
-                    @for (i of incluye(); track i) {
-                      <li class="flex gap-2 text-sm text-zinc-700"><span class="mt-0.5 text-brand-600"><app-icon name="check" size="w-4 h-4" /></span>{{ i }}</li>
-                    }
-                  </ul>
+      <header class="barra">
+        <a routerLink="/" aria-label="Kampu: página principal"><app-logo variante="horizontal" [oscuro]="true" [alto]="26" /></a>
+        <nav class="flex items-center gap-1 sm:gap-2">
+          <a routerLink="/" fragment="tours" class="barra-enlace"><app-icon name="arrow-left" size="w-4 h-4" /> <span class="hidden sm:inline">Todos los tours</span></a>
+          @if (auth.esCliente()) {
+            <a routerLink="/mi-cuenta" class="barra-enlace">Mis paquetes</a>
+          } @else {
+            <a routerLink="/seguimiento" class="barra-enlace">Seguir mi cotización</a>
+          }
+        </nav>
+      </header>
+
+      <div class="portada-texto mx-auto w-full max-w-6xl px-5 sm:px-8">
+        <p class="aparece aparece-1 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/85">
+          <span class="h-px w-8 bg-leaf-400"></span>{{ editar ? 'Modificar ' + editar : 'Cotiza tu viaje' }}
+        </p>
+        <h1 class="aparece aparece-2 mt-4 max-w-3xl text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-6xl">{{ p.nombre }}</h1>
+        <div class="aparece aparece-3 mt-6 flex flex-wrap items-center gap-2">
+          <span class="dato-portada"><app-icon name="clock" size="w-4 h-4" /> {{ p.dias }} {{ p.dias === 1 ? 'día' : 'días' }}@if (p.noches) { · {{ p.noches }} {{ p.noches === 1 ? 'noche' : 'noches' }} }</span>
+          @if (p.horaInicio) { <span class="dato-portada"><app-icon name="flag" size="w-4 h-4" /> Inicia {{ p.horaInicio }} h</span> }
+          <span class="dato-portada dato-precio">Desde S/ {{ p.precioBase | number:'1.0-0' }} <small>por persona</small></span>
+          <!-- Visitante o cliente registrado: se distingue a simple vista -->
+          @if (auth.esCliente()) {
+            <span class="dato-portada dato-modo" data-testid="modo-cliente"><app-icon name="user" size="w-4 h-4" /> Con tu cuenta · {{ auth.usuario()?.nombre }}</span>
+          } @else {
+            <span class="dato-portada dato-modo" data-testid="modo-invitado"><app-icon name="sparkles" size="w-4 h-4" /> Como visitante · sin crear cuenta</span>
+          }
+        </div>
+      </div>
+      @if (credito(); as f) {
+        <a [href]="f.fuente" target="_blank" rel="noopener" class="portada-credito">{{ f.lugar }} · Foto: {{ f.autor }} · {{ f.licencia }}</a>
+      }
+    </section>
+
+    <main class="relative mx-auto -mt-12 max-w-6xl px-5 pb-32 sm:px-8 lg:pb-20">
+      <div class="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
+
+        <div class="space-y-6">
+          <!-- El tour: descripción, qué incluye e itinerario -->
+          <section class="bloque">
+            <h2 class="paso-titulo"><span class="paso-num">El tour</span></h2>
+            @if (p.descripcion) { <p class="mt-3 text-[15px] leading-relaxed text-zinc-700">{{ p.descripcion }}</p> }
+            @if (incluye().length) {
+              <h3 class="sub">Incluye</h3>
+              <ul class="mt-3 grid gap-2.5 sm:grid-cols-2">
+                @for (i of incluye(); track i) {
+                  <li class="flex gap-2.5 text-sm text-zinc-700"><span class="incluye-check"><app-icon name="check" size="w-3.5 h-3.5" /></span>{{ i }}</li>
                 }
-              </div>
-            </div>
+              </ul>
+            }
             @if (dias().length) {
-              <details class="border-t border-zinc-100 px-5 py-3">
-                <summary class="cursor-pointer text-sm font-semibold text-zinc-800">Itinerario día por día</summary>
-                <ol class="mt-3 space-y-3">
-                  @for (d of dias(); track d[0]) {
-                    <li>
-                      <p class="text-xs font-semibold uppercase tracking-wide text-brand-700">Día {{ d[0] }}</p>
+              <h3 class="sub">Itinerario</h3>
+              <ol class="linea-tiempo mt-4">
+                @for (d of dias(); track d[0]) {
+                  <li>
+                    <span class="linea-dia">Día {{ d[0] }}</span>
+                    <div class="space-y-1.5">
                       @for (a of d[1]; track a.itinerarioId) {
-                        <p class="mt-1 text-sm text-zinc-700">@if (a.horaInicio) { <span class="tabular-nums text-zinc-400">{{ a.horaInicio }}</span> · } {{ a.titulo }}@if (a.lugar) { <span class="text-zinc-400"> — {{ a.lugar }}</span> }</p>
+                        <p class="text-sm text-zinc-700">@if (a.horaInicio) { <span class="mr-1.5 tabular-nums text-zinc-400">{{ a.horaInicio }}</span> }<span class="font-medium text-zinc-900">{{ a.titulo }}</span>@if (a.lugar) { <span class="text-zinc-500"> · {{ a.lugar }}</span> }</p>
                       }
-                    </li>
-                  }
-                </ol>
-              </details>
+                    </div>
+                  </li>
+                }
+              </ol>
             }
           </section>
 
-          <section class="card p-5">
-            <h2 class="flex items-center gap-2 font-semibold text-zinc-900"><span class="ico-tile"><app-icon name="calendar" size="w-4 h-4" /></span> 1. Fecha de salida</h2>
+          <!-- 01 Fecha: calendario del mes con los cupos de cada día -->
+          <section class="bloque">
+            <h2 class="paso-titulo"><span class="paso-num">01</span> ¿Cuándo viajas?</h2>
             @if (!fechas().length) {
-              <p class="mt-3 text-sm text-zinc-500">No hay fechas con cupos en los próximos meses.</p>
+              <p class="mt-4 text-sm text-zinc-500">No hay fechas con cupos en los próximos meses. Escríbenos y te avisamos de nuevas salidas.</p>
             } @else {
-              <div class="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5" role="radiogroup" aria-label="Fechas disponibles">
-                @for (d of fechasRapidas(); track d.fecha) {
-                  <button type="button" role="radio" [attr.aria-checked]="fecha === d.fecha" (click)="elegirFecha(d.fecha)"
-                          class="rounded-xl border px-2 py-2 text-center transition-colors"
-                          [class]="fecha === d.fecha ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 bg-white hover:border-zinc-300'">
-                    <span class="block text-[11px] uppercase text-zinc-500">{{ d.fecha | date:'EEE' }}</span>
-                    <span class="block text-sm font-semibold text-zinc-900">{{ d.fecha | date:'d MMM' }}</span>
-                    <span class="block text-[11px]" [class]="d.estadoSalida === 'GARANTIZADA' ? 'text-brand-700' : 'text-zinc-500'">{{ d.estadoSalida === 'GARANTIZADA' ? 'Garantizada' : d.cuposDisponibles + ' cupos' }}</span>
-                  </button>
+              <div class="mt-5 flex items-center justify-between">
+                <button type="button" class="mes-flecha" (click)="cambiarMes(-1)" [disabled]="!puedeMes(-1)" aria-label="Mes anterior"><app-icon name="chevron-left" size="w-4 h-4" /></button>
+                <p class="text-base font-semibold text-zinc-900" aria-live="polite">{{ nombreMes() }}</p>
+                <button type="button" class="mes-flecha" (click)="cambiarMes(1)" [disabled]="!puedeMes(1)" aria-label="Mes siguiente"><app-icon name="chevron-right" size="w-4 h-4" /></button>
+              </div>
+              <div class="calendario mt-4" role="radiogroup" aria-label="Fechas disponibles">
+                @for (n of ['L', 'M', 'M', 'J', 'V', 'S', 'D']; track $index) { <span class="cal-dia-semana" aria-hidden="true">{{ n }}</span> }
+                @for (c of celdas(); track $index) {
+                  @if (c === null) { <span></span> }
+                  @else { @if (c.info; as d) {
+                    <button type="button" role="radio" class="cal-dia" [class.cal-elegido]="fecha === c.fecha" [attr.aria-checked]="fecha === c.fecha"
+                            [attr.aria-label]="(c.fecha | date:'EEEE d MMMM') + ', ' + (d.estadoSalida === 'GARANTIZADA' ? 'salida garantizada' : d.cuposDisponibles + ' cupos')"
+                            (click)="elegirFecha(c.fecha)">
+                      <span class="cal-numero">{{ c.dia }}</span>
+                      <span class="cal-info" [class.cal-garantizada]="d.estadoSalida === 'GARANTIZADA'">{{ d.estadoSalida === 'GARANTIZADA' ? 'Garant.' : d.cuposDisponibles }}</span>
+                    </button>
+                  } @else {
+                    <span class="cal-dia cal-no" aria-hidden="true"><span class="cal-numero">{{ c.dia }}</span></span>
+                  } }
                 }
               </div>
-              <label class="label mt-4" for="cot-otra">Otra fecha</label>
-              <select id="cot-otra" class="field sm:max-w-xs" [ngModel]="fecha" (ngModelChange)="elegirFecha($event)" data-testid="cotizar-fecha">
-                @for (d of fechas(); track d.fecha) { <option [value]="d.fecha">{{ d.fecha | date:'EEEE d MMM y' }} · {{ d.cuposDisponibles }} cupos</option> }
-              </select>
+              <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs text-zinc-500">
+                <span class="inline-flex items-center gap-3"><span class="inline-flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-brand-600"></span>Elegida</span><span>Número = cupos libres</span><span class="text-brand-700">Garant. = salida garantizada</span></span>
+                <label class="inline-flex items-center gap-2">
+                  <span class="sr-only sm:not-sr-only">o elige de la lista</span>
+                  <select id="cot-otra" class="field h-9 w-auto py-0 text-xs" [ngModel]="fecha" (ngModelChange)="elegirFecha($event)" data-testid="cotizar-fecha" aria-label="Elegir fecha de la lista">
+                    @for (d of fechas(); track d.fecha) { <option [value]="d.fecha">{{ d.fecha | date:'EEE d MMM y' }} · {{ d.cuposDisponibles }} cupos</option> }
+                  </select>
+                </label>
+              </div>
             }
           </section>
 
-          <section class="card p-5">
-            <h2 class="flex items-center gap-2 font-semibold text-zinc-900"><span class="ico-tile"><app-icon name="users" size="w-4 h-4" /></span> 2. Pasajeros</h2>
-            <div class="mt-4 grid gap-4 sm:grid-cols-2">
-              @for (t of [{ campo: 'adultos', texto: 'Adultos', detalle: '12 años o más' }, { campo: 'ninos', texto: 'Niños', detalle: 'Menores de 12 · ocupan cupo' }]; track t.campo) {
-                <div class="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 p-3">
-                  <div><p class="text-sm font-semibold text-zinc-900">{{ t.texto }}</p><p class="text-xs text-zinc-500">{{ t.detalle }}</p></div>
-                  <div class="flex items-center gap-2">
-                    <button type="button" class="btn-light h-9 w-9 justify-center px-0" (click)="pasajeros($any(t.campo), -1)" [attr.aria-label]="t.texto + ': uno menos'">−</button>
-                    <span class="w-6 text-center font-semibold tabular-nums" [attr.data-testid]="'cotizar-' + t.campo">{{ t.campo === 'adultos' ? adultos : ninos }}</span>
-                    <button type="button" class="btn-light h-9 w-9 justify-center px-0" (click)="pasajeros($any(t.campo), 1)" [attr.aria-label]="t.texto + ': uno más'">+</button>
+          <!-- 02 Pasajeros y recojo -->
+          <section class="bloque">
+            <h2 class="paso-titulo"><span class="paso-num">02</span> ¿Quiénes viajan?</h2>
+            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+              @for (t of [{ campo: 'adultos', texto: 'Adultos', detalle: '12 años o más', icono: 'user' }, { campo: 'ninos', texto: 'Niños', detalle: 'Menores de 12 · ocupan cupo', icono: 'users' }]; track t.campo) {
+                <div class="contador">
+                  <span class="contador-icono"><app-icon [name]="t.icono" size="w-5 h-5" /></span>
+                  <div class="min-w-0 flex-1"><p class="text-sm font-semibold text-zinc-900">{{ t.texto }}</p><p class="text-xs text-zinc-500">{{ t.detalle }}</p></div>
+                  <div class="flex items-center gap-1.5">
+                    <button type="button" class="contador-btn" (click)="pasajeros($any(t.campo), -1)" [attr.aria-label]="t.texto + ': uno menos'">−</button>
+                    <span class="w-7 text-center text-lg font-semibold tabular-nums" [attr.data-testid]="'cotizar-' + t.campo">{{ t.campo === 'adultos' ? adultos : ninos }}</span>
+                    <button type="button" class="contador-btn" (click)="pasajeros($any(t.campo), 1)" [attr.aria-label]="t.texto + ': uno más'">+</button>
                   </div>
                 </div>
               }
             </div>
-            <div class="mt-4">
-              <label class="label" for="cot-recojo">Punto de recojo</label>
-              <select id="cot-recojo" class="field" [(ngModel)]="lugarRecojoId" (ngModelChange)="recalcular()">
+            <label class="label mt-5" for="cot-recojo">¿Dónde te recogemos?</label>
+            <div class="con-icono">
+              <span class="ico-campo"><app-icon name="map-pin" size="w-4 h-4" /></span>
+              <select id="cot-recojo" class="field !h-11" [(ngModel)]="lugarRecojoId" (ngModelChange)="recalcular()">
                 <option [ngValue]="null">Oficina de la agencia</option>
                 @for (x of puntos(); track x.lugarId) { @if (!x.porDefecto) { <option [ngValue]="x.lugarId">{{ x.nombre }} · pasamos a las {{ x.horaRecojo }}</option> } }
               </select>
             </div>
           </section>
 
+          <!-- 03 Adicionales: tarjetas que se marcan -->
           @if (servicios().length) {
-            <section class="card p-5">
-              <h2 class="flex items-center gap-2 font-semibold text-zinc-900"><span class="ico-tile"><app-icon name="plus" size="w-4 h-4" /></span> 3. Servicios adicionales <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
-              <div class="mt-4 grid gap-3">
+            <section class="bloque">
+              <h2 class="paso-titulo"><span class="paso-num">03</span> Personaliza tu viaje <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
+              <div class="mt-5 grid gap-3 sm:grid-cols-2">
                 @for (s of servicios(); track s.servicioId) {
-                  <div class="flex flex-wrap items-center gap-3 rounded-xl border p-3 transition-colors"
-                       [class]="elegidos[s.servicioId] ? 'border-brand-500 bg-brand-50/60' : 'border-zinc-200'">
+                  <div class="extra" [class.extra-elegido]="!!elegidos[s.servicioId]">
                     <label class="flex min-w-0 flex-1 cursor-pointer items-start gap-3">
-                      <input type="checkbox" class="mt-1 h-4 w-4 accent-brand-600" [checked]="!!elegidos[s.servicioId]" (change)="alternar(s)" [attr.data-testid]="'servicio-' + s.servicioId">
+                      <input type="checkbox" class="extra-check" [checked]="!!elegidos[s.servicioId]" (change)="alternar(s)" [attr.data-testid]="'servicio-' + s.servicioId">
                       <span class="min-w-0">
                         <span class="block text-sm font-semibold text-zinc-900">{{ s.nombre }}</span>
-                        @if (s.descripcion) { <span class="block text-xs text-zinc-500">{{ s.descripcion }}</span> }
-                        <span class="text-xs font-medium text-zinc-700">S/ {{ s.precio | number:'1.2-2' }} {{ s.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }}</span>
+                        @if (s.descripcion) { <span class="mt-0.5 block text-xs leading-relaxed text-zinc-500">{{ s.descripcion }}</span> }
+                        <span class="mt-2 inline-flex items-baseline gap-1 text-sm font-semibold text-brand-700">S/ {{ s.precio | number:'1.2-2' }} <small class="text-xs font-normal text-zinc-500">{{ s.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }}</small></span>
                       </span>
                     </label>
                     @if (elegidos[s.servicioId] && s.modalidad === 'POR_PERSONA') {
-                      <div class="flex items-center gap-2 text-sm">
-                        <span class="text-xs text-zinc-500">Para</span>
-                        <button type="button" class="btn-light h-8 w-8 justify-center px-0" (click)="cantidadServicio(s, -1)" aria-label="Una persona menos">−</button>
-                        <span class="w-5 text-center font-semibold tabular-nums">{{ elegidos[s.servicioId] }}</span>
-                        <button type="button" class="btn-light h-8 w-8 justify-center px-0" (click)="cantidadServicio(s, 1)" aria-label="Una persona más">+</button>
+                      <div class="mt-3 flex items-center justify-between border-t border-brand-200/60 pt-3 text-sm">
+                        <span class="text-xs text-zinc-600">¿Para cuántas personas?</span>
+                        <div class="flex items-center gap-1.5">
+                          <button type="button" class="contador-btn !h-8 !w-8" (click)="cantidadServicio(s, -1)" aria-label="Una persona menos">−</button>
+                          <span class="w-6 text-center font-semibold tabular-nums">{{ elegidos[s.servicioId] }}</span>
+                          <button type="button" class="contador-btn !h-8 !w-8" (click)="cantidadServicio(s, 1)" aria-label="Una persona más">+</button>
+                        </div>
                       </div>
                     }
                   </div>
@@ -145,47 +188,68 @@
             </section>
           }
 
-          <section class="card p-5">
-            <label class="label" for="cot-obs">Comentarios para la agencia <span class="opt">Opcional</span></label>
-            <textarea id="cot-obs" class="field min-h-[76px]" maxlength="500" [(ngModel)]="observaciones" (ngModelChange)="recalcular()" placeholder="Ej. viajamos con niños de 6 y 9 años, llegamos un día antes…"></textarea>
+          <!-- Comentarios -->
+          <section class="bloque">
+            <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '04' : '03' }}</span> ¿Algo que debamos saber? <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
+            <textarea id="cot-obs" class="field mt-4 min-h-[88px]" maxlength="500" [(ngModel)]="observaciones" (ngModelChange)="recalcular()" aria-label="Comentarios para la agencia"
+                      placeholder="Ej. viajamos con niños de 6 y 9 años, llegamos un día antes…"></textarea>
           </section>
         </div>
 
-        <!-- Columna derecha: resumen calculado por el servidor -->
-        <aside class="card p-5 lg:sticky lg:top-20" aria-live="polite" data-testid="resumen">
-          <h2 class="font-semibold text-zinc-900">Tu cotización</h2>
-          @if (calculo(); as c) {
-            <p class="mt-1 text-sm text-zinc-500">{{ c.fechaInicio | date:'EEEE d MMM y' }}@if (c.fechaFin !== c.fechaInicio) { al {{ c.fechaFin | date:'d MMM' }} } · {{ c.cantidad }} {{ c.cantidad === 1 ? 'pasajero' : 'pasajeros' }}</p>
-            <dl class="mt-4 space-y-2 text-sm" [class.opacity-50]="calculando()">
-              <div class="flex justify-between gap-3"><dt class="text-zinc-600">Paquete · {{ c.cantidad }} × S/ {{ c.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums">S/ {{ c.montoPaquete | number:'1.2-2' }}</dd></div>
-              @for (l of c.servicios; track l.servicioId) {
-                <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums">S/ {{ l.subtotal | number:'1.2-2' }}</dd></div>
-              }
-              <div class="flex items-end justify-between gap-3 border-t border-zinc-100 pt-3">
-                <dt class="font-semibold text-zinc-900">Total</dt>
-                <dd class="text-2xl font-semibold tracking-tight text-zinc-900" data-testid="cotizar-total">S/ {{ c.total | number:'1.2-2' }}</dd>
-              </div>
-            </dl>
-            <ul class="mt-4 space-y-1.5 text-xs text-zinc-600">
-              <li class="flex gap-2"><span class="text-brand-600"><app-icon name="check-circle" size="w-3.5 h-3.5" /></span> Quedan {{ c.cuposDisponibles }} cupos para esa fecha.</li>
-              <li class="flex gap-2"><span class="text-brand-600"><app-icon name="map-pin" size="w-3.5 h-3.5" /></span> Recojo: {{ c.puntoRecojo ?? 'Oficina de la agencia' }}@if (c.horaRecojo) { a las {{ c.horaRecojo }} }</li>
-              <li class="flex gap-2"><span class="text-brand-600"><app-icon name="info" size="w-3.5 h-3.5" /></span>
-                @if (c.estadoSalida === 'GARANTIZADA' || c.faltanParaGarantizar === 0) { Salida garantizada con tu grupo. } @else { Se garantiza al sumar {{ c.faltanParaGarantizar }} pasajero(s) más. }</li>
-              @if (!c.reservableWeb) {
-                <li class="flex gap-2 text-amber-700"><app-icon name="alert" size="w-3.5 h-3.5" /> Fecha cercana (menos de {{ c.anticipacionMinHoras }} h): la agencia confirmará la disponibilidad.</li>
-              }
-            </ul>
-          } @else if (!errorCalculo()) {
-            <p class="mt-3 text-sm text-zinc-500">{{ calculando() ? 'Calculando…' : 'Elige una fecha para ver el precio.' }}</p>
-          }
-          @if (errorCalculo()) { <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert" data-testid="cotizar-error">{{ errorCalculo() }}</div> }
+        <!-- Resumen calculado por el servidor (fijo al costado en escritorio) -->
+        <aside class="resumen lg:sticky lg:top-6" aria-live="polite" data-testid="resumen">
+          <div class="resumen-cabecera">
+            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-leaf-300">Tu cotización</p>
+            @if (calculo(); as c) {
+              <p class="mt-2 text-sm text-white/80">{{ c.fechaInicio | date:'EEEE d MMM y' }}@if (c.fechaFin !== c.fechaInicio) { al {{ c.fechaFin | date:'d MMM' }} }</p>
+              <p class="text-sm text-white/80">{{ c.cantidad }} {{ c.cantidad === 1 ? 'pasajero' : 'pasajeros' }}</p>
+            } @else {
+              <p class="mt-2 text-sm text-white/70">{{ calculando() ? 'Calculando…' : 'Elige una fecha para ver el precio.' }}</p>
+            }
+          </div>
 
-          <button type="button" class="btn-dark mt-5 w-full justify-center" [disabled]="!calculo() || calculando() || guardando() || !!errorCalculo()" (click)="guardar()" data-testid="cotizar-guardar">
-            <app-icon name="check" size="w-4 h-4" /> {{ guardando() ? 'Guardando…' : editar ? 'Guardar cambios' : 'Guardar cotización' }}
-          </button>
-          <p class="mt-3 text-center text-xs text-zinc-500">Gratis y sin crear cuenta. Recibes un código y una clave para volver a verla, descargarla en PDF y pedir tu reserva.</p>
+          <div class="p-5">
+            @if (calculo(); as c) {
+              <dl class="space-y-2.5 text-sm" [class.opacity-50]="calculando()">
+                <div class="flex justify-between gap-3"><dt class="text-zinc-600">Paquete · {{ c.cantidad }} × S/ {{ c.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ c.montoPaquete | number:'1.2-2' }}</dd></div>
+                @for (l of c.servicios; track l.servicioId) {
+                  <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ l.subtotal | number:'1.2-2' }}</dd></div>
+                }
+                <div class="flex items-end justify-between gap-3 border-t border-zinc-100 pt-4">
+                  <dt class="font-semibold text-zinc-900">Total</dt>
+                  <dd class="text-3xl font-semibold tracking-tight text-zinc-900" data-testid="cotizar-total">S/ {{ c.total | number:'1.2-2' }}</dd>
+                </div>
+              </dl>
+              <ul class="mt-5 space-y-2 text-xs text-zinc-600">
+                <li class="flex gap-2"><span class="text-brand-600"><app-icon name="check-circle" size="w-4 h-4" /></span> Quedan {{ c.cuposDisponibles }} cupos para esa fecha.</li>
+                <li class="flex gap-2"><span class="text-brand-600"><app-icon name="map-pin" size="w-4 h-4" /></span> Recojo: {{ c.puntoRecojo ?? 'Oficina de la agencia' }}@if (c.horaRecojo) { a las {{ c.horaRecojo }} }</li>
+                <li class="flex gap-2"><span class="text-brand-600"><app-icon name="info" size="w-4 h-4" /></span>
+                  @if (c.estadoSalida === 'GARANTIZADA' || c.faltanParaGarantizar === 0) { Salida garantizada con tu grupo. } @else { Se garantiza al sumar {{ c.faltanParaGarantizar }} pasajero(s) más. }</li>
+                @if (!c.reservableWeb) {
+                  <li class="flex gap-2 text-amber-700"><app-icon name="alert" size="w-4 h-4" /> Fecha cercana (menos de {{ c.anticipacionMinHoras }} h): la agencia confirmará la disponibilidad.</li>
+                }
+              </ul>
+            }
+            @if (errorCalculo()) { <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert" data-testid="cotizar-error">{{ errorCalculo() }}</div> }
+
+            <button type="button" class="boton-pill mt-6 w-full" [disabled]="!calculo() || calculando() || guardando() || !!errorCalculo()" (click)="guardar()" data-testid="cotizar-guardar">
+              <app-icon name="check" size="w-4 h-4" /> {{ guardando() ? 'Guardando…' : editar ? 'Guardar cambios' : 'Guardar cotización' }}
+            </button>
+            <p class="mt-3 text-center text-xs leading-relaxed text-zinc-500">Gratis y sin crear cuenta. Recibes un código y una clave para volver a verla, descargarla en PDF y pedir tu reserva.</p>
+          </div>
         </aside>
       </div>
-    } }
-  </main>
+    </main>
+
+    <!-- Celular: total y "Guardar" siempre a la vista -->
+    <div class="barra-movil lg:hidden" aria-hidden="false">
+      <div class="min-w-0">
+        <p class="text-[11px] uppercase tracking-wider text-zinc-500">Total</p>
+        <p class="truncate text-lg font-semibold tabular-nums text-zinc-900" [class.opacity-50]="calculando()">{{ calculo() ? 'S/ ' + (calculo()!.total | number:'1.2-2') : '—' }}</p>
+      </div>
+      <button type="button" class="boton-pill" [disabled]="!calculo() || calculando() || guardando() || !!errorCalculo()" (click)="guardar()">
+        {{ guardando() ? 'Guardando…' : editar ? 'Guardar cambios' : 'Guardar' }} <app-icon name="arrow-right" size="w-4 h-4" />
+      </button>
+    </div>
+  } }
 </div>

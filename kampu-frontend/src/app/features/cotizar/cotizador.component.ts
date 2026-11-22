@@ -14,7 +14,7 @@ import { TourStore } from '../../core/services/tour-store.service';
 import { mensajeError } from '../../core/utils/api';
 import { hoy } from '../../core/utils/date.util';
 import { IconComponent } from '../../shared/icon.component';
-import { PortalHeaderComponent } from '../portal/portal-header.component';
+import { LogoComponent } from '../../shared/logo.component';
 import { fotoDePaquete } from '../landing/landing.models';
 
 /**
@@ -25,8 +25,9 @@ import { fotoDePaquete } from '../landing/landing.models';
 @Component({
   selector: 'app-cotizador',
   standalone: true,
-  imports: [FormsModule, RouterLink, DatePipe, DecimalPipe, IconComponent, PortalHeaderComponent],
-  templateUrl: './cotizador.component.html'
+  imports: [FormsModule, RouterLink, DatePipe, DecimalPipe, IconComponent, LogoComponent],
+  templateUrl: './cotizador.component.html',
+  styleUrl: './cotizador.component.css'
 })
 export class CotizadorComponent {
   private api = inject(CotizacionService);
@@ -58,6 +59,47 @@ export class CotizadorComponent {
     const porDia = new Map<number, ActividadItinerario[]>();
     for (const a of this.itinerario()) porDia.set(a.diaNumero, [...(porDia.get(a.diaNumero) ?? []), a]);
     return [...porDia.entries()].sort((a, b) => a[0] - b[0]);
+  });
+
+  // ---------- Calendario de mes (solo presentación: usa el mismo calendario de la base) ----------
+  // Mes visible (YYYY-MM); por defecto el de la fecha elegida o el de la primera fecha disponible
+  private mesElegido = signal('');
+  meses = computed(() => [...new Set(this.fechas().map(d => d.fecha.slice(0, 7)))]);
+  mes = computed(() => this.mesElegido() || this.fecha.slice(0, 7) || this.meses()[0] || '');
+  // Celdas del mes empezando en lunes: null = hueco antes del día 1
+  celdas = computed(() => {
+    const m = this.mes();
+    if (!m) return [];
+    const [y, mo] = m.split('-').map(Number);
+    const primero = new Date(y, mo - 1, 1), dias = new Date(y, mo, 0).getDate();
+    const porFecha = new Map(this.fechas().map(d => [d.fecha, d]));
+    const huecos = (primero.getDay() + 6) % 7;
+    const celdas: ({ fecha: string; dia: number; info: CalendarioDia | undefined } | null)[] = Array(huecos).fill(null);
+    for (let d = 1; d <= dias; d++) {
+      const fecha = `${m}-${String(d).padStart(2, '0')}`;
+      celdas.push({ fecha, dia: d, info: porFecha.get(fecha) });
+    }
+    return celdas;
+  });
+  nombreMes = computed(() => {
+    const m = this.mes();
+    if (!m) return '';
+    const t = new Date(m + '-01T00:00:00').toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  });
+  puedeMes(dir: number) {
+    const i = this.meses().indexOf(this.mes());
+    return i >= 0 ? !!this.meses()[i + dir] : false;
+  }
+  cambiarMes(dir: number) {
+    const i = this.meses().indexOf(this.mes());
+    const otro = this.meses()[i + dir];
+    if (otro) this.mesElegido.set(otro);
+  }
+  // Foto de referencia del destino (con crédito) cuando el paquete no tiene una propia
+  credito = computed(() => {
+    const p = this.paquete();
+    return p ? fotoDePaquete(p.nombre, p.descripcion ?? '') : null;
   });
 
   // Elecciones del visitante
@@ -105,6 +147,7 @@ export class CotizadorComponent {
             this.calendario.set(c);
             if (!this.editar) {
               this.fecha = (c.find(x => x.reservableWeb) ?? this.fechas()[0])?.fecha ?? '';
+              this.mesElegido.set(this.fecha.slice(0, 7));
               this.recalcular();
             }
             this.cargando.set(false);
@@ -123,6 +166,7 @@ export class CotizadorComponent {
       next: c => {
         if (c.estado !== 'GENERADA') { this.router.navigate(['/cotizacion', c.codigo]); return; }
         this.fecha = c.fechaViaje;
+        this.mesElegido.set(c.fechaViaje.slice(0, 7));
         this.adultos = c.adultos;
         this.ninos = c.ninos;
         this.lugarRecojoId = c.lugarRecojoId;
@@ -144,7 +188,7 @@ export class CotizadorComponent {
   }
   sinImagen() { if (!this.imagenFallo()) this.imagenFallo.set(true); }
 
-  elegirFecha(f: string) { this.fecha = f; this.recalcular(); }
+  elegirFecha(f: string) { this.fecha = f; this.mesElegido.set(f.slice(0, 7)); this.recalcular(); }
 
   pasajeros(campo: 'adultos' | 'ninos', delta: number) {
     const min = campo === 'adultos' ? 1 : 0;
