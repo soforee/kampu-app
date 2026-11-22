@@ -3,7 +3,7 @@ import { CanActivateFn, Router } from '@angular/router';
 import { Permiso } from '../models';
 import { AuthService } from './auth.service';
 
-// Panel interno: solo personal (ADMIN / VENDEDOR / OPERADOR). El cliente va a su portal.
+// Panel interno: solo personal (ADMIN / VENTAS). El cliente va a su portal.
 export const personalGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);

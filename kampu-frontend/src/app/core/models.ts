@@ -8,7 +8,7 @@ export type TipoDocumento = 'DNI' | 'CE' | 'PASAPORTE';
 export type TipoDocumentoCliente = TipoDocumento | 'RUC';
 export type Moneda = 'PEN' | 'USD' | 'EUR';
 // chk_usu_rol (personal interno y, desde v11, personal de campo) + CLIENTE (portal web)
-export type Rol = 'ADMIN' | 'VENDEDOR' | 'OPERADOR' | 'GUIA' | 'CONDUCTOR' | 'CLIENTE';
+export type Rol = 'ADMIN' | 'VENTAS' | 'GUIA' | 'CONDUCTOR' | 'CLIENTE';
 export type EstadoRegistro = 'ACTIVO' | 'INACTIVO';
 export type CategoriaLicencia = 'A-I' | 'A-IIa' | 'A-IIb' | 'A-IIIa' | 'A-IIIb' | 'A-IIIc';
 export type EstadoProveedor = 'ACTIVO' | 'INACTIVO' | 'SUSPENDIDO';
@@ -331,7 +331,7 @@ export interface Pago {
   codigoTransaccion: string;
   fechaPago: string;
   estadoTransaccion: EstadoTransaccion;
-  registradoPor: 'ADMIN' | 'VENDEDOR' | 'CLIENTE';
+  registradoPor: 'ADMIN' | 'VENTAS' | 'CLIENTE';
   usuarioRegistraId: number | null;
   usuarioValidaId: number | null;
   fechaValidacion: string | null;
@@ -387,7 +387,7 @@ export interface PortalDetalle {
   solicitud: SolicitudAnulacion | null;
 }
 
-// VW_RESUMEN_PAQUETES_POR_ROL (montos nulos para el Operador)
+// VW_RESUMEN_PAQUETES_POR_ROL (montos nulos si el rol no puede VER_MONTOS)
 export interface ResumenPaquete {
   salidaId: number;
   paqueteId: number;
@@ -619,7 +619,7 @@ export interface Pagina<T> {
 }
 
 // ---------- Usuarios del sistema (solo ADMIN) ----------
-export type RolInterno = 'ADMIN' | 'VENDEDOR' | 'OPERADOR' | 'GUIA' | 'CONDUCTOR';
+export type RolInterno = 'ADMIN' | 'VENTAS' | 'GUIA' | 'CONDUCTOR';
 export type EstadoUsuario = 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO';
 
 export interface UsuarioSistema {

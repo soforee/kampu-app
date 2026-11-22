@@ -11,8 +11,7 @@ import { IconComponent } from '../../shared/icon.component';
 import { TarjetaDatoComponent } from '../../shared/tarjeta-dato.component';
 
 // Panel por rol (v4). El bloque "Paquetes" sale de VW_RESUMEN_PAQUETES_POR_ROL:
-//  - ADMIN / VENDEDOR: todos los estados y montos.
-//  - OPERADOR: solo POR_EMPEZAR y EN_CURSO, montos en NULL (los filtra Oracle, no Angular).
+//  - ADMIN / VENTAS: todos los estados y montos (los filtra Oracle, no Angular).
 import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-dashboard',
@@ -113,7 +112,7 @@ export class DashboardComponent {
   });
 
   // ---------- Gráfico: últimos 6 meses ----------
-  // Comercial: monto vendido por mes (reservas no anuladas). Operador: pasajeros por mes de inicio de la salida.
+  // Comercial: monto vendido por mes (reservas no anuladas). Sin VER_MONTOS: pasajeros por mes de inicio de la salida.
   grafico = computed(() => {
     const hoy = new Date();
     const meses = Array.from({ length: 6 }, (_, i) => {
@@ -193,7 +192,7 @@ export class DashboardComponent {
     return r.cuposMaximos ? Math.round((r.cuposMaximos - r.cuposDisponibles) * 100 / r.cuposMaximos) : 0;
   }
 
-  // Ciclo de la salida (v10, ACTUALIZAR_EJECUCION: Admin, Ventas y Operador)
+  // Ciclo de la salida (v10, ACTUALIZAR_EJECUCION: Admin y Ventas)
   // Garantizar: PROGRAMADA -> GARANTIZADA (la BD lo hace sola al llegar al mínimo; aquí se adelanta)
   // Terminar: GARANTIZADA -> COMPLETADA (sus reservas confirmadas pasan a COMPLETADA)
   puedeIniciar(r: ResumenPaquete) { return this.ejecuta() && r.estadoSalida === 'PROGRAMADA' && r.estadoEjecucion !== 'TERMINADO' && r.pasajeros > 0; }

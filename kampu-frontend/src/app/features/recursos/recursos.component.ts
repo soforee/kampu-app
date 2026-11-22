@@ -73,7 +73,7 @@ export class RecursosComponent {
   vehiculo: VehiculoForm = this.vehiculoVacio();
   lugar: LugarForm = this.lugarVacio();
 
-  // GESTIONAR_LOGISTICA (PKG_SEGURIDAD_ROLES): Admin y Operador; Ventas solo consulta (VER_LOGISTICA)
+  // GESTIONAR_LOGISTICA (PKG_SEGURIDAD_ROLES): solo Admin; Ventas solo consulta (VER_LOGISTICA)
   puedeEditar = computed(() => this.auth.puede('GESTIONAR_LOGISTICA'));
 
   v = new FormValidacion(() => {
