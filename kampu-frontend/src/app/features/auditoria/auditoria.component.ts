@@ -33,7 +33,7 @@ export class AuditoriaComponent {
   etiqueta = etiqueta;
   hoy = hoy();
 
-  roles = ['ADMIN', 'VENDEDOR', 'OPERADOR', 'CLIENTE', 'SISTEMA'];
+  roles = ['ADMIN', 'VENTAS', 'GUIA', 'CONDUCTOR', 'CLIENTE', 'INVITADO', 'SISTEMA'];
   acciones: AccionAuditoria[] = ['CREAR', 'ACTUALIZAR', 'ELIMINAR', 'REGISTRO', 'LOGIN', 'LOGOUT', 'LOGIN_FALLIDO'];
   entidades = signal<string[]>([]);
   usuarios = signal<string[]>([]);
