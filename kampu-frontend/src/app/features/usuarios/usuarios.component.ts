@@ -40,9 +40,8 @@ export class UsuariosComponent {
 
   // Roles que el administrador puede asignar (chk_usu_rol) y qué puede hacer cada uno (PKG_SEGURIDAD_ROLES.puede)
   roles: { valor: RolInterno; texto: string; icono: string; detalle: string }[] = [
-    { valor: 'ADMIN', texto: 'Administrador', icono: 'lock', detalle: 'Acceso completo: usuarios, auditoría, ventas, catálogo y operaciones.' },
-    { valor: 'VENDEDOR', texto: 'Ventas', icono: 'ticket', detalle: 'Clientes, reservas, pagos y catálogo de paquetes. Sin usuarios ni gestión de flota.' },
-    { valor: 'OPERADOR', texto: 'Operador', icono: 'truck', detalle: 'Salidas, tráfico, logística y solicitudes de cotización. Sin pagos ni clientes.' },
+    { valor: 'ADMIN', texto: 'Administrador', icono: 'lock', detalle: 'Acceso completo: usuarios, auditoría, ventas, catálogo, logística y operaciones.' },
+    { valor: 'VENTAS', texto: 'Ventas', icono: 'ticket', detalle: 'Clientes, reservas, pagos, cotizaciones y catálogo de paquetes. Sin usuarios ni gestión de flota.' },
     // (v11) Personal de campo: la cuenta es opcional y va ligada a su ficha de personal
     { valor: 'GUIA', texto: 'Guía', icono: 'flag', detalle: 'Solo sus salidas: itinerario, manifiesto y recojos. Sin montos ni clientes.' },
     { valor: 'CONDUCTOR', texto: 'Conductor', icono: 'map-pin', detalle: 'Solo sus traslados: vehículo, ruta y recojos. Sin montos ni clientes.' }
@@ -62,7 +61,7 @@ export class UsuariosComponent {
   filtroRol = signal<FiltroRol>('TODOS');
   filtros: { valor: FiltroRol; texto: string }[] = [
     { valor: 'TODOS', texto: 'Todos' }, { valor: 'ADMIN', texto: 'Administradores' },
-    { valor: 'VENDEDOR', texto: 'Ventas' }, { valor: 'OPERADOR', texto: 'Operadores' }, { valor: 'CAMPO', texto: 'Guías y conductores' }
+    { valor: 'VENTAS', texto: 'Ventas' }, { valor: 'CAMPO', texto: 'Guías y conductores' }
   ];
   private cumple = (u: UsuarioSistema, f: FiltroRol) => f === 'TODOS' || u.rol === f || (f === 'CAMPO' && this.esCampo(u.rol));
   contar = (f: FiltroRol) => this.usuarios().filter(u => this.cumple(u, f)).length;
@@ -97,7 +96,7 @@ export class UsuariosComponent {
 
   // ---------- Cambiar rol ----------
   editando = signal<UsuarioSistema | null>(null);
-  nuevoRol: RolInterno = 'VENDEDOR';
+  nuevoRol: RolInterno = 'VENTAS';
   nuevoPersonal: number | null = null;
 
   // ---------- Contraseña nueva ----------
@@ -126,7 +125,7 @@ export class UsuariosComponent {
   rolInfo(rol: RolInterno) { return this.roles.find(r => r.valor === rol)!; }
 
   private vacio(): UsuarioForm {
-    return { username: '', nombreCompleto: '', email: '', rol: 'VENDEDOR', personalId: null, password: '', confirmacion: '' };
+    return { username: '', nombreCompleto: '', email: '', rol: 'VENTAS', personalId: null, password: '', confirmacion: '' };
   }
 
   private errorUsername(): string | null {

@@ -1,0 +1,42 @@
+package pe.edu.upeu.kampu.controller;
+
+import pe.edu.upeu.kampu.seguridad.Permiso;
+import pe.edu.upeu.kampu.seguridad.Publico;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import pe.edu.upeu.kampu.dto.PagoDTO;
+import pe.edu.upeu.kampu.dto.PagoRequestDTO;
+import pe.edu.upeu.kampu.dto.ResolucionPagoRequestDTO;
+import pe.edu.upeu.kampu.services.IPagoService;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/v1/pagos")
+public class PagoController {
+    private final IPagoService pagoService;
+
+    public PagoController(IPagoService pagoService) {
+        this.pagoService = pagoService;
+    }
+
+    @Permiso("VER_MONTOS")
+    @GetMapping
+    public ResponseEntity<List<PagoDTO>> listar(@RequestParam(required = false) Long reservaId) {
+        return ResponseEntity.ok(pagoService.listar(reservaId));
+    }
+
+    @Permiso("REGISTRAR_PAGO")
+    @PostMapping
+    public ResponseEntity<PagoDTO> registrar(@Valid @RequestBody PagoRequestDTO dto) {
+        return new ResponseEntity<>(pagoService.registrar(dto), HttpStatus.CREATED);
+    }
+
+    @Permiso("REGISTRAR_PAGO")
+    @PatchMapping("/{id}/resolver")
+    public ResponseEntity<PagoDTO> resolver(@PathVariable Long id, @Valid @RequestBody ResolucionPagoRequestDTO dto) {
+        return ResponseEntity.ok(pagoService.resolver(id, dto.estado()));
+    }
+}

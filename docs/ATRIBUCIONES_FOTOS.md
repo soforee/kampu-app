@@ -20,4 +20,4 @@ muestra el autor de cada una. Las fotos de los paquetes que sube la agencia tien
 | `destinos/moyobamba.jpg` | Moyobamba, San Martín | Aleksei M. | CC BY-SA 4.0 | https://commons.wikimedia.org/wiki/File:Moyobamba,_Peru,_2018.jpg |
 
 Las fotos de San Martín se usan en Destinos cuando el paquete no tiene foto propia o su archivo no existe
-(los datos semilla de `kampu_tours_v11.sql` apuntan a `/img/paquetes/*.jpg`, que no están en el repositorio).
+(los datos semilla de `kampu_bd.sql` apuntan a `/img/paquetes/*.jpg`, que no están en el repositorio).

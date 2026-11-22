@@ -12,10 +12,10 @@ npm install
 npm start
 ```
 
-Abre http://localhost:4200. Usuarios de los datos demo (`kampu_tours_v11.sql`): `kadmin`, `kventas`, `koperador`, `kguia`, `kconductor` y el cliente
+Abre http://localhost:4200. Usuarios de los datos demo (`kampu_bd.sql`): `kadmin`, `kventas`, `kguia`, `kconductor` y el cliente
 `maria.rios@example.com`, todos con la clave `Kampu2026*`.
 
-Para generar la versión de producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
+Para generar la versión de producción: `npm run build` (queda en `dist/frontend_kampu`).
 
 ## Estilos
 
@@ -50,9 +50,9 @@ Para generar la versión de producción: `npm run build` (queda en `dist/fronten
 
 ## Backend
 
-`proxy.config.json` redirige `/api` → `http://localhost:8082/lp2_gp2/api` y `/lp2_gp2/images` → `http://localhost:8082`.
+`proxy.config.json` redirige `/api` → `http://localhost:8082/kampu/api` y `/kampu/images` → `http://localhost:8082`.
 
 ## Notas
 
 - `PAQUETES_TOUR.imagen`: las imágenes se suben desde el equipo (JPG, PNG o WebP, máx. 10 MB) a `POST /api/v1/paquetes/imagen`;
-  en la columna se guarda solo la ruta y el backend la sirve en `/lp2_gp2/images/<ruta>`.
+  en la columna se guarda solo la ruta y el backend la sirve en `/kampu/images/<ruta>`.

@@ -25,7 +25,7 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 export class SalidasComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
-  // GESTIONAR_CATALOGO: solo Admin y Ventas crean/editan salidas (el Operador solo las consulta)
+  // GESTIONAR_CATALOGO: solo Admin y Ventas crean/editan salidas (el resto solo las consulta)
   editable = inject(AuthService).puede('GESTIONAR_CATALOGO');
 
   // Mismas transiciones que valida la BD (TRG_SALIDAS_VALIDAR). Cancelar va aparte (anula y reembolsa sus reservas).

@@ -18,7 +18,7 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 type Filtro = '' | EstadoCotizacion;
 
 /**
- * (v11) Cotizaciones que llegan de la web (visitantes y clientes). Admin, Ventas y Operador
+ * (v11) Cotizaciones que llegan de la web (visitantes y clientes). Admin y Ventas
  * (GESTIONAR_COTIZACIONES) confirman una solicitud —se crea la reserva PENDIENTE con el precio cotizado
  * y el cliente sin cuenta web— o la rechazan con un motivo que ve el visitante.
  */
