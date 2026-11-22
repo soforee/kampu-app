@@ -107,7 +107,7 @@ export class AlertasService {
         nivel: dias < 0 ? 'alta' : 'media', icono: 'id',
         titulo: `Licencia de ${p.nombreCompleto} ${dias < 0 ? 'vencida' : 'por vencer'}`,
         detalle: `${dias < 0 ? 'Venció' : 'Vence'} ${cuando(dias)}. ${dias < 0 ? 'No debe conducir hasta renovarla.' : 'Pídele que la renueve.'}`,
-        ruta: ['/recursos'], consulta: { tab: 'personal' }
+        ruta: [p.proveedorId === null ? '/personal' : '/proveedores'], consulta: p.proveedorId === null ? {} : { tab: 'personal' }
       });
     }
     for (const v of this.store.vehiculos()) {
@@ -118,7 +118,7 @@ export class AlertasService {
         nivel: dias < 0 ? 'alta' : 'media', icono: 'truck',
         titulo: `Mantenimiento de ${v.placa} ${dias < 0 ? 'atrasado' : 'próximo'}`,
         detalle: `${v.marcaModelo || 'Vehículo'} · ${dias < 0 ? 'debía entrar' : 'entra'} ${cuando(dias)}.`,
-        ruta: ['/recursos'], consulta: { tab: 'vehiculos' }
+        ruta: [v.proveedorId === null ? '/vehiculos' : '/proveedores'], consulta: v.proveedorId === null ? {} : { tab: 'vehiculos' }
       });
     }
 

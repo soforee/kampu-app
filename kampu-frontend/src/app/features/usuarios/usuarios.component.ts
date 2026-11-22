@@ -1,7 +1,9 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { EstadoUsuario, PersonalSinCuenta, RolInterno, UsuarioForm, UsuarioSistema } from '../../core/models';
+import { CambioRolForm, CategoriaLicencia, EstadoUsuario, RolInterno, UsuarioForm, UsuarioSistema } from '../../core/models';
+import { filtrarEscritura, filtrarPegado } from '../../core/utils/filtro';
+import { hoy } from '../../core/utils/date.util';
 import { AlertService } from '../../core/services/alert.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioService } from '../../core/services/usuario.service';
@@ -20,7 +22,8 @@ type FiltroRol = 'TODOS' | RolInterno | 'CAMPO';
 
 /**
  * Usuarios del sistema (solo ADMIN, permiso GESTIONAR_USUARIOS).
- * El administrador crea las cuentas del personal y elige su rol; también cambia el rol,
+ * El administrador crea las cuentas del personal y elige su rol (guía y conductor nacen con su ficha
+ * en el personal propio); también cambia el rol dentro del grupo,
  * revoca o restablece el acceso (desbloquea) y asigna una contraseña nueva.
  * Las cuentas de clientes no se crean aquí: el cliente se registra en el portal.
  */
@@ -42,14 +45,14 @@ export class UsuariosComponent {
   roles: { valor: RolInterno; texto: string; icono: string; detalle: string }[] = [
     { valor: 'ADMIN', texto: 'Administrador', icono: 'lock', detalle: 'Acceso completo: usuarios, auditoría, ventas, catálogo, logística y operaciones.' },
     { valor: 'VENTAS', texto: 'Ventas', icono: 'ticket', detalle: 'Clientes, reservas, pagos, cotizaciones y catálogo de paquetes. Sin usuarios ni gestión de flota.' },
-    // (v11) Personal de campo: la cuenta es opcional y va ligada a su ficha de personal
+    // Personal de campo: al crear la cuenta se registra su ficha en Personal
     { valor: 'GUIA', texto: 'Guía', icono: 'flag', detalle: 'Solo sus salidas: itinerario, manifiesto y recojos. Sin montos ni clientes.' },
     { valor: 'CONDUCTOR', texto: 'Conductor', icono: 'map-pin', detalle: 'Solo sus traslados: vehículo, ruta y recojos. Sin montos ni clientes.' }
   ];
   esCampo = (rol: RolInterno) => rol === 'GUIA' || rol === 'CONDUCTOR';
-  // Guías y conductores (por la función de su cargo) que aún no tienen cuenta
-  personal = signal<PersonalSinCuenta[]>([]);
-  personalPara = (rol: RolInterno) => this.personal().filter(p => p.rol === rol);
+  // El rol solo cambia dentro de su grupo: oficina (Admin/Ventas) o campo (Guía/Conductor)
+  mismoGrupo = (a: RolInterno, b: RolInterno) => this.esCampo(a) === this.esCampo(b);
+  categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
 
   usuarios = signal<UsuarioSistema[]>([]);
   cargando = signal(true);
@@ -86,7 +89,12 @@ export class UsuariosComponent {
   form: UsuarioForm = this.vacio();
   v = new FormValidacion(() => ({
     nombre: V.nombrePersona(this.form.nombreCompleto),
-    personal: this.esCampo(this.form.rol) && !this.form.personalId ? 'Elige la persona del personal que usará la cuenta.' : null,
+    documento: !this.esCampo(this.form.rol) ? null
+      : !this.form.numeroDocumento.trim() ? 'El documento es obligatorio.'
+      : /^[A-Za-z0-9]{6,20}$/.test(this.form.numeroDocumento.trim()) ? null : 'El documento solo admite letras y números (6 a 20 caracteres).',
+    telefono: !this.esCampo(this.form.rol) ? null
+      : !this.form.telefono.trim() ? 'El teléfono es obligatorio.' : V.telefono(this.form.telefono),
+    ...this.erroresLicencia(this.form.rol === 'CONDUCTOR', this.form),
     username: this.errorUsername(),
     email: this.form.email.trim() ? V.email(this.form.email) ?? this.emailRepetido() : 'El correo es obligatorio.',
     password: this.errorClave(this.form.password),
@@ -96,8 +104,8 @@ export class UsuariosComponent {
 
   // ---------- Cambiar rol ----------
   editando = signal<UsuarioSistema | null>(null);
-  nuevoRol: RolInterno = 'VENTAS';
-  nuevoPersonal: number | null = null;
+  cambio: CambioRolForm = { rol: 'VENTAS', numLicencia: '', catLicencia: '', vencLicencia: '' };
+  vr = new FormValidacion(() => this.erroresLicencia(this.cambio.rol === 'CONDUCTOR' && this.editando()?.rol !== 'CONDUCTOR', this.cambio));
 
   // ---------- Contraseña nueva ----------
   claveDe = signal<UsuarioSistema | null>(null);
@@ -125,8 +133,24 @@ export class UsuariosComponent {
   rolInfo(rol: RolInterno) { return this.roles.find(r => r.valor === rol)!; }
 
   private vacio(): UsuarioForm {
-    return { username: '', nombreCompleto: '', email: '', rol: 'VENTAS', personalId: null, password: '', confirmacion: '' };
+    return { username: '', nombreCompleto: '', email: '', rol: 'VENTAS', numeroDocumento: '', telefono: '',
+      numLicencia: '', catLicencia: '', vencLicencia: '', password: '', confirmacion: '' };
   }
+
+  // Licencia del conductor: número, categoría y vencimiento vigente
+  private erroresLicencia(conduce: boolean, f: { numLicencia: string; catLicencia: string; vencLicencia: string }) {
+    const lic = f.numLicencia.trim();
+    return {
+      licencia: !conduce ? null : !lic ? 'Ingresa el número de licencia.'
+        : /^[A-Za-z0-9]{6,20}$/.test(lic) ? null : 'La licencia solo admite letras y números (6 a 20 caracteres).',
+      categoria: conduce && !f.catLicencia ? 'Elige la categoría de la licencia.' : null,
+      vencimiento: !conduce ? null : V.fecha(f.vencLicencia, 'La fecha de vencimiento')
+        ?? (f.vencLicencia < hoy() ? 'La licencia está vencida.' : null)
+    };
+  }
+
+  filtrar(evento: Event, tipo: string) { filtrarEscritura(evento, tipo); }
+  pegar(evento: Event, tipo: string) { filtrarPegado(evento, tipo); }
 
   private errorUsername(): string | null {
     const u = this.form.username.trim();
@@ -164,26 +188,11 @@ export class UsuariosComponent {
     if (partes.length >= 2) this.form.username = (partes[0][0] + partes[1]).slice(0, 50);
   }
 
-  private cargarPersonal() {
-    this.api.personalSinCuenta().subscribe({ next: l => this.personal.set(l), error: () => this.personal.set([]) });
-  }
-
-  // Al elegir a la persona se completa su nombre (el usuario se sugiere a partir de él)
-  elegirPersona(id: number | null) {
-    this.form.personalId = id;
-    const p = this.personal().find(x => x.personalId === id);
-    if (p) { this.form.nombreCompleto = p.nombreCompleto; this.form.username = ''; this.sugerirUsuario(); }
-    this.v.tocar('personal');
-  }
-
   elegirRol(rol: RolInterno) {
     this.form.rol = rol;
-    if (!this.esCampo(rol)) this.form.personalId = null;
-    else if (this.form.personalId && !this.personalPara(rol).some(p => p.personalId === this.form.personalId)) this.form.personalId = null;
   }
 
   nuevo() {
-    this.cargarPersonal();
     this.form = this.vacio();
     this.verClave.set(false);
     this.v.reiniciar();
@@ -198,7 +207,11 @@ export class UsuariosComponent {
       username: this.form.username.trim(),
       nombreCompleto: this.form.nombreCompleto.trim().replace(/\s+/g, ' '),
       email: this.form.email.trim().toLowerCase(),
-      personalId: this.esCampo(this.form.rol) ? this.form.personalId : null
+      numeroDocumento: this.esCampo(this.form.rol) ? this.form.numeroDocumento.trim().toUpperCase() : '',
+      telefono: this.esCampo(this.form.rol) ? this.form.telefono.trim() : '',
+      numLicencia: this.form.rol === 'CONDUCTOR' ? this.form.numLicencia.trim().toUpperCase() : '',
+      catLicencia: this.form.rol === 'CONDUCTOR' ? this.form.catLicencia : '',
+      vencLicencia: this.form.rol === 'CONDUCTOR' ? this.form.vencLicencia : ''
     };
     this.ocupado.set(true);
     this.api.crear(datos).subscribe({
@@ -214,20 +227,18 @@ export class UsuariosComponent {
   }
 
   abrirRol(u: UsuarioSistema) {
-    this.cargarPersonal();
-    this.nuevoRol = u.rol;
-    this.nuevoPersonal = u.personalId;
+    this.cambio = { rol: u.rol, numLicencia: '', catLicencia: '', vencLicencia: '' };
+    this.vr.reiniciar();
     this.editando.set(u);
   }
 
   guardarRol() {
     const u = this.editando();
     if (!u || this.ocupado()) return;
-    const campo = this.esCampo(this.nuevoRol);
-    if (this.nuevoRol === u.rol && (!campo || this.nuevoPersonal === u.personalId)) { this.editando.set(null); return; }
-    if (campo && !this.nuevoPersonal) { this.alerts.toast('Elige la persona del personal', 'error'); return; }
+    if (this.cambio.rol === u.rol) { this.editando.set(null); return; }
+    if (!this.vr.valido()) { this.alerts.toast('Revisa los campos marcados en rojo', 'error'); return; }
     this.ocupado.set(true);
-    this.api.cambiarRol(u.usuarioId, this.nuevoRol, campo ? this.nuevoPersonal : null).subscribe({
+    this.api.cambiarRol(u.usuarioId, { ...this.cambio, numLicencia: this.cambio.numLicencia.trim().toUpperCase() }).subscribe({
       next: r => {
         this.ocupado.set(false);
         this.editando.set(null);

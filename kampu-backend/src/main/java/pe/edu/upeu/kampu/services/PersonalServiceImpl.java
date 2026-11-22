@@ -3,6 +3,7 @@ package pe.edu.upeu.kampu.services;
 import pe.edu.upeu.kampu.entity.Cargo;
 import pe.edu.upeu.kampu.repository.CargoRepository;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.kampu.dto.PersonalDTO;
@@ -20,7 +21,8 @@ import pe.edu.upeu.kampu.repository.SalidaProgramadaRepository;
 import java.util.List;
 import java.util.Optional;
 
-// Guías y conductores (un mismo registro puede ser AMBOS)
+// Guías y conductores. El personal PROPIO (proveedor_id NULL) nace en Usuarios junto con su cuenta y aquí solo
+// se activa o desactiva; el de los proveedores se registra y edita completo.
 @Service
 public class PersonalServiceImpl implements IPersonalService {
     private final PersonalRepository personalRepository;
@@ -30,10 +32,13 @@ public class PersonalServiceImpl implements IPersonalService {
     private final IOperacionTransporteService operaciones;
     private final CargoRepository cargoRepository;
     private final Recursos recursos;
+    private final JdbcTemplate jdbc;
 
     public PersonalServiceImpl(PersonalRepository personalRepository, ProveedorRepository proveedorRepository,
                                SalidaProgramadaRepository salidaRepository, OperacionTransporteRepository operacionRepository,
-                               IOperacionTransporteService operaciones, CargoRepository cargoRepository, Recursos recursos) {
+                               IOperacionTransporteService operaciones, CargoRepository cargoRepository, Recursos recursos,
+                               JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
         this.cargoRepository = cargoRepository;
         this.recursos = recursos;
         this.personalRepository = personalRepository;
@@ -47,8 +52,12 @@ public class PersonalServiceImpl implements IPersonalService {
     @Transactional(readOnly = true)
     public List<PersonalDTO> listarTodo() {
         var cargos = recursos.cargos();
+        java.util.Map<Long, String> cuentas = new java.util.HashMap<>();
+        jdbc.query("SELECT personal_id, username FROM USUARIOS_SISTEMA WHERE personal_id IS NOT NULL",
+                rs -> { cuentas.put(rs.getLong(1), rs.getString(2)); });
         return personalRepository.findAllByOrderByPersonalIdAsc().stream()
-                .map(p -> PersonalDTO.desde(p, cargos.containsKey(p.getCargo()) ? cargos.get(p.getCargo()).getFuncion() : null)).toList();
+                .map(p -> PersonalDTO.desde(p, cargos.containsKey(p.getCargo()) ? cargos.get(p.getCargo()).getFuncion() : null,
+                        cuentas.get(p.getPersonalId()))).toList();
     }
 
     @Override
@@ -60,6 +69,7 @@ public class PersonalServiceImpl implements IPersonalService {
     @Override
     @Transactional
     public PersonalDTO crear(PersonalRequestDTO dto) {
+        exigirProveedor(dto);
         Personal p = new Personal();
         copiar(dto, p, null);
         return dto(personalRepository.saveAndFlush(p));
@@ -69,6 +79,10 @@ public class PersonalServiceImpl implements IPersonalService {
     @Transactional
     public PersonalDTO actualizar(Long id, PersonalRequestDTO dto) {
         Personal p = obtener(id);
+        if (p.getProveedorId() == null) {
+            throw new BusinessException("Del personal propio solo se cambia el estado (activo o inactivo) en la sección Personal.");
+        }
+        exigirProveedor(dto);
         // Cambio de cargo con trabajo pendiente: lo valida TRG_PERSONAL_VALIDAR (ORA-20525)
         copiar(dto, p, id);
         Personal guardado = personalRepository.saveAndFlush(p);
@@ -82,9 +96,61 @@ public class PersonalServiceImpl implements IPersonalService {
         // kampu_bd.sql no otorga DELETE sobre PERSONAL: la baja es lógica (estado INACTIVO)
         Personal p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("La persona ya está INACTIVA.");
+        if (p.getProveedorId() == null) {
+            cambiarEstado(id, false);
+            return;
+        }
         p.setEstado("INACTIVO");
         personalRepository.saveAndFlush(p);
         operaciones.verificarAsignacionesPendientes(null, id, null);
+    }
+
+    @Override
+    @Transactional
+    public PersonalDTO crearPropio(PersonalRequestDTO dto) {
+        Personal p = new Personal();
+        copiar(dto, p, null);
+        p.setProveedorId(null);
+        p.setEstado("DISPONIBLE");
+        return dto(personalRepository.saveAndFlush(p));
+    }
+
+    @Override
+    @Transactional
+    public PersonalDTO cambiarEstado(Long id, boolean activo) {
+        Personal p = obtener(id);
+        List<java.util.Map<String, Object>> cuenta = jdbc.queryForList(
+                "SELECT usuario_id, estado FROM USUARIOS_SISTEMA WHERE personal_id = ?", id);
+        Long usuarioId = cuenta.isEmpty() ? null : ((Number) cuenta.get(0).get("USUARIO_ID")).longValue();
+        String estadoCuenta = cuenta.isEmpty() ? null : (String) cuenta.get(0).get("ESTADO");
+        if (activo) {
+            // La persona primero (TRG_USUARIOS_PERSONAL no deja activar la cuenta de alguien INACTIVO), luego su cuenta
+            if ("INACTIVO".equals(p.getEstado())) {
+                p.setEstado("DISPONIBLE");
+                personalRepository.saveAndFlush(p);
+            }
+            if (usuarioId != null && !"ACTIVO".equals(estadoCuenta)) {
+                jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.restablecer_acceso(?); END;", usuarioId);
+            }
+        } else {
+            // La cuenta primero (TRG_PERSONAL_CUENTA no deja dar de baja a quien tiene cuenta activa), luego la persona
+            if (usuarioId != null && !"INACTIVO".equals(estadoCuenta)) {
+                jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.revocar_acceso(?); END;", usuarioId);
+            }
+            if (!"INACTIVO".equals(p.getEstado())) {
+                p.setEstado("INACTIVO");
+                personalRepository.saveAndFlush(p);
+                operaciones.verificarAsignacionesPendientes(null, id, null);
+            }
+        }
+        return dto(obtener(id));
+    }
+
+    // El personal de proveedores se registra con su proveedor; el propio nace en Usuarios
+    private void exigirProveedor(PersonalRequestDTO dto) {
+        if (dto.proveedorId() == null) {
+            throw new BusinessException("Elige el proveedor. El personal propio se registra en Usuarios, al crear la cuenta del guía o conductor.");
+        }
     }
 
     @Override
@@ -94,7 +160,9 @@ public class PersonalServiceImpl implements IPersonalService {
     }
 
     private PersonalDTO dto(Personal p) {
-        return PersonalDTO.desde(p, recursos.funcion(p));
+        List<String> cuenta = jdbc.queryForList("SELECT username FROM USUARIOS_SISTEMA WHERE personal_id = ?",
+                String.class, p.getPersonalId());
+        return PersonalDTO.desde(p, recursos.funcion(p), cuenta.isEmpty() ? null : cuenta.get(0));
     }
 
     private Personal obtener(Long id) {

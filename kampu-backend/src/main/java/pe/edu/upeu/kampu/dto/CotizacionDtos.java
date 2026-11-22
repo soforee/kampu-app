@@ -48,6 +48,24 @@ public final class CotizacionDtos {
     public record Clave(@Size(max = 40) String clave) {
     }
 
+    // Invitado que gestiona la reserva de su cotización: la clave viaja junto con cada operación
+    public record PasajeroInvitado(@Size(max = 40) String clave,
+                                   @NotNull(message = "Faltan los datos del pasajero.") @Valid PasajeroRequestDTO pasajero) {
+    }
+
+    public record PagoInvitado(@Size(max = 40) String clave,
+                               @NotNull(message = "Faltan los datos del pago.") @Valid InformarPagoRequestDTO pago) {
+    }
+
+    // lugarRecojoId null = la oficina de la agencia
+    public record RecojoInvitado(@Size(max = 40) String clave, Long lugarRecojoId) {
+    }
+
+    public record AnulacionInvitado(@Size(max = 40) String clave,
+                                    @NotBlank(message = "Indica el motivo.")
+                                    @Size(max = 300, message = "El motivo admite máximo 300 caracteres.") String motivo) {
+    }
+
     public record Modificar(@Size(max = 40) String clave, @NotNull @Valid Datos datos) {
     }
 

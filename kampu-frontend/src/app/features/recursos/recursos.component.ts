@@ -19,10 +19,14 @@ import { addDays, hoy } from '../../core/utils/date.util';
 import { ModalComponent } from '../../shared/modal.component';
 
 type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'lugares';
+// Sección del menú (data.seccion de la ruta):
+//  - personal: personal PROPIO (nace en Usuarios con su cuenta); aquí solo se activa o desactiva.
+//  - vehiculos: flota PROPIA (sin proveedor).
+//  - proveedores: terceros, con su personal, su flota y los lugares.
+type Seccion = 'personal' | 'vehiculos' | 'proveedores';
 
 /**
- * Logística v4: PROVEEDORES (Kampu Tours propio + terceros), PERSONAL (guías y conductores),
- * VEHICULOS y LUGARES. La flota y el personal propios cuelgan de Kampu Tours.
+ * Logística dividida en tres secciones que comparten este componente (proveedor_id NULL = propio de la agencia).
  */
 import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
@@ -36,12 +40,26 @@ export class RecursosComponent {
   private alerts = inject(AlertService);
   private auth = inject(AuthService);
 
-  tabs: { id: Tab; texto: string; icono: string; singular: string }[] = [
-    { id: 'proveedores', texto: 'Proveedores', icono: 'flag', singular: 'proveedor' },
-    { id: 'personal', texto: 'Personal', icono: 'id', singular: 'guía o conductor' },
-    { id: 'vehiculos', texto: 'Vehículos', icono: 'truck', singular: 'vehículo' },
-    { id: 'lugares', texto: 'Lugares', icono: 'map-pin', singular: 'lugar' }
-  ];
+  private ruta = inject(ActivatedRoute);
+  seccion: Seccion = (this.ruta.snapshot.data['seccion'] as Seccion) ?? 'proveedores';
+  // Personal y Vehículos muestran solo lo propio; Proveedores, solo lo de terceros
+  propio = this.seccion !== 'proveedores';
+  encabezado = {
+    personal: { titulo: 'Personal', subtitulo: 'Guías y conductores propios de la agencia. Se registran en Usuarios al crear su cuenta.' },
+    vehiculos: { titulo: 'Vehículos', subtitulo: 'Flota propia de la agencia.' },
+    proveedores: { titulo: 'Proveedores', subtitulo: 'Proveedores externos con sus guías, conductores y vehículos, y los lugares de la operación.' }
+  }[this.seccion];
+
+  tabs: { id: Tab; texto: string; icono: string; singular: string }[] = this.seccion === 'personal'
+    ? [{ id: 'personal', texto: 'Personal', icono: 'id', singular: 'guía o conductor' }]
+    : this.seccion === 'vehiculos'
+      ? [{ id: 'vehiculos', texto: 'Vehículos', icono: 'truck', singular: 'vehículo' }]
+      : [
+        { id: 'proveedores', texto: 'Proveedores', icono: 'flag', singular: 'proveedor' },
+        { id: 'personal', texto: 'Personal de proveedores', icono: 'id', singular: 'guía o conductor del proveedor' },
+        { id: 'vehiculos', texto: 'Vehículos de proveedores', icono: 'truck', singular: 'vehículo del proveedor' },
+        { id: 'lugares', texto: 'Lugares', icono: 'map-pin', singular: 'lugar' }
+      ];
   categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
   estadosProveedor: EstadoProveedor[] = ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'];
   // Cargos del catálogo CARGOS (v10): store.cargos()
@@ -54,13 +72,14 @@ export class RecursosComponent {
   hoy = hoy();
   pronto = addDays(hoy(), 30);
 
-  // ?tab=personal|vehiculos: llega desde los avisos de licencias y mantenimiento del panel
+  // ?tab=personal|vehiculos|lugares (sección Proveedores): llega desde los avisos del panel
   tab = signal<Tab>(this.tabInicial());
   private tabInicial(): Tab {
-    const t = inject(ActivatedRoute).snapshot.queryParamMap.get('tab');
+    if (this.seccion !== 'proveedores') return this.seccion;
+    const t = this.ruta.snapshot.queryParamMap.get('tab');
     return t === 'personal' || t === 'vehiculos' || t === 'lugares' ? t : 'proveedores';
   }
-  // null = todos · 0 = propio de Kampu Tours (v10: proveedor_id NULL) · n = un proveedor tercero
+  // null = todos los proveedores · n = un proveedor
   filtroProveedor = signal<number | null>(null);
   // '' = todos · GUIA = función GUIADO · CONDUCTOR = función TRANSPORTE
   filtroRol = signal<'' | 'GUIA' | 'CONDUCTOR'>('');
@@ -88,7 +107,7 @@ export class RecursosComponent {
               ? 'Ese teléfono ya está registrado para otro proveedor.' : null),
           pEmail: p.email.trim() ? V.email(p.email) : null,
           // chk_prov_servicio: todo proveedor brinda al menos un soporte
-          pServicio: p.ofreceTransporte || p.ofreceGuiado || p.ofreceHospedaje || p.ofreceAlimentacion
+          pServicio: p.ofreceTransporte || p.ofreceGuiado || p.ofreceHospedaje
             ? null : 'Marca al menos un soporte que brinda.'
         };
       }
@@ -99,8 +118,8 @@ export class RecursosComponent {
         const prov = this.store.getProveedor(p.proveedorId);
         const funcion = this.store.getCargo(p.cargo)?.funcion;
         return {
-          // proveedorId null = personal propio; un tercero debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
-          rProveedor: !prov ? null
+          // Personal de proveedores: el proveedor es obligatorio y debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
+          rProveedor: !prov ? 'Elige el proveedor.'
             : funcion === 'TRANSPORTE' && !prov.ofreceTransporte ? 'Ese proveedor no brinda transporte.'
             : funcion === 'GUIADO' && !prov.ofreceGuiado ? 'Ese proveedor no brinda guiado.' : null,
           rCargo: p.cargo ? null : 'Elige el cargo.',
@@ -119,8 +138,8 @@ export class RecursosComponent {
         };
       }
       case 'vehiculos': return {
-        vProveedor: this.vehiculo.proveedorId && !this.store.getProveedor(this.vehiculo.proveedorId)?.ofreceTransporte
-          ? 'Ese proveedor no brinda transporte.' : null,
+        vProveedor: this.propio ? null : !this.vehiculo.proveedorId ? 'Elige el proveedor.'
+          : !this.store.getProveedor(this.vehiculo.proveedorId)?.ofreceTransporte ? 'Ese proveedor no brinda transporte.' : null,
         vPlaca: V.placa(this.vehiculo.placa),
         vMarca: V.texto(this.vehiculo.marcaModelo, 'La marca/modelo', 100),
         vCapacidad: V.entero(this.vehiculo.capacidadPax, 'La capacidad', 1, 80),
@@ -146,11 +165,12 @@ export class RecursosComponent {
     const p = this.filtroProveedor();
     const r = this.filtroRol();
     const funcion = r === 'GUIA' ? 'GUIADO' : r === 'CONDUCTOR' ? 'TRANSPORTE' : '';
-    return this.store.personal().filter(x => (p === null || (x.proveedorId ?? 0) === p) && (!funcion || x.funcion === funcion));
+    return this.store.personal().filter(x => (this.propio ? x.proveedorId === null : x.proveedorId !== null && (p === null || x.proveedorId === p))
+      && (!funcion || x.funcion === funcion));
   });
   vehiculosFiltrados = computed(() => {
     const p = this.filtroProveedor();
-    return this.store.vehiculos().filter(v => p === null || (v.proveedorId ?? 0) === p);
+    return this.store.vehiculos().filter(v => this.propio ? v.proveedorId === null : v.proveedorId !== null && (p === null || v.proveedorId === p));
   });
   lugaresPorCiudad = computed(() => {
     const grupos: { ciudad: string; lugares: Lugar[] }[] = [];
@@ -168,10 +188,10 @@ export class RecursosComponent {
   // ---------- Formularios ----------
   private proveedorVacio(): ProveedorForm {
     return { nombreComercial: '', ruc: '', telefono: '', email: '', ofreceTransporte: true, ofreceGuiado: false,
-      ofreceHospedaje: false, ofreceAlimentacion: false, estado: 'ACTIVO' };
+      ofreceHospedaje: false, estado: 'ACTIVO' };
   }
-  // proveedorId null = propio de Kampu Tours (v10)
-  private proveedorFiltro(): number | null { const p = this.filtroProveedor(); return p ? p : null; }
+  // Propio: sin proveedor · Proveedores: el que está filtrado (o ninguno, y se elige en el formulario)
+  private proveedorFiltro(): number | null { return this.propio ? null : this.filtroProveedor(); }
   private personaVacia(): PersonalForm {
     return { proveedorId: this.proveedorFiltro(), numeroDocumento: '', nombreCompleto: '', cargo: 'GUIA', telefono: '',
       numLicencia: '', catLicencia: '', vencLicencia: '', estado: 'DISPONIBLE' };
@@ -202,7 +222,7 @@ export class RecursosComponent {
     this.editId = id;
     this.proveedor = { nombreComercial: p.nombreComercial, ruc: p.ruc, telefono: p.telefono, email: p.email,
       ofreceTransporte: p.ofreceTransporte, ofreceGuiado: p.ofreceGuiado, ofreceHospedaje: p.ofreceHospedaje,
-      ofreceAlimentacion: p.ofreceAlimentacion, estado: p.estado };
+      estado: p.estado };
     this.abrir();
   }
   editarPersona(id: number) {
@@ -252,7 +272,8 @@ export class RecursosComponent {
       }
       case 'vehiculos': {
         const x = this.vehiculo;
-        peticion = this.store.guardarVehiculo({ ...x, placa: t(x.placa).toUpperCase(), marcaModelo: t(x.marcaModelo),
+        peticion = this.store.guardarVehiculo({ ...x, proveedorId: this.propio ? null : x.proveedorId,
+          placa: t(x.placa).toUpperCase(), marcaModelo: t(x.marcaModelo),
           proxMantenimiento: x.proxMantenimiento || '' }, this.editId);
         break;
       }
@@ -299,6 +320,21 @@ export class RecursosComponent {
     };
     peticiones[tab]().subscribe({
       next: () => { this.recargar(); this.alerts.toast(tab === 'lugares' ? 'Eliminado' : 'Dado de baja'); },
+      error: (err) => this.alerts.error(this.store.error(err))
+    });
+  }
+
+  // Personal propio: activar o desactivar (su cuenta de acceso queda en el mismo estado)
+  async cambiarEstado(id: number) {
+    const p = this.store.getPersonal(id);
+    if (!p) return;
+    const activar = p.estado === 'INACTIVO';
+    const texto = activar
+      ? `${p.nombreCompleto} volverá a estar disponible${p.usuario ? ' y podrá iniciar sesión (' + p.usuario + ')' : ''}.`
+      : `${p.nombreCompleto} quedará inactivo${p.usuario ? ' y su cuenta (' + p.usuario + ') no podrá iniciar sesión' : ''}. Sus registros se conservan.`;
+    if (!(await this.alerts.confirm(texto, activar ? 'Activar personal' : 'Desactivar personal', activar ? 'Sí, activar' : 'Sí, desactivar'))) return;
+    this.store.cambiarEstadoPersonal(id, activar).subscribe({
+      next: () => { this.store.cargarPersonal(); this.alerts.toast(activar ? 'Personal activado' : 'Personal desactivado'); },
       error: (err) => this.alerts.error(this.store.error(err))
     });
   }

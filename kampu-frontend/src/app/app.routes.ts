@@ -13,6 +13,8 @@ export const routes: Routes = [
   // (v11) Cotización sin cuenta: cotizador, una cotización (código + clave) y su seguimiento
   { path: 'cotizar/:paqueteId', loadComponent: () => import('./features/cotizar/cotizador.component').then(m => m.CotizadorComponent) },
   { path: 'cotizacion/:codigo', loadComponent: () => import('./features/cotizar/cotizacion-detalle.component').then(m => m.CotizacionDetalleComponent) },
+  // Invitado con su cotización ya RESERVADA: gestiona la reserva como un cliente, con el código + clave
+  { path: 'cotizacion/:codigo/reserva', loadComponent: () => import('./features/portal/paquete-cliente.component').then(m => m.PaqueteClienteComponent) },
   { path: 'seguimiento', loadComponent: () => import('./features/cotizar/seguimiento.component').then(m => m.SeguimientoComponent) },
   // Módulo de clientes (v4)
   { path: 'registro', loadComponent: () => import('./features/portal/registro.component').then(m => m.RegistroComponent) },
@@ -38,7 +40,10 @@ export const routes: Routes = [
       { path: 'pagos', loadComponent: () => import('./features/pagos/pagos.component').then(m => m.PagosComponent), data: permiso('VER_MONTOS') },
       { path: 'clientes', loadComponent: () => import('./features/clientes/clientes.component').then(m => m.ClientesComponent), data: permiso('VER_CLIENTES') },
       { path: 'operaciones', loadComponent: () => import('./features/operaciones/operaciones.component').then(m => m.OperacionesComponent), data: permiso('VER_OPERACIONES') },
-      { path: 'recursos', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: permiso('VER_LOGISTICA') },
+      // Logística dividida: personal propio (nace en Usuarios), flota propia y proveedores (con su personal, flota y los lugares)
+      { path: 'personal', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'personal' } },
+      { path: 'vehiculos', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'vehiculos' } },
+      { path: 'proveedores', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'proveedores' } },
       { path: 'usuarios', loadComponent: () => import('./features/usuarios/usuarios.component').then(m => m.UsuariosComponent), data: permiso('GESTIONAR_USUARIOS') },
       { path: 'auditoria', loadComponent: () => import('./features/auditoria/auditoria.component').then(m => m.AuditoriaComponent), data: permiso('VER_AUDITORIA') }
     ]
