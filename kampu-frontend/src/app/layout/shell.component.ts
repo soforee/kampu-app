@@ -48,7 +48,9 @@ export class ShellComponent {
     { ruta: '/pagos', texto: 'Pagos', icono: 'card', permiso: 'VER_MONTOS' },
     { ruta: '/clientes', texto: 'Clientes', icono: 'users', permiso: 'VER_CLIENTES' },
     { ruta: '/operaciones', texto: 'Tráfico', icono: 'truck', permiso: 'VER_OPERACIONES' },
-    { ruta: '/recursos', texto: 'Logística', icono: 'map-pin', permiso: 'VER_LOGISTICA' },
+    { ruta: '/personal', texto: 'Personal', icono: 'users', permiso: 'VER_LOGISTICA' },
+    { ruta: '/vehiculos', texto: 'Vehículos', icono: 'truck', permiso: 'VER_LOGISTICA' },
+    { ruta: '/proveedores', texto: 'Proveedores', icono: 'map-pin', permiso: 'VER_LOGISTICA' },
     { ruta: '/usuarios', texto: 'Usuarios', icono: 'id', permiso: 'GESTIONAR_USUARIOS' },
     { ruta: '/auditoria', texto: 'Auditoría', icono: 'file-text', permiso: 'VER_AUDITORIA' }
   ];

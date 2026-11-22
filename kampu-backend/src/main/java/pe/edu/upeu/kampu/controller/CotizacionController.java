@@ -15,6 +15,10 @@ import pe.edu.upeu.kampu.seguridad.Permiso;
 import pe.edu.upeu.kampu.seguridad.Publico;
 import pe.edu.upeu.kampu.services.CotizacionPdfService;
 import pe.edu.upeu.kampu.services.CotizacionService;
+import pe.edu.upeu.kampu.services.PortalClienteService;
+import pe.edu.upeu.kampu.dto.PagoDTO;
+import pe.edu.upeu.kampu.dto.PortalDetalleDTO;
+import pe.edu.upeu.kampu.dto.PortalPaqueteDTO;
 
 import java.time.Duration;
 import java.util.List;
@@ -23,6 +27,8 @@ import java.util.List;
  * (v11) Cotizaciones.
  *  - Visitante (sin cuenta): calcula, guarda, abre/modifica/solicita/cancela/descarga con código + clave.
  *    La clave viaja siempre en el cuerpo (POST/PUT), nunca en la URL. Límite de intentos por IP.
+ *  - Invitado con la cotización ya RESERVADA: gestiona esa reserva como un cliente (pasajeros, pagos, recojo,
+ *    anulación) con el mismo código + clave, sin crear cuenta.
  *  - Personal (VER_/GESTIONAR_COTIZACIONES): lista, detalle, confirmar (crea la reserva) o rechazar.
  */
 @RestController
@@ -31,8 +37,11 @@ public class CotizacionController {
     private final CotizacionService servicio;
     private final CotizacionPdfService pdf;
     private final LimiteSolicitudes limite;
+    private final PortalClienteService portal;
 
-    public CotizacionController(CotizacionService servicio, CotizacionPdfService pdf, LimiteSolicitudes limite) {
+    public CotizacionController(CotizacionService servicio, CotizacionPdfService pdf, LimiteSolicitudes limite,
+                                PortalClienteService portal) {
+        this.portal = portal;
         this.servicio = servicio;
         this.pdf = pdf;
         this.limite = limite;
@@ -86,6 +95,57 @@ public class CotizacionController {
     public ResponseEntity<byte[]> descargar(@PathVariable String codigo, @Valid @RequestBody Clave c, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return archivo(servicio.paraPdf(codigo, c.clave()));
+    }
+
+    // ------------------------------------------------------------ invitado con su reserva
+    @Publico
+    @PostMapping("/{codigo}/reserva")
+    public PortalDetalleDTO reserva(@PathVariable String codigo, @Valid @RequestBody Clave c, HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        return portal.detalleInvitado(codigo, c.clave());
+    }
+
+    @Publico
+    @PostMapping("/{codigo}/reserva/pasajeros")
+    public ResponseEntity<PortalDetalleDTO.PortalPasajeroDTO> registrarPasajero(@PathVariable String codigo,
+                                                                                @Valid @RequestBody PasajeroInvitado p,
+                                                                                HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        return new ResponseEntity<>(portal.registrarPasajeroInvitado(codigo, p.clave(), p.pasajero()), HttpStatus.CREATED);
+    }
+
+    @Publico
+    @PostMapping("/{codigo}/reserva/pasajeros/{pasajeroId}/eliminar")
+    public ResponseEntity<Void> eliminarPasajero(@PathVariable String codigo, @PathVariable Long pasajeroId,
+                                                 @Valid @RequestBody Clave c, HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        portal.eliminarPasajeroInvitado(codigo, c.clave(), pasajeroId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Publico
+    @PostMapping("/{codigo}/reserva/pagos")
+    public ResponseEntity<PagoDTO> informarPago(@PathVariable String codigo, @Valid @RequestBody PagoInvitado p,
+                                                HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        return new ResponseEntity<>(portal.informarPagoInvitado(codigo, p.clave(), p.pago()), HttpStatus.CREATED);
+    }
+
+    @Publico
+    @PostMapping("/{codigo}/reserva/recojo")
+    public PortalPaqueteDTO cambiarRecojo(@PathVariable String codigo, @Valid @RequestBody RecojoInvitado r,
+                                          HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        return portal.cambiarRecojoInvitado(codigo, r.clave(), r.lugarRecojoId());
+    }
+
+    // Respuesta: {"resultado": "ANULADA"} o {"resultado": "SOLICITUD_REGISTRADA"}
+    @Publico
+    @PostMapping("/{codigo}/reserva/anulacion")
+    public java.util.Map<String, String> solicitarAnulacion(@PathVariable String codigo, @Valid @RequestBody AnulacionInvitado a,
+                                                            HttpServletRequest req) {
+        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
+        return java.util.Map.of("resultado", portal.solicitarAnulacionInvitado(codigo, a.clave(), a.motivo()));
     }
 
     // ------------------------------------------------------------ cliente con cuenta

@@ -51,7 +51,7 @@
 
    QUE CAMBIO EN v8 (personal, flota y proveedores)
      * PROVEEDORES guarda solo terceros y declara que soporte brinda
-       (transporte, guiado, hospedaje, alimentacion). En PERSONAL y
+       (transporte, guiado, hospedaje). En PERSONAL y
        VEHICULOS, proveedor_id NULL = propio de Kampu.
      * PERSONAL.rol pasa a PERSONAL.cargo, con catalogo CARGOS (por defecto
        GUIA y CONDUCTOR). Si el cargo requiere licencia, la BD exige numero,
@@ -316,7 +316,6 @@ CREATE TABLE PROVEEDORES (
     ofrece_transporte   NUMBER(1)     DEFAULT ON NULL 0,                -- (+v8) vehiculos y conductores
     ofrece_guiado       NUMBER(1)     DEFAULT ON NULL 0,                -- (+v8) guias
     ofrece_hospedaje    NUMBER(1)     DEFAULT ON NULL 0,                -- (+v8) hoteles
-    ofrece_alimentacion NUMBER(1)     DEFAULT ON NULL 0,                -- (+v8) restaurantes, box lunch
     estado              VARCHAR2(20)  DEFAULT ON NULL 'ACTIVO',
     CONSTRAINT pk_proveedores PRIMARY KEY (proveedor_id),
     CONSTRAINT uq_prov_ruc       UNIQUE (ruc),
@@ -324,9 +323,9 @@ CREATE TABLE PROVEEDORES (
     CONSTRAINT chk_prov_ruc      CHECK (REGEXP_LIKE(ruc, '^(10|15|17|20)[0-9]{9}$')),
     CONSTRAINT chk_prov_email    CHECK (email IS NULL OR REGEXP_LIKE(email, '^[^@ ]+@[^@ ]+\.[^@ ]+$')),
     CONSTRAINT chk_prov_flags    CHECK (ofrece_transporte IN (0, 1) AND ofrece_guiado IN (0, 1)
-                                        AND ofrece_hospedaje IN (0, 1) AND ofrece_alimentacion IN (0, 1)),
+                                        AND ofrece_hospedaje IN (0, 1)),
     -- Todo proveedor brinda al menos un soporte
-    CONSTRAINT chk_prov_servicio CHECK (ofrece_transporte + ofrece_guiado + ofrece_hospedaje + ofrece_alimentacion > 0)
+    CONSTRAINT chk_prov_servicio CHECK (ofrece_transporte + ofrece_guiado + ofrece_hospedaje > 0)
 );
 CREATE UNIQUE INDEX uq_prov_telefono ON PROVEEDORES (TRANSLATE(telefono, '0+-() ', '0'));
 
@@ -903,6 +902,10 @@ CREATE OR REPLACE PACKAGE PKG_SEGURIDAD_ROLES AS
     -- (v11) Visitante sin cuenta que opera SU cotizacion (ya validada por clave):
     -- solo deja rastro en AUDITORIA como INVITADO; no tiene ningun permiso.
     PROCEDURE iniciar_sesion_invitado (p_codigo_cotizacion VARCHAR2);
+    -- Visitante sin cuenta cuya cotizacion ya es una reserva: con su codigo + hash de la clave
+    -- actua como el CLIENTE de esa reserva (pasajeros, pagos, recojo, anulacion), sin cuenta web.
+    -- Lo llama PKG_COTIZACIONES.iniciar_sesion_reserva (que antes cuenta los intentos de clave).
+    PROCEDURE iniciar_sesion_reserva (p_codigo_cotizacion VARCHAR2, p_clave_hash VARCHAR2);
     FUNCTION usuario_actual    RETURN VARCHAR2;
     FUNCTION usuario_id_actual RETURN NUMBER;     -- USUARIOS_SISTEMA.usuario_id (NULL para clientes)
     FUNCTION personal_id_actual RETURN NUMBER;    -- (v11) PERSONAL.personal_id de un GUIA o CONDUCTOR con sesion
@@ -923,8 +926,12 @@ CREATE OR REPLACE PACKAGE PKG_SEGURIDAD_ROLES AS
 
     -- Administracion de accesos de usuarios internos (solo ADMIN)
     PROCEDURE asignar_rol (p_usuario_id NUMBER, p_rol VARCHAR2);
-    -- (v11) Rol GUIA o CONDUCTOR ligado a una persona del PERSONAL (cuenta de campo)
-    PROCEDURE asignar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_personal_id NUMBER);
+    -- Guia <-> Conductor: cambia el rol de la cuenta y el cargo de su ficha de PERSONAL
+    -- (licencia obligatoria al pasar a CONDUCTOR). Entre oficina y campo no se cambia.
+    PROCEDURE cambiar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_num_licencia VARCHAR2 DEFAULT NULL,
+                                 p_cat_licencia VARCHAR2 DEFAULT NULL, p_venc_licencia DATE DEFAULT NULL);
+    -- 1 mientras cambiar_rol_campo ajusta cuenta y ficha a la vez (lo consulta TRG_PERSONAL_CUENTA)
+    FUNCTION cambiando_rol_campo RETURN NUMBER;
     PROCEDURE revocar_acceso (p_usuario_id NUMBER);
     PROCEDURE restablecer_acceso (p_usuario_id NUMBER);
 END PKG_SEGURIDAD_ROLES;
@@ -936,6 +943,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
     g_rol         VARCHAR2(20);
     g_cliente_id  NUMBER;
     g_personal_id NUMBER;    -- (v11) ficha de PERSONAL de un GUIA / CONDUCTOR
+    g_cambiando   NUMBER := 0;  -- cambiar_rol_campo en curso
 
     -- Catalogo de acciones (unica fuente de verdad de los permisos)
     c_acciones CONSTANT VARCHAR2(1000) :=
@@ -1019,6 +1027,27 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
         g_rol     := 'INVITADO';
         DBMS_SESSION.SET_IDENTIFIER(SUBSTR(g_usuario, 1, 64));
     END iniciar_sesion_invitado;
+
+    PROCEDURE iniciar_sesion_reserva (p_codigo_cotizacion VARCHAR2, p_clave_hash VARCHAR2) IS
+        v_cliente RESERVAS.cliente_id%TYPE;
+    BEGIN
+        g_usuario := NULL; g_usuario_id := NULL; g_rol := NULL; g_cliente_id := NULL; g_personal_id := NULL;
+        BEGIN
+            SELECT r.cliente_id INTO v_cliente
+              FROM COTIZACIONES c JOIN RESERVAS r ON r.reserva_id = c.reserva_id
+             WHERE c.codigo_cotizacion = UPPER(TRIM(p_codigo_cotizacion))
+               AND c.clave_hash = LOWER(p_clave_hash)
+               AND c.estado = 'RESERVADA';
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                DBMS_SESSION.CLEAR_IDENTIFIER;
+                RAISE_APPLICATION_ERROR(-20512, 'Codigo o clave de la cotizacion incorrectos');
+        END;
+        g_usuario    := SUBSTR('invitado ' || UPPER(TRIM(p_codigo_cotizacion)), 1, 100);
+        g_rol        := 'CLIENTE';
+        g_cliente_id := v_cliente;
+        DBMS_SESSION.SET_IDENTIFIER(SUBSTR(g_usuario, 1, 64));
+    END iniciar_sesion_reserva;
 
     FUNCTION personal_id_actual RETURN NUMBER IS
     BEGIN
@@ -1143,13 +1172,19 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
     END validar_no_ultimo_admin;
 
     PROCEDURE asignar_rol (p_usuario_id NUMBER, p_rol VARCHAR2) IS
-        v_rol VARCHAR2(20) := UPPER(TRIM(p_rol));
+        v_rol   VARCHAR2(20) := UPPER(TRIM(p_rol));
+        v_campo NUMBER;
     BEGIN
         exigir('GESTIONAR_USUARIOS');
         IF v_rol IS NULL OR v_rol NOT IN ('ADMIN', 'VENTAS') THEN
             RAISE_APPLICATION_ERROR(-20096, CASE WHEN v_rol IN ('GUIA', 'CONDUCTOR')
-                THEN 'El rol ' || v_rol || ' requiere elegir la persona del personal (asignar_rol_campo)'
+                THEN 'El rol ' || v_rol || ' se asigna al crear la cuenta (o con cambiar_rol_campo)'
                 ELSE 'Rol interno no valido: ' || p_rol END);
+        END IF;
+        SELECT COUNT(*) INTO v_campo FROM USUARIOS_SISTEMA
+         WHERE usuario_id = p_usuario_id AND rol IN ('GUIA', 'CONDUCTOR');
+        IF v_campo > 0 THEN
+            RAISE_APPLICATION_ERROR(-20096, 'Una cuenta de guia o conductor no pasa a un rol de oficina: crea otra cuenta');
         END IF;
         IF v_rol <> 'ADMIN' THEN
             validar_no_ultimo_admin(p_usuario_id);
@@ -1161,23 +1196,49 @@ CREATE OR REPLACE PACKAGE BODY PKG_SEGURIDAD_ROLES AS
         END IF;
     END asignar_rol;
 
-    PROCEDURE asignar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_personal_id NUMBER) IS
-        v_rol VARCHAR2(20) := UPPER(TRIM(p_rol));
+    FUNCTION cambiando_rol_campo RETURN NUMBER IS
+    BEGIN
+        RETURN g_cambiando;
+    END cambiando_rol_campo;
+
+    PROCEDURE cambiar_rol_campo (p_usuario_id NUMBER, p_rol VARCHAR2, p_num_licencia VARCHAR2 DEFAULT NULL,
+                                 p_cat_licencia VARCHAR2 DEFAULT NULL, p_venc_licencia DATE DEFAULT NULL) IS
+        v_rol      VARCHAR2(20) := UPPER(TRIM(p_rol));
+        v_actual   USUARIOS_SISTEMA.rol%TYPE;
+        v_personal USUARIOS_SISTEMA.personal_id%TYPE;
     BEGIN
         exigir('GESTIONAR_USUARIOS');
         IF v_rol IS NULL OR v_rol NOT IN ('GUIA', 'CONDUCTOR') THEN
             RAISE_APPLICATION_ERROR(-20096, 'Rol de campo no valido: ' || p_rol);
         END IF;
-        IF p_usuario_id = g_usuario_id THEN
-            RAISE_APPLICATION_ERROR(-20097, 'No puedes cambiar tu propio rol a uno de campo');
+        BEGIN
+            SELECT rol, personal_id INTO v_actual, v_personal FROM USUARIOS_SISTEMA
+             WHERE usuario_id = p_usuario_id FOR UPDATE;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20091, 'El usuario ' || p_usuario_id || ' no existe');
+        END;
+        IF v_actual NOT IN ('GUIA', 'CONDUCTOR') OR v_personal IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20096, 'Una cuenta de oficina no pasa a guia o conductor: crea otra cuenta');
         END IF;
-        validar_no_ultimo_admin(p_usuario_id);
-        -- TRG_USUARIOS_PERSONAL valida que el cargo de la persona corresponda al rol
-        UPDATE USUARIOS_SISTEMA SET rol = v_rol, personal_id = p_personal_id WHERE usuario_id = p_usuario_id;
-        IF SQL%ROWCOUNT = 0 THEN
-            RAISE_APPLICATION_ERROR(-20091, 'El usuario ' || p_usuario_id || ' no existe');
+        IF v_actual = v_rol THEN
+            RETURN;
         END IF;
-    END asignar_rol_campo;
+        g_cambiando := 1;
+        -- TRG_PERSONAL_VALIDAR exige la licencia vigente del conductor y que no queden asignaciones pendientes
+        UPDATE PERSONAL
+           SET cargo         = v_rol,
+               num_licencia  = CASE WHEN v_rol = 'CONDUCTOR' THEN p_num_licencia  ELSE num_licencia  END,
+               cat_licencia  = CASE WHEN v_rol = 'CONDUCTOR' THEN p_cat_licencia  ELSE cat_licencia  END,
+               venc_licencia = CASE WHEN v_rol = 'CONDUCTOR' THEN p_venc_licencia ELSE venc_licencia END
+         WHERE personal_id = v_personal;
+        UPDATE USUARIOS_SISTEMA SET rol = v_rol WHERE usuario_id = p_usuario_id;
+        g_cambiando := 0;
+    EXCEPTION
+        WHEN OTHERS THEN
+            g_cambiando := 0;
+            RAISE;
+    END cambiar_rol_campo;
 
     PROCEDURE revocar_acceso (p_usuario_id NUMBER) IS
     BEGIN
@@ -2090,6 +2151,10 @@ CREATE OR REPLACE PACKAGE PKG_COTIZACIONES AS
 
     -- Marca VENCIDA lo que paso su vigencia o su fecha de viaje (idempotente)
     PROCEDURE vencer;
+
+    -- Visitante cuya cotizacion ya es RESERVADA: valida la clave (cuenta los intentos) y deja la
+    -- sesion como el CLIENTE de esa reserva para usar PKG_GESTION_PAQUETES_CLIENTE sin cuenta web.
+    PROCEDURE iniciar_sesion_reserva (p_codigo VARCHAR2, p_clave_hash VARCHAR2, p_reserva_id OUT NUMBER);
 END PKG_COTIZACIONES;
 /
 
@@ -2540,6 +2605,18 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
          WHERE cotizacion_id = p_cotizacion_id;
     END rechazar;
 
+    PROCEDURE iniciar_sesion_reserva (p_codigo VARCHAR2, p_clave_hash VARCHAR2, p_reserva_id OUT NUMBER) IS
+        v_id     NUMBER;
+        v_estado COTIZACIONES.estado%TYPE;
+    BEGIN
+        v_id := acceder(p_codigo, p_clave_hash);
+        SELECT estado, reserva_id INTO v_estado, p_reserva_id FROM COTIZACIONES WHERE cotizacion_id = v_id;
+        IF v_estado <> 'RESERVADA' OR p_reserva_id IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20517, 'Esta cotizacion aun no es una reserva: la agencia debe confirmar tu solicitud');
+        END IF;
+        PKG_SEGURIDAD_ROLES.iniciar_sesion_reserva(p_codigo, p_clave_hash);
+    END iniciar_sesion_reserva;
+
     PROCEDURE vencer IS
     BEGIN
         UPDATE COTIZACIONES
@@ -2739,6 +2816,10 @@ BEGIN
             RETURN;
     END;
     SELECT funcion INTO v_funcion FROM CARGOS WHERE codigo = :NEW.cargo;
+    -- PKG_SEGURIDAD_ROLES.cambiar_rol_campo cambia cargo y rol juntos
+    IF PKG_SEGURIDAD_ROLES.cambiando_rol_campo = 1 AND :NEW.estado = :OLD.estado THEN
+        RETURN;
+    END IF;
     IF (v_rol = 'GUIA' AND v_funcion <> 'GUIADO') OR (v_rol = 'CONDUCTOR' AND v_funcion <> 'TRANSPORTE') THEN
         RAISE_APPLICATION_ERROR(-20099, :NEW.nombre_completo || ' tiene una cuenta ' || v_rol
             || ': cambia o desactiva su cuenta antes de cambiarle el cargo');
@@ -4070,8 +4151,8 @@ INSERT INTO PROVEEDORES (nombre_comercial, ruc, telefono, ofrece_transporte)
 VALUES ('Transportes Selva Alta E.I.R.L.', '20601234561', '042-521111', 1);
 INSERT INTO PROVEEDORES (nombre_comercial, ruc, telefono, ofrece_transporte, ofrece_guiado)
 VALUES ('Turismo Rio Mayo S.R.L.', '20598765432', '042-562222', 1, 1);
-INSERT INTO PROVEEDORES (nombre_comercial, ruc, telefono, email, ofrece_hospedaje, ofrece_alimentacion)
-VALUES ('Hospedaje Centro Tarapoto E.I.R.L.', '20605544332', '042-530303', 'reservas@hospedajecentro.example.com', 1, 1);
+INSERT INTO PROVEEDORES (nombre_comercial, ruc, telefono, email, ofrece_hospedaje)
+VALUES ('Hospedaje Centro Tarapoto E.I.R.L.', '20605544332', '042-530303', 'reservas@hospedajecentro.example.com', 1);
 
 -- Cargos por defecto del personal
 INSERT INTO CARGOS (codigo, nombre, funcion, requiere_licencia) VALUES ('GUIA', 'Guia de turismo', 'GUIADO', 0);

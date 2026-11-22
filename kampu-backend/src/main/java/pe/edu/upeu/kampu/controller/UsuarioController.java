@@ -31,21 +31,16 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.listarTodo());
     }
 
-    // Alta de un usuario con el rol que elige el administrador (ADMIN, VENTAS, GUIA o CONDUCTOR)
+    // Alta de un usuario con el rol que elige el administrador (ADMIN, VENTAS, GUIA o CONDUCTOR).
+    // GUIA y CONDUCTOR: crea también su ficha en el personal propio.
     @PostMapping
     public ResponseEntity<UsuarioDTO> crear(@Valid @RequestBody UsuarioRequestDTO dto) {
         return new ResponseEntity<>(usuarioService.crear(dto), HttpStatus.CREATED);
     }
 
-    // (v11) Guías y conductores del personal que aún no tienen cuenta
-    @GetMapping("/personal-sin-cuenta")
-    public ResponseEntity<List<pe.edu.upeu.kampu.dto.PersonalCuentaDTO>> personalSinCuenta() {
-        return ResponseEntity.ok(usuarioService.personalSinCuenta());
-    }
-
     @PatchMapping("/{id}/rol")
     public ResponseEntity<UsuarioDTO> cambiarRol(@PathVariable Long id, @Valid @RequestBody CambioRolRequestDTO dto) {
-        return ResponseEntity.ok(usuarioService.cambiarRol(id, dto.rol(), dto.personalId()));
+        return ResponseEntity.ok(usuarioService.cambiarRol(id, dto));
     }
 
     // {"activo": false} revoca el acceso (INACTIVO); {"activo": true} lo restablece y desbloquea
