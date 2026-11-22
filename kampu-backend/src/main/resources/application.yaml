@@ -1,15 +1,10 @@
 spring:
   application:
     name: kampu
-  # Base de datos: kampu-backend/src/main/resources/db/kampu_bd.sql (ejecutar como SYSTEM en XEPDB1).
-  # El script crea (o conserva) el usuario KAMPU_BD, dueño de las tablas, y el backend se conecta con él.
-  # Roles de la aplicación: ADMIN, CLIENTE, VENTAS, GUIA y CONDUCTOR.
-  # Sesión firmada: define KAMPU_SESION_SECRETO (32+ caracteres) en producción; sin ella se genera
-  # una clave al arrancar y las sesiones se cierran en cada reinicio.
   datasource:
-    url: ${DB_URL:jdbc:oracle:thin:@localhost:1521/XEPDB1}
-    username: ${DB_USERNAME:KAMPU_BD}
-    password: ${DB_PASSWORD:Kampu_Bd_2026}
+    url: jdbc:oracle:thin:@localhost:1521/xe
+    username: kampu_bd
+    password: tour1234
     driver-class-name: oracle.jdbc.OracleDriver
 
   jpa:

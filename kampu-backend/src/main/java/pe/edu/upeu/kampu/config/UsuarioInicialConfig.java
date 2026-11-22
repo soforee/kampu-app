@@ -55,10 +55,9 @@ public class UsuarioInicialConfig {
                 + ", contenedor " + datos.get("CONTENEDOR") + ", servicio " + datos.get("SERVICIO");
         String mensaje = "La base de datos a la que se conectó la aplicación (" + donde + ") no tiene "
                 + (tablas ? "el paquete PKG_SEGURIDAD_ROLES válido" : "las tablas del sistema") + ". "
-                + "Ejecuta db/kampu_bd.sql como SYSTEM en la PDB (crea o conserva el usuario KAMPU_BD), "
-                + "o revisa DB_URL, DB_USERNAME y DB_PASSWORD "
-                + "(Oracle XE 21c: jdbc:oracle:thin:@localhost:1521/XEPDB1 · Oracle 23 Free: .../FREEPDB1)."
-                + ("CDB$ROOT".equals(datos.get("CONTENEDOR")) ? " Ojo: estás en el contenedor raíz (CDB$ROOT); los scripts van en la PDB." : "");
+                + "Ejecuta db/kampu_bd.sql como SYSTEM en la misma base de la url (crea o conserva el usuario KAMPU_BD), "
+                + "o revisa url, username y password en application.yaml "
+                + "(por defecto jdbc:oracle:thin:@localhost:1521/xe, usuario kampu_bd).";
         System.err.println("\n*** " + mensaje + "\n");
         throw new IllegalStateException(mensaje);
     }
