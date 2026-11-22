@@ -79,7 +79,7 @@
         <div class="form-section-title">Rol en el sistema</div>
         <div class="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label="Rol del usuario">
           @for (r of roles; track r.valor) {
-            @if (r.valor === 'GUIA') { <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:col-span-3">Personal de campo (cuenta opcional)</p> }
+            @if (r.valor === 'GUIA') { <p class="text-xs font-semibold uppercase tracking-wide text-zinc-500 sm:col-span-3">Personal de campo (se registra también en Personal)</p> }
             <label class="flex cursor-pointer flex-col gap-1 rounded-xl border p-3 transition-colors"
                    [class]="form.rol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 hover:border-zinc-300'">
               <span class="flex items-center gap-2 text-sm font-semibold text-zinc-900">
@@ -92,16 +92,30 @@
           }
         </div>
         @if (esCampo(form.rol)) {
-          <div class="mt-3">
-            <label class="label req" for="u-personal">Persona del personal</label>
-            <select id="u-personal" class="field" [ngModel]="form.personalId" (ngModelChange)="elegirPersona($event)" [class.field-invalid]="v.error('personal')" data-testid="u-personal">
-              <option [ngValue]="null" disabled>Elige a quién pertenece la cuenta</option>
-              @for (p of personalPara(form.rol); track p.personalId) { <option [ngValue]="p.personalId">{{ p.nombreCompleto }} · {{ p.cargoNombre }}@if (p.proveedor) { · {{ p.proveedor }} }</option> }
-            </select>
-            @if (v.error('personal'); as e) { <p class="field-error">{{ e }}</p> }
-            @else if (!personalPara(form.rol).length) { <p class="hint">Todas las personas con ese cargo ya tienen cuenta (o no hay ninguna). Regístrala primero en Logística.</p> }
-            @else { <p class="hint">Solo aparecen quienes aún no tienen cuenta. Las demás personas del personal pueden seguir sin cuenta.</p> }
+          <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div><label class="label req" for="u-doc">N° de documento</label>
+              <input id="u-doc" class="field uppercase" maxlength="20" [(ngModel)]="form.numeroDocumento" placeholder="DNI o carné de extranjería" (blur)="v.tocar('documento')" [class.field-invalid]="v.error('documento')" (beforeinput)="filtrar($event, 'alfanumerico')" (paste)="pegar($event, 'alfanumerico')" autocomplete="off">
+              @if (v.error('documento'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div><label class="label req" for="u-tel">Teléfono</label>
+              <input id="u-tel" class="field" maxlength="20" type="tel" inputmode="tel" [(ngModel)]="form.telefono" placeholder="+51 9xx xxx xxx" (blur)="v.tocar('telefono')" [class.field-invalid]="v.error('telefono')" (beforeinput)="filtrar($event, 'telefono')" (paste)="pegar($event, 'telefono')">
+              @if (v.error('telefono'); as e) { <p class="field-error">{{ e }}</p> }</div>
           </div>
+          @if (form.rol === 'CONDUCTOR') {
+            <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div><label class="label req" for="u-lic">N° de licencia</label>
+                <input id="u-lic" class="field tabular-nums uppercase" maxlength="20" [(ngModel)]="form.numLicencia" placeholder="Q45871236" (blur)="v.tocar('licencia')" [class.field-invalid]="v.error('licencia')" (beforeinput)="filtrar($event, 'alfanumerico')" (paste)="pegar($event, 'alfanumerico')">
+                @if (v.error('licencia'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label req" for="u-cat">Categoría</label>
+                <select id="u-cat" class="field" [(ngModel)]="form.catLicencia" (blur)="v.tocar('categoria')" [class.field-invalid]="v.error('categoria')">
+                  <option value="" disabled>Elige</option>
+                  @for (k of categorias; track k) { <option [value]="k">{{ k }}</option> }
+                </select>@if (v.error('categoria'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label req" for="u-venc">Vencimiento</label>
+                <input id="u-venc" type="date" class="field" [(ngModel)]="form.vencLicencia" (blur)="v.tocar('vencimiento')" [class.field-invalid]="v.error('vencimiento')">
+                @if (v.error('vencimiento'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            </div>
+          }
+          <p class="hint mt-2">Con la cuenta se registra en <b>Personal</b> como personal propio de la agencia.</p>
         }
       </div>
 
@@ -142,8 +156,8 @@
       <div class="grid gap-2" role="radiogroup" aria-label="Rol del usuario">
         @for (r of roles; track r.valor) {
           <label class="flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors"
-                 [class]="nuevoRol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : 'border-zinc-200 hover:border-zinc-300'">
-            <input type="radio" name="u-nuevo-rol" class="mt-1 accent-brand-600" [value]="r.valor" [(ngModel)]="nuevoRol" [disabled]="esYo(u) && r.valor !== 'ADMIN'">
+                 [class]="cambio.rol === r.valor ? 'border-brand-500 bg-brand-50 ring-2 ring-brand-500/20' : !mismoGrupo(u.rol, r.valor) ? 'cursor-not-allowed border-zinc-100 opacity-50' : 'border-zinc-200 hover:border-zinc-300'">
+            <input type="radio" name="u-nuevo-rol" class="mt-1 accent-brand-600" [value]="r.valor" [(ngModel)]="cambio.rol" [disabled]="!mismoGrupo(u.rol, r.valor) || (esYo(u) && r.valor !== 'ADMIN')">
             <span>
               <span class="flex items-center gap-2 text-sm font-semibold text-zinc-900"><app-icon [name]="r.icono" size="w-4 h-4" /> {{ r.texto }} @if (u.rol === r.valor) { <span class="chip">Actual</span> }</span>
               <span class="mt-0.5 block text-xs leading-relaxed text-zinc-500">{{ r.detalle }}</span>
@@ -151,21 +165,27 @@
           </label>
         }
       </div>
-      @if (esCampo(nuevoRol)) {
-        <div>
-          <label class="label req" for="u-nuevo-personal">Persona del personal</label>
-          <select id="u-nuevo-personal" class="field" [(ngModel)]="nuevoPersonal">
-            <option [ngValue]="null" disabled>Elige a quién pertenece la cuenta</option>
-            @if (u.personalId && u.rol === nuevoRol) { <option [ngValue]="u.personalId">{{ u.personalNombre }} (actual)</option> }
-            @for (p of personalPara(nuevoRol); track p.personalId) { <option [ngValue]="p.personalId">{{ p.nombreCompleto }} · {{ p.cargoNombre }}</option> }
-          </select>
+      @if (cambio.rol === 'CONDUCTOR' && u.rol !== 'CONDUCTOR') {
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div><label class="label req" for="r-lic">N° de licencia</label>
+            <input id="r-lic" class="field tabular-nums uppercase" maxlength="20" [(ngModel)]="cambio.numLicencia" placeholder="Q45871236" (blur)="vr.tocar('licencia')" [class.field-invalid]="vr.error('licencia')" (beforeinput)="filtrar($event, 'alfanumerico')" (paste)="pegar($event, 'alfanumerico')">
+            @if (vr.error('licencia'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req" for="r-cat">Categoría</label>
+            <select id="r-cat" class="field" [(ngModel)]="cambio.catLicencia" (blur)="vr.tocar('categoria')" [class.field-invalid]="vr.error('categoria')">
+              <option value="" disabled>Elige</option>
+              @for (k of categorias; track k) { <option [value]="k">{{ k }}</option> }
+            </select>@if (vr.error('categoria'); as e) { <p class="field-error">{{ e }}</p> }</div>
+          <div><label class="label req" for="r-venc">Vencimiento</label>
+            <input id="r-venc" type="date" class="field" [(ngModel)]="cambio.vencLicencia" (blur)="vr.tocar('vencimiento')" [class.field-invalid]="vr.error('vencimiento')">
+            @if (vr.error('vencimiento'); as e) { <p class="field-error">{{ e }}</p> }</div>
         </div>
       }
+      <p class="hint">{{ esCampo(u.rol) ? 'Una cuenta de campo solo cambia entre Guía y Conductor (también cambia su cargo en Personal).' : 'Una cuenta de oficina solo cambia entre Administrador y Ventas.' }} Para otro grupo crea una cuenta nueva.</p>
       @if (esYo(u)) { <p class="hint">No puedes quitarte a ti mismo el rol de administrador.</p> }
       <p class="hint">El cambio se aplica en su próximo inicio de sesión y queda registrado en la auditoría.</p>
       <div class="form-actions">
         <button type="button" class="btn-light" (click)="editando.set(null)">Cancelar</button>
-        <button type="button" class="btn-dark" [disabled]="ocupado() || (nuevoRol === u.rol && (!esCampo(nuevoRol) || nuevoPersonal === u.personalId))" (click)="guardarRol()"><app-icon name="check" size="w-4 h-4" /> Guardar rol</button>
+        <button type="button" class="btn-dark" [disabled]="ocupado() || cambio.rol === u.rol" (click)="guardarRol()"><app-icon name="check" size="w-4 h-4" /> Guardar rol</button>
       </div>
     </div>
   </app-modal>

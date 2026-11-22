@@ -203,6 +203,8 @@ export class TourStore {
   eliminarProveedor(id: number) { return this.http.delete<void>(`${API}/proveedores/${id}`); }
   guardarPersonal(d: PersonalForm, id: number | null) { return this.guardarEn<Personal>('personal', d, id); }
   eliminarPersonal(id: number) { return this.http.delete<void>(`${API}/personal/${id}`); }
+  // Personal propio: solo se activa o desactiva (su cuenta de acceso sigue el mismo estado)
+  cambiarEstadoPersonal(id: number, activo: boolean) { return this.http.patch<Personal>(`${API}/personal/${id}/estado`, { activo }); }
   guardarVehiculo(d: VehiculoForm, id: number | null) { return this.guardarEn<Vehiculo>('vehiculos', d, id); }
   eliminarVehiculo(id: number) { return this.http.delete<void>(`${API}/vehiculos/${id}`); }
   guardarLugar(d: LugarForm, id: number | null) { return this.guardarEn<Lugar>('lugares', d, id); }

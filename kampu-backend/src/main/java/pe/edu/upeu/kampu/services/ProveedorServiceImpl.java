@@ -121,7 +121,7 @@ public class ProveedorServiceImpl implements IProveedorService {
                 && proveedorRepository.contarTelefono(Reglas.digitos(dto.telefono()), Reglas.idOMenosUno(id)) > 0) {
             throw new DuplicateResourceException("El teléfono " + dto.telefono().trim() + " ya está registrado para otro proveedor.");
         }
-        if (!dto.ofreceTransporte() && !dto.ofreceGuiado() && !dto.ofreceHospedaje() && !dto.ofreceAlimentacion()) {
+        if (!dto.ofreceTransporte() && !dto.ofreceGuiado() && !dto.ofreceHospedaje()) {
             throw new BusinessException("Marca al menos un soporte que brinda el proveedor (transporte, guiado, hospedaje o alimentación).");
         }
         p.setNombreComercial(dto.nombreComercial().trim());
@@ -131,7 +131,6 @@ public class ProveedorServiceImpl implements IProveedorService {
         p.setOfreceTransporte(dto.ofreceTransporte() ? 1 : 0);
         p.setOfreceGuiado(dto.ofreceGuiado() ? 1 : 0);
         p.setOfreceHospedaje(dto.ofreceHospedaje() ? 1 : 0);
-        p.setOfreceAlimentacion(dto.ofreceAlimentacion() ? 1 : 0);
         p.setEstado(dto.estado());
     }
 }

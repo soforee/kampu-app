@@ -4,6 +4,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.kampu.dto.CambioClaveRequestDTO;
+import pe.edu.upeu.kampu.dto.CambioRolRequestDTO;
+import pe.edu.upeu.kampu.dto.PersonalRequestDTO;
 import pe.edu.upeu.kampu.dto.UsuarioDTO;
 import pe.edu.upeu.kampu.dto.UsuarioRequestDTO;
 import pe.edu.upeu.kampu.entity.UsuarioSistema;
@@ -21,7 +23,7 @@ import java.util.List;
 /**
  * Usuarios internos (USUARIOS_SISTEMA). Todo el módulo es solo para el administrador:
  *  - aquí se comprueba GESTIONAR_USUARIOS con PKG_SEGURIDAD_ROLES.puede (403 si no lo tiene);
- *  - el cambio de rol y de acceso usa PKG_SEGURIDAD_ROLES.asignar_rol / revocar_acceso / restablecer_acceso,
+ *  - el cambio de rol y de acceso usa PKG_SEGURIDAD_ROLES.asignar_rol / cambiar_rol_campo / revocar_acceso / restablecer_acceso,
  *    que vuelven a exigir el permiso en Oracle e impiden dejar el sistema sin administradores;
  *  - TRG_USUARIOS_AUDITORIA deja en la bitácora el alta y cada cambio de rol o de estado.
  */
@@ -31,9 +33,11 @@ public class UsuarioServiceImpl implements IUsuarioService {
     private final ClienteRepository clienteRepository;
     private final PkgSeguridadRepository seguridad;
     private final JdbcTemplate jdbc;
+    private final IPersonalService personal;
 
     public UsuarioServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
-                              PkgSeguridadRepository seguridad, JdbcTemplate jdbc) {
+                              PkgSeguridadRepository seguridad, JdbcTemplate jdbc, IPersonalService personal) {
+        this.personal = personal;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.seguridad = seguridad;
@@ -52,49 +56,12 @@ public class UsuarioServiceImpl implements IUsuarioService {
                 .map(u -> UsuarioDTO.desde(u, u.getPersonalId() == null ? null : nombres.get(u.getPersonalId()))).toList();
     }
 
-    // Guías y conductores (por la función de su cargo) que no están inactivos y aún no tienen cuenta
-    @Override
-    @Transactional(readOnly = true)
-    public List<pe.edu.upeu.kampu.dto.PersonalCuentaDTO> personalSinCuenta() {
-        exigirAdmin();
-        return jdbc.query("SELECT p.personal_id, p.nombre_completo, p.cargo, c.nombre AS cargo_nombre, c.funcion, "
-                        + "pr.nombre_comercial FROM PERSONAL p JOIN CARGOS c ON c.codigo = p.cargo "
-                        + "LEFT JOIN PROVEEDORES pr ON pr.proveedor_id = p.proveedor_id "
-                        + "WHERE c.funcion IN ('GUIADO', 'TRANSPORTE') AND p.estado <> 'INACTIVO' "
-                        + "AND NOT EXISTS (SELECT 1 FROM USUARIOS_SISTEMA u WHERE u.personal_id = p.personal_id) "
-                        + "ORDER BY c.funcion, p.nombre_completo",
-                (rs, i) -> new pe.edu.upeu.kampu.dto.PersonalCuentaDTO(rs.getLong("personal_id"),
-                        rs.getString("nombre_completo"), rs.getString("cargo"), rs.getString("cargo_nombre"),
-                        "GUIADO".equals(rs.getString("funcion")) ? "GUIA" : "CONDUCTOR", rs.getString("nombre_comercial")));
-    }
-
     private static boolean esRolCampo(String rol) {
         return "GUIA".equals(rol) || "CONDUCTOR".equals(rol);
     }
 
-    // La persona existe, no tiene cuenta y su cargo corresponde al rol (TRG_USUARIOS_PERSONAL lo vuelve a validar)
-    private String validarPersonal(String rol, Long personalId, Long usuarioId) {
-        if (personalId == null) {
-            throw new BusinessException("Para el rol " + ("GUIA".equals(rol) ? "Guía" : "Conductor")
-                    + " elige la persona del personal que usará la cuenta.");
-        }
-        List<java.util.Map<String, Object>> fila = jdbc.queryForList("SELECT p.nombre_completo, c.funcion, p.estado, "
-                + "(SELECT u.usuario_id FROM USUARIOS_SISTEMA u WHERE u.personal_id = p.personal_id) AS cuenta "
-                + "FROM PERSONAL p JOIN CARGOS c ON c.codigo = p.cargo WHERE p.personal_id = ?", personalId);
-        if (fila.isEmpty()) throw new BusinessException("La persona elegida no existe en el personal.");
-        var f = fila.get(0);
-        String nombre = (String) f.get("NOMBRE_COMPLETO");
-        Object cuenta = f.get("CUENTA");
-        if (cuenta != null && (usuarioId == null || ((Number) cuenta).longValue() != usuarioId)) {
-            throw new DuplicateResourceException(nombre + " ya tiene una cuenta de acceso.");
-        }
-        String esperada = "GUIA".equals(rol) ? "GUIADO" : "TRANSPORTE";
-        if (!esperada.equals(f.get("FUNCION"))) {
-            throw new BusinessException(nombre + " no tiene un cargo de " + ("GUIA".equals(rol) ? "guiado" : "transporte")
-                    + ": no puede tener el rol " + ("GUIA".equals(rol) ? "Guía" : "Conductor") + ".");
-        }
-        if ("INACTIVO".equals(f.get("ESTADO"))) throw new BusinessException(nombre + " está inactivo en el personal.");
-        return nombre;
+    private static String texto(String v) {
+        return v == null || v.isBlank() ? null : v.trim();
     }
 
     @Override
@@ -105,6 +72,7 @@ public class UsuarioServiceImpl implements IUsuarioService {
         if (dto.password().trim().length() < 8) throw new BusinessException("La contraseña debe tener al menos 8 caracteres.");
         String username = dto.username().trim();
         String email = dto.email().trim().toLowerCase();
+        String nombre = dto.nombreCompleto().trim().replaceAll("\\s+", " ");
         if (usuarioRepository.findByUsernameIgnoreCase(username).isPresent()) {
             throw new DuplicateResourceException("Ese nombre de usuario ya existe.");
         }
@@ -116,13 +84,24 @@ public class UsuarioServiceImpl implements IUsuarioService {
             throw new DuplicateResourceException("Ese nombre de usuario coincide con el documento de un cliente. Elige otro.");
         }
 
+        // Guía o conductor: su ficha en el personal propio nace con la cuenta (cargo = rol)
+        Long personalId = null;
         String personalNombre = null;
-        if (esRolCampo(dto.rol())) personalNombre = validarPersonal(dto.rol(), dto.personalId(), null);
+        if (esRolCampo(dto.rol())) {
+            if (texto(dto.numeroDocumento()) == null) throw new BusinessException("Ingresa el documento de identidad.");
+            if (texto(dto.telefono()) == null) throw new BusinessException("Ingresa el teléfono.");
+            var ficha = personal.crearPropio(new PersonalRequestDTO(null, dto.numeroDocumento(), nombre, dto.rol(),
+                    dto.telefono(), "CONDUCTOR".equals(dto.rol()) ? dto.numLicencia() : null,
+                    "CONDUCTOR".equals(dto.rol()) ? dto.catLicencia() : null,
+                    "CONDUCTOR".equals(dto.rol()) ? dto.vencLicencia() : null, "DISPONIBLE"));
+            personalId = ficha.personalId();
+            personalNombre = ficha.nombreCompleto();
+        }
 
         UsuarioSistema u = new UsuarioSistema();
-        u.setPersonalId(esRolCampo(dto.rol()) ? dto.personalId() : null);
+        u.setPersonalId(personalId);
         u.setUsername(username);
-        u.setNombreCompleto(dto.nombreCompleto().trim().replaceAll("\\s+", " "));
+        u.setNombreCompleto(nombre);
         u.setEmail(email);
         u.setRol(dto.rol());
         u.setPasswordHash(Claves.cifrar(dto.password()));   // BCrypt (chk_usu_hash)
@@ -131,22 +110,39 @@ public class UsuarioServiceImpl implements IUsuarioService {
         return UsuarioDTO.desde(usuarioRepository.saveAndFlush(u), personalNombre);
     }
 
+    // Solo dentro del grupo: ADMIN <-> VENTAS, o GUIA <-> CONDUCTOR (cambia también el cargo de su ficha)
     @Override
     @Transactional
-    public UsuarioDTO cambiarRol(Long usuarioId, String rol, Long personalId) {
+    public UsuarioDTO cambiarRol(Long usuarioId, CambioRolRequestDTO dto) {
         exigirAdmin();
         UsuarioSistema u = buscar(usuarioId);
-        boolean campo = esRolCampo(rol);
-        if (rol.equals(u.getRol()) && (!campo || java.util.Objects.equals(personalId, u.getPersonalId()))) return recargar(usuarioId);
+        String rol = dto.rol();
+        if (rol.equals(u.getRol())) return recargar(usuarioId);
+        if (esRolCampo(rol) != esRolCampo(u.getRol())) {
+            throw new BusinessException("El rol solo cambia entre Administrador y Ventas, o entre Guía y Conductor. "
+                    + "Para pasar de oficina a campo (o al revés) crea otra cuenta.");
+        }
         if (usuarioId.equals(SesionActual.get().usuarioId()) && !"ADMIN".equals(rol)) {
             throw new BusinessException("No puedes quitarte a ti mismo el rol de administrador.");
         }
-        if (campo) {
-            validarPersonal(rol, personalId, usuarioId);
-            jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.asignar_rol_campo(?, ?, ?); END;", usuarioId, rol, personalId);
-        } else {
+        if (!esRolCampo(rol)) {
             jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.asignar_rol(?, ?); END;", usuarioId, rol);
+            return recargar(usuarioId);
         }
+        String licencia = texto(dto.numLicencia());
+        if ("CONDUCTOR".equals(rol)) {
+            if (licencia == null || texto(dto.catLicencia()) == null || dto.vencLicencia() == null) {
+                throw new BusinessException("Para el rol Conductor ingresa número, categoría y vencimiento de la licencia.");
+            }
+            if (dto.vencLicencia().isBefore(java.time.LocalDate.now())) throw new BusinessException("La licencia está vencida.");
+            licencia = licencia.toUpperCase();
+            List<Long> otro = jdbc.queryForList("SELECT personal_id FROM PERSONAL WHERE UPPER(num_licencia) = ? "
+                    + "AND personal_id <> NVL(?, -1)", Long.class, licencia, u.getPersonalId());
+            if (!otro.isEmpty()) throw new DuplicateResourceException("Ya existe una persona con la licencia " + licencia + ".");
+        }
+        // Cambia cargo y rol juntos; TRG_PERSONAL_VALIDAR impide dejar asignaciones pendientes del cargo anterior
+        jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.cambiar_rol_campo(?, ?, ?, ?, ?); END;", usuarioId, rol, licencia,
+                texto(dto.catLicencia()), dto.vencLicencia() == null ? null : java.sql.Date.valueOf(dto.vencLicencia()));
         return recargar(usuarioId);
     }
 
@@ -154,9 +150,14 @@ public class UsuarioServiceImpl implements IUsuarioService {
     @Transactional
     public UsuarioDTO cambiarAcceso(Long usuarioId, boolean activo) {
         exigirAdmin();
-        buscar(usuarioId);
         if (!activo && usuarioId.equals(SesionActual.get().usuarioId())) {
             throw new BusinessException("No puedes desactivar tu propio usuario.");
+        }
+        UsuarioSistema u = buscar(usuarioId);
+        if (u.getPersonalId() != null) {
+            // Guía o conductor: la cuenta y su ficha de personal se activan o desactivan juntas
+            personal.cambiarEstado(u.getPersonalId(), activo);
+            return recargar(usuarioId);
         }
         jdbc.update(activo ? "BEGIN PKG_SEGURIDAD_ROLES.restablecer_acceso(?); END;"
                 : "BEGIN PKG_SEGURIDAD_ROLES.revocar_acceso(?); END;", usuarioId);

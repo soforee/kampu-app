@@ -37,9 +37,6 @@ public class Proveedor {
     @Column(name = "ofrece_hospedaje")
     private Integer ofreceHospedaje;
 
-    @Column(name = "ofrece_alimentacion")
-    private Integer ofreceAlimentacion;
-
     @Column(name = "estado")
     private String estado;
 
@@ -108,14 +105,6 @@ public class Proveedor {
 
     public void setOfreceHospedaje(Integer ofreceHospedaje) {
         this.ofreceHospedaje = ofreceHospedaje;
-    }
-
-    public Integer getOfreceAlimentacion() {
-        return ofreceAlimentacion;
-    }
-
-    public void setOfreceAlimentacion(Integer ofreceAlimentacion) {
-        this.ofreceAlimentacion = ofreceAlimentacion;
     }
 
     public String getEstado() {

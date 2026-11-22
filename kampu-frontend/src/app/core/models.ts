@@ -101,7 +101,6 @@ export interface Proveedor {
   ofreceTransporte: boolean;
   ofreceGuiado: boolean;
   ofreceHospedaje: boolean;
-  ofreceAlimentacion: boolean;
   estado: EstadoProveedor;
   vehiculos: number;
   capacidadOperativa: number;
@@ -122,6 +121,7 @@ export interface Personal {
   catLicencia: CategoriaLicencia | null;
   vencLicencia: string | null;
   estado: EstadoPersonal;
+  usuario: string | null;           // personal propio: usuario de su cuenta
 }
 
 export interface Lugar {
@@ -485,7 +485,6 @@ export interface ProveedorForm {
   ofreceTransporte: boolean;
   ofreceGuiado: boolean;
   ofreceHospedaje: boolean;
-  ofreceAlimentacion: boolean;
   estado: EstadoProveedor;
 }
 
@@ -635,24 +634,27 @@ export interface UsuarioSistema {
   personalNombre: string | null;
 }
 
-// (v11) Guía o conductor del personal que aún no tiene cuenta
-export interface PersonalSinCuenta {
-  personalId: number;
-  nombreCompleto: string;
-  cargo: string;
-  cargoNombre: string;
-  rol: 'GUIA' | 'CONDUCTOR';
-  proveedor: string | null;
-}
-
 export interface UsuarioForm {
   username: string;
   nombreCompleto: string;
   email: string;
   rol: RolInterno;
-  personalId: number | null;
+  // GUIA / CONDUCTOR: datos de su ficha de personal propio (se crea con la cuenta)
+  numeroDocumento: string;
+  telefono: string;
+  numLicencia: string;
+  catLicencia: CategoriaLicencia | '';
+  vencLicencia: string;
   password: string;
   confirmacion: string;
+}
+
+// Cambio de rol dentro del grupo; la licencia solo al pasar a CONDUCTOR
+export interface CambioRolForm {
+  rol: RolInterno;
+  numLicencia: string;
+  catLicencia: CategoriaLicencia | '';
+  vencLicencia: string;
 }
 
 // ---------- Cotizaciones (v11): visitante sin cuenta, cliente y personal ----------

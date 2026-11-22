@@ -4,7 +4,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// Alta de un usuario interno por el administrador (USUARIOS_SISTEMA, chk_usu_rol)
+import java.time.LocalDate;
+
+// Alta de un usuario interno por el administrador (USUARIOS_SISTEMA, chk_usu_rol).
+// GUIA y CONDUCTOR: con la cuenta se crea su ficha de PERSONAL propio (documento, teléfono y, el conductor, licencia).
 public record UsuarioRequestDTO(
         @NotBlank(message = "Ingresa el nombre de usuario.")
         @Size(min = 3, max = 50, message = "El usuario debe tener entre 3 y 50 caracteres.")
@@ -22,8 +25,18 @@ public record UsuarioRequestDTO(
         @Pattern(regexp = "ADMIN|VENTAS|GUIA|CONDUCTOR",
                 message = "El rol debe ser ADMIN, VENTAS, GUIA o CONDUCTOR.")
         String rol,
-        // (v11) Obligatorio para GUIA y CONDUCTOR: la persona del personal que usará la cuenta
-        Long personalId,
+        // Solo GUIA y CONDUCTOR (datos de su ficha de personal)
+        @Size(max = 20, message = "El documento admite máximo 20 caracteres.")
+        @Pattern(regexp = "^$|^\\s*[A-Za-z0-9]{6,20}\\s*$", message = "El documento solo admite letras y números (6 a 20 caracteres).")
+        String numeroDocumento,
+        @Size(max = 20, message = "El teléfono admite máximo 20 caracteres.")
+        @Pattern(regexp = Reglas.TELEFONO, message = Reglas.MSG_TELEFONO)
+        String telefono,
+        @Pattern(regexp = "^$|^\\s*[A-Za-z0-9]{6,20}\\s*$", message = "La licencia solo admite letras y números (6 a 20 caracteres).")
+        String numLicencia,
+        @Pattern(regexp = "^$|A-I|A-IIa|A-IIb|A-IIIa|A-IIIb|A-IIIc", message = "Categoría de licencia no válida.")
+        String catLicencia,
+        LocalDate vencLicencia,
         @NotBlank(message = "Ingresa una contraseña.")
         @Size(min = 8, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres.")
         String password,

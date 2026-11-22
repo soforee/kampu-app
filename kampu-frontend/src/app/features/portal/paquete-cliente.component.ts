@@ -1,7 +1,8 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { CotizacionesLocales } from '../../core/services/cotizaciones-locales.service';
 import { PasajeroDraft, PortalDetalle, PuntoRecojo, TipoDocumento } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
@@ -22,6 +23,7 @@ import { PortalHeaderComponent } from './portal-header.component';
 // v10: hasta antes del viaje el cliente registra o quita pasajeros, cambia su punto de recojo y pide la
 // anulación (sin pagos aprobados se anula al instante; con pagos queda una solicitud para Ventas).
 // Sus pagos informados quedan PENDIENTES hasta que Ventas los valide.
+// Invitado sin cuenta (/cotizacion/:codigo/reserva): lo mismo sobre la reserva de su cotización, con el código + clave.
 @Component({
   selector: 'app-paquete-cliente',
   standalone: true,
@@ -31,7 +33,19 @@ import { PortalHeaderComponent } from './portal-header.component';
 export class PaqueteClienteComponent {
   private portal = inject(PortalService);
   private imagenes = inject(ImagenService);
-  private id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
+  private ruta = inject(ActivatedRoute);
+  private router = inject(Router);
+  private locales = inject(CotizacionesLocales);
+  private id = Number(this.ruta.snapshot.paramMap.get('id'));
+  // Invitado: código de su cotización y la clave (la trae la navegación o la recuerda este navegador)
+  codigo = (this.ruta.snapshot.paramMap.get('codigo') ?? '').toUpperCase();
+  invitado = !!this.codigo;
+  private clave: string = ((this.router.getCurrentNavigation()?.extras.state ?? history.state ?? {}) as { clave?: string }).clave
+    || (this.invitado ? this.locales.clave(this.codigo) : '');
+  migas = this.invitado
+    ? [{ texto: 'Mi cotización ' + this.codigo, ruta: '/cotizacion/' + this.codigo }]
+    : [{ texto: 'Mis paquetes', ruta: '/mi-cuenta' }];
+  volver = this.invitado ? '/cotizacion/' + this.codigo : '/mi-cuenta';
   private store = inject(TourStore);
   private alerts = inject(AlertService);
   etiqueta = etiqueta;
@@ -94,12 +108,14 @@ export class PaqueteClienteComponent {
   }));
 
   constructor() {
+    // Sin clave no se muestra nada: la cotización la pide
+    if (this.invitado && !this.clave) { this.router.navigate(['/cotizacion', this.codigo]); return; }
     this.cargar();
   }
 
   cargar() {
     this.cargando.set(true);
-    this.portal.detalle(this.id).subscribe({
+    (this.invitado ? this.portal.detalleInvitado(this.codigo, this.clave) : this.portal.detalle(this.id)).subscribe({
       next: d => {
         this.detalle.set(d);
         this.cargando.set(false);
@@ -129,7 +145,9 @@ export class PaqueteClienteComponent {
     this.errorPago.set('');
     if (!this.v.valido()) return;
     this.enviando.set(true);
-    this.portal.informarPago(this.id, this.pago.monto!, this.pago.metodoPago, this.pago.codigoTransaccion.trim()).subscribe({
+    const cod = this.pago.codigoTransaccion.trim();
+    (this.invitado ? this.portal.informarPagoInvitado(this.codigo, this.clave, this.pago.monto!, this.pago.metodoPago, cod)
+      : this.portal.informarPago(this.id, this.pago.monto!, this.pago.metodoPago, cod)).subscribe({
       next: () => {
         this.enviando.set(false);
         this.informando.set(false);
@@ -144,8 +162,9 @@ export class PaqueteClienteComponent {
     if (!this.vp.valido()) return;
     const n = this.nuevo;
     this.enviando.set(true);
-    this.portal.registrarPasajero(this.id, { ...n, nombreCompleto: n.nombreCompleto.trim(), numeroDocumento: n.numeroDocumento.trim(),
-      nacionalidad: n.nacionalidad.trim() }).subscribe({
+    const datos = { ...n, nombreCompleto: n.nombreCompleto.trim(), numeroDocumento: n.numeroDocumento.trim(), nacionalidad: n.nacionalidad.trim() };
+    (this.invitado ? this.portal.registrarPasajeroInvitado(this.codigo, this.clave, datos)
+      : this.portal.registrarPasajero(this.id, datos)).subscribe({
       next: () => {
         this.enviando.set(false);
         this.agregando.set(false);
@@ -160,7 +179,8 @@ export class PaqueteClienteComponent {
 
   async quitarPasajero(pasajeroId: number, nombre: string) {
     if (!(await this.alerts.confirm(`${nombre} dejará de figurar en tu reserva.`, 'Quitar pasajero', 'Quitar'))) return;
-    this.portal.eliminarPasajero(pasajeroId).subscribe({
+    (this.invitado ? this.portal.eliminarPasajeroInvitado(this.codigo, this.clave, pasajeroId)
+      : this.portal.eliminarPasajero(pasajeroId)).subscribe({
       next: () => { this.alerts.toast('Pasajero quitado'); this.cargar(); },
       error: err => this.alerts.error(mensajeError(err))
     });
@@ -168,7 +188,8 @@ export class PaqueteClienteComponent {
 
   cambiarRecojo() {
     if (!this.recojoSel) return;
-    this.portal.cambiarRecojo(this.id, this.recojoSel).subscribe({
+    (this.invitado ? this.portal.cambiarRecojoInvitado(this.codigo, this.clave, this.recojoSel)
+      : this.portal.cambiarRecojo(this.id, this.recojoSel)).subscribe({
       next: () => { this.alerts.toast('Punto de recojo actualizado'); this.cargar(); },
       error: err => this.alerts.error(mensajeError(err))
     });
@@ -182,7 +203,8 @@ export class PaqueteClienteComponent {
       conPagos ? 'Tu reserva tiene pagos: la agencia revisará tu pedido y te indicará el reembolso.'
         : 'Se anulará tu reserva y se liberarán los cupos.', 'Cuéntanos el motivo', conPagos ? 'Enviar solicitud' : 'Anular', true);
     if (!motivo) return;
-    this.portal.solicitarAnulacion(this.id, motivo).subscribe({
+    (this.invitado ? this.portal.solicitarAnulacionInvitado(this.codigo, this.clave, motivo)
+      : this.portal.solicitarAnulacion(this.id, motivo)).subscribe({
       next: r => {
         this.alerts.toast(r.resultado === 'ANULADA' ? 'Reserva anulada' : 'Solicitud enviada a la agencia');
         this.cargar();
