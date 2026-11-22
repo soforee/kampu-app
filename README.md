@@ -61,12 +61,11 @@ cd kampu-backend
 En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `KampuApplication` desde IntelliJ. Arranca en el puerto **8082**;
 la documentación de la API está en http://localhost:8082/kampu/swagger-ui/index.html.
 
-La conexión está en `src/main/resources/application.yaml`. También se puede cambiar con variables de entorno:
+La conexión está en `src/main/resources/application.yaml`: `jdbc:oracle:thin:@localhost:1521/xe`, usuario `kampu_bd`,
+clave `tour1234`. Otros valores se pueden cambiar con variables de entorno:
 
 | Variable | Valor por defecto |
 |---|---|
-| `DB_URL` | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
-| `DB_USERNAME` / `DB_PASSWORD` | `KAMPU_BD` / `Kampu_Bd_2026` |
 | `KAMPU_SESION_SECRETO` | clave para firmar las sesiones (32+ caracteres). Sin ella, las sesiones se cierran al reiniciar el backend |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | correo para enviar la boleta (Gmail: contraseña de aplicación). Vacío = envío desactivado |
 | `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | datos de contacto de la agencia (página principal, boleta y PDF de cotización). Por defecto: Tarapoto, San Martín |
@@ -74,7 +73,7 @@ La conexión está en `src/main/resources/application.yaml`. También se puede c
 `ddl-auto` está en `update` con el dialecto `OracleDialect`. Las tablas, vistas y PL/SQL los crea `kampu_bd.sql`; ejecútalo antes de arrancar.
 
 **Si no arranca con "no tiene las tablas del sistema", ORA-00942 o PLS-00201:** el backend se conectó a una base donde no
-se ejecutó el script. Revisa que `DB_URL` apunte a `XEPDB1` (no al servicio `XE`) y que el script se haya ejecutado ahí.
+se ejecutó el script. Revisa que la `url` del `application.yaml` apunte a la base donde ejecutaste el script.
 Para comprobar dónde estás: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
 
 ---
