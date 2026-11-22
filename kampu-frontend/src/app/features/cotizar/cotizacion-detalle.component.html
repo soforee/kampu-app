@@ -77,8 +77,12 @@
       @if (c.estado === 'RESERVADA') {
         <div class="mt-4 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-zinc-800" data-testid="reserva">
           Tu reserva es <b>{{ c.codigoReserva }}</b>@if (c.totalReserva !== null) { · total S/ {{ c.totalReserva | number:'1.2-2' }} · pagado S/ {{ (c.montoPagado ?? 0) | number:'1.2-2' }} }.
-          @if (auth.esCliente()) { <a routerLink="/mi-cuenta" class="link ml-1">Gestiónala en Mis paquetes</a> }
-          @else { La agencia te escribirá para el pago. Si quieres pagar y registrar pasajeros en línea, <a routerLink="/registro" class="link">crea tu cuenta</a> con el mismo documento y correo: la reserva aparecerá sola. }
+          @if (clave()) {
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              <a [routerLink]="['/cotizacion', c.codigo, 'reserva']" [state]="{ clave: clave() }" class="btn-dark btn-sm" data-testid="gestionar-reserva"><app-icon name="ticket" size="w-4 h-4" /> Gestionar mi reserva</a>
+              <span class="text-xs text-zinc-600">Registra pasajeros, informa tus pagos, cambia el punto de recojo o pide la anulación, sin crear una cuenta.</span>
+            </div>
+          } @else if (auth.esCliente()) { <a routerLink="/mi-cuenta" class="link ml-1">Gestiónala en Mis paquetes</a> }
         </div>
       }
       @if (c.estado === 'GENERADA' && c.venceEn) {

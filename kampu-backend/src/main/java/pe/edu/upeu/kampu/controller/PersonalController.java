@@ -52,6 +52,13 @@ public class PersonalController {
         return ResponseEntity.ok(personalService.actualizar(id, dto));
     }
 
+    // Personal propio: {"activo": true|false}. Su cuenta de acceso queda en el mismo estado.
+    @Permiso("GESTIONAR_LOGISTICA")
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<PersonalDTO> cambiarEstado(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> cuerpo) {
+        return ResponseEntity.ok(personalService.cambiarEstado(id, Boolean.TRUE.equals(cuerpo.get("activo"))));
+    }
+
     @Permiso("GESTIONAR_LOGISTICA")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {

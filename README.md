@@ -41,7 +41,7 @@ Roles definitivos: **ADMIN, CLIENTE, VENTAS, GUIA y CONDUCTOR** (en Oracle: `ROL
 
 | Usuario | Rol | Entra a |
 |---|---|---|
-| `kadmin` | Administrador | panel completo: usuarios, auditoría, tráfico y logística |
+| `kadmin` | Administrador | panel completo: usuarios, auditoría, tráfico, personal, vehículos y proveedores |
 | `kventas` | Ventas | reservas, pagos, clientes y cotizaciones |
 | `kguia` | Guía | solo *Mis asignaciones* (sus salidas) |
 | `kconductor` | Conductor | solo *Mis asignaciones* (sus traslados) |
@@ -97,13 +97,18 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
   Cada tour tiene dos botones: "Reservar" (con cuenta) y "Cotizar".
 - **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, punto de recojo y servicios adicionales. El precio lo calcula
   el servidor. Al guardar se obtiene un código y una clave para volver a verla, descargar el PDF o solicitar la reserva;
-  el estado se sigue en `/seguimiento`.
+  el estado se sigue en `/seguimiento`. Cuando la agencia confirma la solicitud, con el mismo código y clave el
+  visitante gestiona su reserva sin crear cuenta (`/cotizacion/:codigo/reserva`): pasajeros, pagos, punto de recojo y
+  anulación.
 - **Portal del cliente** (`/mi-cuenta`): reservar, ver sus paquetes, pasajeros y pagos, e informar un pago.
 - **Panel del personal:**
   - panel general;
   - reservas, salidas, paquetes y servicios adicionales;
   - pagos, clientes y cotizaciones;
-  - tráfico (traslados) y logística (proveedores, personal, vehículos y lugares);
+  - tráfico (traslados);
+  - **Personal**: guías y conductores propios. Se registran en *Usuarios* al crear su cuenta; aquí solo se activan o desactivan;
+  - **Vehículos**: flota propia;
+  - **Proveedores**: proveedores externos con su personal y sus vehículos, y los lugares (puntos de recojo, hoteles…);
   - usuarios y auditoría.
 - **Guía y conductor:** solo ven *Mis asignaciones*. La base de datos filtra lo que corresponde a cada uno.
 - **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.

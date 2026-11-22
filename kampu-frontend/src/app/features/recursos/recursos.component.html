@@ -1,19 +1,20 @@
-<app-page-header titulo="Logística" subtitulo="Kampu Tours (propio) y proveedores externos, con sus guías, conductores, vehículos y lugares.">
-  @if (puedeEditar()) {
+<app-page-header [titulo]="encabezado.titulo" [subtitulo]="encabezado.subtitulo">
+  @if (puedeEditar() && seccion !== 'personal') {
     <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> Nuevo {{ actual.singular }}</button>
   }
 </app-page-header>
 
 <div class="toolbar">
-  <div class="seg">
-    @for (t of tabs; track t.id) {
-      <button type="button" class="seg-btn" [class.on]="tab() === t.id" (click)="tab.set(t.id)">{{ t.texto }}</button>
-    }
-  </div>
-  @if (tab() === 'personal' || tab() === 'vehiculos') {
+  @if (tabs.length > 1) {
+    <div class="seg">
+      @for (t of tabs; track t.id) {
+        <button type="button" class="seg-btn" [class.on]="tab() === t.id" (click)="tab.set(t.id)">{{ t.texto }}</button>
+      }
+    </div>
+  }
+  @if (!propio && (tab() === 'personal' || tab() === 'vehiculos')) {
     <select class="field w-full sm:!w-auto sm:min-w-[220px]" [ngModel]="filtroProveedor()" (ngModelChange)="filtroProveedor.set($event)" aria-label="Filtrar por proveedor">
       <option [ngValue]="null">Todos los proveedores</option>
-      <option [ngValue]="0">Kampu Tours (propio)</option>
       @for (p of store.proveedores(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> }
     </select>
   }
@@ -47,7 +48,6 @@
             @if (p.ofreceTransporte) { <span class="chip">Transporte</span> }
             @if (p.ofreceGuiado) { <span class="chip">Guiado</span> }
             @if (p.ofreceHospedaje) { <span class="chip">Hospedaje</span> }
-            @if (p.ofreceAlimentacion) { <span class="chip">Alimentación</span> }
             <app-badge [estado]="p.estado" />
           </div>
           <dl class="grid grid-cols-4 divide-x divide-zinc-100 border-t border-zinc-100 pt-4 text-center">
@@ -58,7 +58,7 @@
           </dl>
         </div>
       } @empty {
-        <div class="card empty col-span-full">Registra primero a Kampu Tours como proveedor propio.</div>
+        <div class="card empty col-span-full">Aún no hay proveedores registrados.</div>
       }
     </div>
   }
@@ -67,13 +67,14 @@
     <div class="card overflow-hidden">
       <div class="relative overflow-x-auto">
         <table class="tbl tbl-tarjetas">
-          <thead><tr><th class="th">Nombre</th><th class="th">Rol</th><th class="th">Proveedor</th><th class="th">Teléfono</th><th class="th">Licencia</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <thead><tr><th class="th">Nombre</th><th class="th">Rol</th>@if (propio) { <th class="th">Usuario</th> } @else { <th class="th">Proveedor</th> }<th class="th">Teléfono</th><th class="th">Licencia</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
           <tbody>
             @for (x of personalFiltrado(); track x.personalId) {
               <tr [class.opacity-60]="x.estado === 'INACTIVO'">
                 <td data-label="Nombre" class="td text-zinc-900">{{ x.nombreCompleto }}</td>
                 <td data-label="Rol" class="td text-zinc-700">{{ store.nombreCargo(x.cargo) }}</td>
-                <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td>
+                @if (propio) { <td data-label="Usuario" class="td text-zinc-700">{{ x.usuario || '—' }}</td> }
+                @else { <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td> }
                 <td data-label="Teléfono" class="td whitespace-nowrap text-zinc-700">{{ x.telefono || '—' }}</td>
                 <td data-label="Licencia" class="td whitespace-nowrap">
                   @if (x.numLicencia) {
@@ -85,14 +86,18 @@
                 @if (puedeEditar()) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
                 <div class="actions">
-                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  @if (propio) {
+                    <button type="button" class="btn-light btn-sm" (click)="cambiarEstado(x.personalId)">{{ x.estado === 'INACTIVO' ? 'Activar' : 'Desactivar' }}</button>
+                  } @else {
+                    <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarPersona(x.personalId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                    <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(x.personalId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                  }
                 </div>
               </td>
             }
               </tr>
             } @empty {
-              <tr><td colspan="7"><div class="empty">No hay personal para mostrar.</div></td></tr>
+              <tr><td colspan="7"><div class="empty">{{ propio ? 'Aún no hay personal propio: se registra en Usuarios al crear la cuenta de un guía o conductor.' : 'No hay personal de proveedores para mostrar.' }}</div></td></tr>
             }
           </tbody>
         </table>
@@ -104,7 +109,7 @@
     <div class="card overflow-hidden">
       <div class="relative overflow-x-auto">
         <table class="tbl tbl-tarjetas">
-          <thead><tr><th class="th">Placa</th><th class="th">Vehículo</th><th class="th text-center">Asientos</th><th class="th">Proveedor</th><th class="th">Mantenimiento</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <thead><tr><th class="th">Placa</th><th class="th">Vehículo</th><th class="th text-center">Asientos</th>@if (!propio) { <th class="th">Proveedor</th> }<th class="th">Mantenimiento</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
           <tbody>
             @for (x of vehiculosFiltrados(); track x.vehiculoId) {
               <tr [class.opacity-60]="x.estado === 'INACTIVO'">
@@ -114,7 +119,7 @@
                   <div class="text-xs text-zinc-500">{{ etiqueta(x.tipoVehiculo) }}</div>
                 </td>
                 <td data-label="Asientos" class="td text-center tabular-nums text-zinc-700">{{ x.capacidadPax }}</td>
-                <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td>
+                @if (!propio) { <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td> }
                 <td data-label="Mantenimiento" class="td whitespace-nowrap" [class]="x.proxMantenimiento && x.proxMantenimiento <= pronto ? 'text-amber-700' : 'text-zinc-700'">{{ x.proxMantenimiento ? (x.proxMantenimiento | date:'dd/MM/yyyy') : '—' }}</td>
                 <td data-label="Estado" class="td"><app-badge [estado]="x.estado" /></td>
                 @if (puedeEditar()) {
@@ -173,7 +178,7 @@
 }
 
 @if (abierto()) {
-  <app-modal [icono]="actual.icono" subtitulo="Logística de la agencia" [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
+  <app-modal [icono]="actual.icono" [subtitulo]="encabezado.titulo" [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
     <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
@@ -194,16 +199,15 @@
               <label class="inline-flex items-center gap-2 text-sm font-medium text-zinc-700"><input type="checkbox" [(ngModel)]="proveedor.ofreceTransporte" (change)="v.tocar('pServicio')"> Transporte (vehículos y conductores)</label>
               <label class="inline-flex items-center gap-2 text-sm font-medium text-zinc-700"><input type="checkbox" [(ngModel)]="proveedor.ofreceGuiado" (change)="v.tocar('pServicio')"> Guiado</label>
               <label class="inline-flex items-center gap-2 text-sm font-medium text-zinc-700"><input type="checkbox" [(ngModel)]="proveedor.ofreceHospedaje" (change)="v.tocar('pServicio')"> Hospedaje</label>
-              <label class="inline-flex items-center gap-2 text-sm font-medium text-zinc-700"><input type="checkbox" [(ngModel)]="proveedor.ofreceAlimentacion" (change)="v.tocar('pServicio')"> Alimentación</label>
             </div>
-            @if (v.error('pServicio'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">La flota y el personal propios de Kampu Tours no llevan proveedor.</p> }
+            @if (v.error('pServicio'); as e) { <p class="field-error">{{ e }}</p> } @else { <p class="hint">La flota y el personal propios se registran en Vehículos y en Usuarios.</p> }
           }
           @case ('personal') {
             <div class="form-section-title">Datos de la persona</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label class="label req">Proveedor</label>
                 <select class="field" [(ngModel)]="persona.proveedorId" (ngModelChange)="v.tocar('rProveedor')" [class.field-invalid]="v.error('rProveedor')">
-                  <option [ngValue]="null">Kampu Tours (propio)</option>
+                  <option [ngValue]="null" disabled>Elige el proveedor</option>
                   @for (p of proveedoresActivos(); track p.proveedorId) { @if (p.ofreceTransporte || p.ofreceGuiado) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> } }
                 </select>@if (v.error('rProveedor'); as e) { <p class="field-error">{{ e }}</p> }
               </div>
@@ -235,12 +239,14 @@
           }
           @case ('vehiculos') {
             <div class="form-section-title">Datos del vehículo</div>
-            <div><label class="label req">Proveedor</label>
-              <select class="field" [(ngModel)]="vehiculo.proveedorId" (ngModelChange)="v.tocar('vProveedor')" [class.field-invalid]="v.error('vProveedor')">
-                <option [ngValue]="null">Kampu Tours (flota propia)</option>
-                @for (p of proveedoresActivos(); track p.proveedorId) { @if (p.ofreceTransporte) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> } }
-              </select>@if (v.error('vProveedor'); as e) { <p class="field-error">{{ e }}</p> }
-            </div>
+            @if (!propio) {
+              <div><label class="label req">Proveedor</label>
+                <select class="field" [(ngModel)]="vehiculo.proveedorId" (ngModelChange)="v.tocar('vProveedor')" [class.field-invalid]="v.error('vProveedor')">
+                  <option [ngValue]="null" disabled>Elige el proveedor</option>
+                  @for (p of proveedoresActivos(); track p.proveedorId) { @if (p.ofreceTransporte) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> } }
+                </select>@if (v.error('vProveedor'); as e) { <p class="field-error">{{ e }}</p> }
+              </div>
+            }
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label class="label req">Placa</label><input class="field tabular-nums uppercase" maxlength="10" [(ngModel)]="vehiculo.placa" placeholder="ABC-123" (blur)="v.tocar('vPlaca')" [class.field-invalid]="v.error('vPlaca')" (beforeinput)="filtrar($event, 'placa')" (paste)="pegar($event, 'placa')">@if (v.error('vPlaca'); as e) { <p class="field-error">{{ e }}</p> }</div>
               <div><label class="label req">Tipo</label><select class="field" [(ngModel)]="vehiculo.tipoVehiculo">@for (t of tiposVehiculo; track t) { <option [value]="t">{{ etiqueta(t) }}</option> }</select></div>

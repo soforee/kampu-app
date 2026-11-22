@@ -23,7 +23,6 @@ public record ProveedorRequestDTO(
         boolean ofreceTransporte,
         boolean ofreceGuiado,
         boolean ofreceHospedaje,
-        boolean ofreceAlimentacion,
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "ACTIVO|INACTIVO|SUSPENDIDO", message = "El estado debe ser ACTIVO, INACTIVO o SUSPENDIDO.")
         String estado
