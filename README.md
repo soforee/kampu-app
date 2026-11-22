@@ -1,460 +1,85 @@
-# KAMPU · Tour Manager v11 — sistema integrado (Angular + Spring Boot + Oracle)
+# KAMPU · Tour Manager
 
-Agencia de turismo: catálogo de paquetes, salidas programadas, reservas, pagos, tráfico/transporte y, desde la v4,
-**portal del cliente** con **seguridad por roles** aplicada en la base de datos.
+Sistema para una agencia de turismo: catálogo de paquetes, salidas, reservas, pagos, traslados y logística, con
+**portal del cliente**, **cotización en línea sin cuenta** y **seguridad por roles** aplicada en la base de datos.
 
 | Capa | Carpeta | Tecnología |
 |---|---|---|
-| Base de datos | `kampu-backend/src/main/resources/db/` | Oracle 12.2+ (probado en Oracle 23ai Free) |
+| Base de datos | `kampu-backend/src/main/resources/db/` | Oracle Database 21c XE (también Oracle 23 Free) |
 | Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
-| Frontend | `kampu-frontend` | Angular 18 (standalone, signals) · Tailwind CSS 3 (compilado con Angular) · SweetAlert2 |
+| Frontend | `kampu-frontend` | Angular 18 · Tailwind CSS 3 · SweetAlert2 |
 
-## Versión 11 — cotización sin cuenta, roles de campo y seguridad real
+**Orden de arranque:** Oracle → backend → frontend.
 
-Diagnóstico, decisiones y resultados de las pruebas: [`docs/AUDITORIA_V11.md`](docs/AUDITORIA_V11.md).
+---
 
-**Base de datos** — instalación nueva: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`.
-Base v10 con datos: **`migracion_v10_a_v11.sql`** (no borra nada, se puede volver a correr, deja el esquema igual al de una
-instalación nueva; verificado en Oracle 23 Free).
+## 1. Base de datos
 
-### Cotizar sin registrarse (visitante)
-| Qué | Dónde |
-|---|---|
-| Explorar el paquete: descripción, **lo que incluye**, itinerario día por día | `/cotizar/:paqueteId` |
-| Personalizar: fecha (calendario real), adultos y niños, punto de recojo, **servicios adicionales** | `/cotizar/:paqueteId` |
-| Precio **calculado por el servidor** al instante (`PKG_COTIZACIONES`): el navegador solo elige | `POST /api/v1/cotizaciones/calcular` |
-| Guardar → **código** `KC-2026-000123` + **clave** de 12 caracteres (la BD guarda solo su SHA-256) | `POST /api/v1/cotizaciones` |
-| Volver a verla, **modificarla**, descargar **PDF**, imprimir, cancelar | `/cotizacion/:codigo`, `/seguimiento` |
-| **Solicitar la reserva** sin cuenta (nombre, documento, correo, teléfono) | `POST /cotizaciones/{codigo}/solicitud` |
-| Seguir el estado con el código: generada → solicitud → confirmada por la agencia → reserva pagada | `/seguimiento` |
+Script: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`
 
-- No se crean usuarios: al **confirmar** la solicitud, el personal busca o crea al cliente **sin cuenta web** (como los
-  que registra Ventas). Si luego el visitante se registra con el mismo documento y correo, su reserva aparece sola.
-- Cotización ≠ reserva: una cotización no toma cupos. Estados: `GENERADA → SOLICITADA → RESERVADA | RECHAZADA`,
-  `CANCELADA` (la retira el visitante) y `VENCIDA` (7 días o la fecha del viaje). Desde `RESERVADA` manda el estado de la
-  reserva (pendiente de pago, confirmada, anulada): no se duplica.
-- Seguridad del acceso: la clave viaja en el cuerpo, nunca en la URL; 10 claves erradas bloquean el código 30 minutos
-  (en la BD) y hay un límite de solicitudes por IP. El PDF lleva el código pero no la clave.
-- Historial de cada cotización en `AUDITORIA` (el visitante aparece como `INVITADO`).
-- El cliente con cuenta también cotiza (queda a su nombre) y abre sus cotizaciones sin clave.
+1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`; en Oracle 23 Free, `FREEPDB1`).
+2. Abre el archivo y ejecútalo completo como script (**F5**, no Ctrl+Enter).
+3. Al final, las pruebas propias del script deben salir con `[OK]`. Los `ORA-` que aparecen junto a `[OK]` son pruebas que
+   comprueban que la base **rechace** operaciones indebidas: no son errores.
 
-### Personal
-- **Cotizaciones** (`/cotizaciones`): Admin, Ventas y Operador ven las solicitudes y las **confirman** (crea la reserva
-  PENDIENTE con el precio cotizado; los adicionales entran en `RESERVAS.monto_total`) o las **rechazan** con un motivo.
-- **Adicionales** (`/servicios-adicionales`, quien gestiona el catálogo): por persona o por grupo, de un paquete o de todos.
-- **Paquetes → Incluye**: lo que incluye cada paquete (uno por línea).
+Se puede volver a ejecutar cuando quieras: borra y recrea las tablas de `KAMPU_BD` con los datos de demostración.
+Si tienes una base **v10 con datos que quieras conservar**, usa en su lugar `migracion_v10_a_v11.sql` (respalda antes).
 
-### Roles: guía y conductor
-Antes **no existían** como roles (solo como fichas de `PERSONAL`). Ahora son ambas cosas:
-- Toda persona del personal sigue existiendo **sin cuenta**. La cuenta es **opcional** y la crea el administrador en
-  *Usuarios* eligiendo a la persona: `USUARIOS_SISTEMA.personal_id` la liga a su ficha y la BD exige que el cargo
-  corresponda (GUIA → función de guiado, CONDUCTOR → transporte).
-- Guía y conductor solo ven **Mis asignaciones** (`/mis-asignaciones`): sus salidas (itinerario, manifiesto, recojos) o
-  sus traslados (vehículo, ruta, recojos). Lo filtra la base de datos (`VW_MIS_SALIDAS_GUIA`, `VW_MIS_TRASLADOS_CONDUCTOR`).
+### Usuarios de Oracle
 
-### Seguridad (corrección importante)
-Hasta v10 el backend confiaba en las cabeceras `X-Usuario`/`X-Rol` que envía el navegador: **cualquiera podía declararse
-ADMIN** y casi ningún endpoint validaba permisos. Ahora:
-- el login entrega una **sesión firmada** (HMAC-SHA256) que viaja como `Authorization: Bearer`; en cada petición se
-  comprueba en la BD que la cuenta siga activa y se usa su rol actual (una baja o un cambio de rol rigen al instante);
-- **todos** los endpoints declaran `@Publico` o `@Permiso("...")` (misma matriz `PKG_SEGURIDAD_ROLES`): 401 sin sesión,
-  403 sin permiso;
-- define `KAMPU_SESION_SECRETO` (32+ caracteres) en producción; sin ella las sesiones se cierran al reiniciar.
-
-### Cuentas nuevas de la demo (clave `Kampu2026*`)
-| Usuario | Rol | Ficha de personal |
+| Usuario | Clave | Para qué |
 |---|---|---|
-| `kguia` | GUIA | Rosa Pinedo Vasquez |
-| `kconductor` | CONDUCTOR | Luis Tapullima Shapiama |
+| `SYSTEM` | la de tu instalación de Oracle | solo para ejecutar el script |
+| `KAMPU_BD` | `Kampu_Bd_2026` | dueño de tablas, vistas y paquetes (mantenimiento) |
+| `KAMPU_APP` | `Kampu_App_2026` | conexión del backend; recibe los roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE` |
 
-Cotizaciones de visitantes de la demo: `KC-<año>-000001` (clave `DEMO-2026-KAMP`, generada) y `KC-<año>-000002`
-(clave `SOLI-2026-KAMP`, solicitud pendiente para que la atienda el personal).
+El backend se conecta como `KAMPU_APP` y trabaja sobre las tablas de `KAMPU_BD`
+(`ALTER SESSION SET CURRENT_SCHEMA = KAMPU_BD`). En cada petición indica a Oracle quién opera
+(`PKG_SEGURIDAD_ROLES.iniciar_sesion`), y así la auditoría y los permisos saben el usuario y el rol.
 
-### Pruebas
-`pruebas/` trae las dos baterías usadas para validar esta versión contra Oracle 23 Free real: `api_v11.py` (64 casos de
-API y seguridad) y `e2e_v11.js` (23 casos en navegador: visitante → operador → guía/conductor → admin → regresiones).
-El script de BD ejecuta además sus propias 52 pruebas de reglas (`[OK]` en la salida).
+### Usuarios de la aplicación (clave de todos: `Kampu2026*`)
 
-## Versión 10.1 — usuarios del sistema
-
-- **Módulo de usuarios (solo administrador)** — menú *Usuarios* (`/usuarios`, permiso `GESTIONAR_USUARIOS`):
-  - crea cuentas y **elige su rol** (en v11 también Guía y Conductor), con contraseña BCrypt;
-  - cambia el rol (`PKG_SEGURIDAD_ROLES.asignar_rol` / `asignar_rol_campo`), desactiva / reactiva / desbloquea y asigna una contraseña nueva;
-  - Oracle impide dejar el sistema sin administradores y `TRG_USUARIOS_AUDITORIA` registra cada alta y cambio.
-  - Las cuentas de clientes no se crean aquí: el cliente usa *Registrarse*.
-- *(La cotización "sin guardar" de la v10.1 —WhatsApp/correo— fue reemplazada por la cotización completa de la v11.)*
-
-## Versión 10 — backend y frontend alineados con `kampu_tours_v10.sql`
-
-La base de datos manda: el script `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` define el flujo y la
-aplicación lo sigue (solo funcionalidad; el diseño visual es el mismo). Detalle y diagnóstico en
-[`docs/MIGRACION_BACKEND_v10.md`](docs/MIGRACION_BACKEND_v10.md).
-
-- **Reservar = paquete + fecha + cantidad** (`PKG_RESERVAS.reservar`): si no hay salida ese día, la BD la crea con las
-  reglas de venta del paquete (cupo por defecto, mínimo de pasajeros, días de operación, anticipación, hora de inicio).
-- **Huéspedes/pasajeros** (`PASAJEROS_RESERVA`) y **punto de recojo** por reserva; la reserva se **confirma sola** al
-  aprobarse un pago; la anulación registra reembolso; el cliente pide la anulación (`SOLICITUDES_ANULACION`) y Ventas la atiende.
-- **Despacho de flota**: operaciones con código `KMP-…` e historial automático por trigger; personal con catálogo de `CARGOS`.
-- **Seguridad**: contraseñas con **BCrypt** y bloqueo a los 5 intentos fallidos (lo exige la BD). El backend se conecta
-  solo con `KAMPU_APP`, que recibe los roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`; el dueño de los objetos es `KAMPU_BD`.
-- Sin permisos `DELETE` en la mayoría de tablas: *eliminar* pasa a ser **desactivar/retirar** (estado INACTIVO, salida CANCELADA…).
-- Reemplaza en lo funcional a lo descrito en las versiones 4 y 5 (BCrypt vuelve; ya no hay particionamiento ni `VW_CUADRE_INTEGRIDAD`).
-
-## Versión 5 — adaptación al curso y rediseño visual
-
-Detalle completo en [`docs/ADAPTACION_ACADEMICA.md`](docs/ADAPTACION_ACADEMICA.md).
-
-- **Seguridad al nivel de la plantilla del curso** (LP2): el login compara la contraseña tal cual y devuelve el usuario con su
-  rol y sus permisos (`PKG_SEGURIDAD_ROLES.permisos`). El frontend guarda esa sesión, filtra el menú y las pantallas por
-  permiso y envía en cada petición quién la hace (`X-Usuario`, `X-Rol`, `X-Usuario-Id`, `X-Cliente-Id`). El backend usa esos
-  datos para la bitácora, el portal del cliente y la sesión de Oracle; **no** valida permisos (como en la plantilla, la API
-  queda abierta). Se quitaron BCrypt, los tokens y el límite de intentos.
-- **Sin servicios externos**: la duración de los traslados se estima con las coordenadas de los lugares (se quitó OSRM).
-- **Tailwind por npm** (`tailwind.config.js`) en lugar del CDN, y **solo tema claro** (se quitó el modo oscuro).
-- **Identidad del logotipo**: oliva `#4B5B1D` (principal), lima `#C4BD45` (acento) y neutros cálidos derivados del crema `#FDF8E6`,
-  en todos los módulos (`tailwind.config.js`).
-- **Interfaz minimalista**: menú lateral compacto que se despliega al
-  pasar el cursor, panel con una franja de indicadores (sin gráficos), tablas sin colores fuertes, estados con un punto
-  de color, un solo estilo de botón principal y formularios uniformes. Se quitaron avatares de colores, esqueletos de
-  carga, fechas relativas y animaciones de aparición.
-
-## Versión 4 — qué cambió
-
-1. **"Registrarse" reemplaza a "Probar cuenta demo".** El login ya no tiene los botones Administrador / Ventas / Operador.
-   Ahora tiene un enlace **Registrarse** (autoregistro de clientes externos) y conserva **Volver al inicio**.
-2. **Módulo de clientes** (`/registro`, `/mi-cuenta`, `/mi-cuenta/paquetes/:id`): el cliente ve **solo sus paquetes**, en modo
-   consulta, con **estado de ejecución** (Por empezar / En curso / Terminado) y **estado de pago**
-   (Pagado completo / Falta pagar / Pendiente de pago). Lo único que puede hacer es *informar un pago*, que queda
-   PENDIENTE hasta que Ventas lo valide. Todas sus pantallas muestran **Volver al inicio**.
-3. **Seguridad por roles**: menú y rutas en Angular (guards) según los permisos de `PKG_SEGURIDAD_ROLES` en Oracle
-   (matriz de permisos + vistas que filtran por la sesión). *En la v5 el backend ya no valida permisos (ver arriba).*
-4. **Modelo v4 de 14 tablas** (+ `AUDITORIA`): `PROVEEDORES`, `PERSONAL` (guías y conductores) y `VEHICULOS` reemplazan a
-   empresas/guías/conductores/rutas de la v3. Columnas añadidas a lo que trae el script v4 van marcadas `-- (+v4)`.
-5. **Exactamente dos objetos por categoría** (PL/SQL, triggers, vistas, paquetes) y **script de particionamiento por nivel de usuario**.
-6. *(v5)* Contraseñas guardadas tal cual, como en la plantilla del curso; la sesión es el usuario devuelto por el login.
-
-### Cuentas
-
-| Usuario | Contraseña | Rol | Entra a |
-|---|---|---|---|
-| `kadmin` | `Kampu2026*` | ADMIN | Panel completo |
-| `kventas` | `Kampu2026*` | VENDEDOR | Panel comercial |
-| `koperador` | `Kampu2026*` | OPERADOR | Panel operativo |
-| `kguia` · `kconductor` | `Kampu2026*` | GUIA · CONDUCTOR (v11) | Mis asignaciones |
-| `maria.rios@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
-| `emma.schneider@example.com` · `jose.vela@example.com` · `valeria.huaman@example.com` | `Kampu2026*` | CLIENTE | Mis paquetes |
-
-Los demás clientes de la demo los creó Ventas y **no tienen cuenta web**: pueden activarla con *Registrarse* usando
-su **mismo documento y correo** (el procedimiento "reclama" el cliente existente y sus reservas aparecen solas).
-
-## Versión 4.3 — mejoras visuales
-
-> Reemplazada en lo visual por la v5: ya no hay modo oscuro, gráficos, avatares, esqueletos ni fechas relativas.
-
-Solo frontend; además, los datos de demostración cargan una foto del paquete Machu Picchu.
-
-- **Menú lateral**:
-  - fijo y abierto, con el nombre de cada módulo, el usuario y su rol;
-  - se puede colapsar a íconos, y el sistema recuerda la elección;
-  - migas de pan en los detalles (*Reservas › R-0003*).
-- **Modo oscuro**:
-  - botón en el menú; la primera vez sigue la preferencia del sistema;
-  - los colores salen de variables CSS (`styles.css`): el tema oscuro solo cambia sus valores;
-  - la clase `tema-claro` mantiene claras las zonas que van sobre fotos.
-- **Panel**:
-  - comparación de lo cobrado con el mes anterior;
-  - sección **Hoy**: salidas que empiezan, traslados del día y pagos por validar;
-  - gráficos *Vendido por mes* y *Pasajeros por paquete*, con tooltip y vista de tabla.
-- **Listas** (reservas, clientes, pagos, salidas, tráfico):
-  - en celular cada fila es una tarjeta;
-  - la columna de acciones queda fija a la derecha;
-  - esqueleto de carga mientras llegan los datos;
-  - estados vacíos con un botón de acción;
-  - el registro recién guardado se resalta un momento;
-  - avatares con iniciales y fechas relativas (*mañana*, *hace 5 días*);
-  - íconos según el tipo de lugar.
-- **Nueva reserva**: asistente en 4 pasos (Cliente → Salida → Pasajeros → Revisar) que valida cada paso antes de avanzar.
-- **Portal del cliente**:
-  - línea de tiempo del viaje (Reservado → Pagado → Por empezar → En curso → Terminado);
-  - cuenta regresiva para la salida;
-  - barra de progreso del pago.
-- **Página principal**: testimonios (son de ejemplo: reemplázalos por reseñas reales) y botón flotante de WhatsApp.
-- **Fotos**: Machu Picchu en la portada, en el login y en su paquete, de Wikimedia Commons con licencia CC BY-SA. Los créditos están en `kampu-backend/images/demo/ATRIBUCIONES.md` y en el pie de página. Las fotos de los demás paquetes se suben desde *Paquetes → Editar*.
-- **Accesibilidad**:
-  - las ventanas se cierran con Esc, ponen el foco en el primer campo y no dejan que el tabulador salga de ellas;
-  - mayor contraste del texto secundario;
-  - se respeta la opción del sistema de reducir animaciones.
-
-## Versión 4.2 — lógica de tour manager y pulido
-
-**Reglas de negocio nuevas (backend, `SalidaProgramadaServiceImpl` y `ReservaServiceImpl`):**
-
-| Regla | Antes | Ahora |
+| Usuario | Rol | Entra a |
 |---|---|---|
-| Estados de una salida | Se podía pasar de cualquier estado a cualquiera (revivir una cancelada, editar una terminada) | `PROGRAMADA → CONFIRMADA → COMPLETADA`, con `CANCELADA` desde las dos primeras y *reabrir* (`CONFIRMADA → PROGRAMADA`). `COMPLETADA` y `CANCELADA` son finales. |
-| Crear una salida | Se podía crear ya confirmada, en una fecha pasada o de un paquete inactivo | Nace `PROGRAMADA`, desde hoy y solo de paquetes activos. |
-| Confirmar una salida | Solo revisaba el transporte | Además exige **guía** y **al menos un pasajero**. |
-| Terminar una salida | Bastaba con que hubiera empezado | Tampoco puede quedar ninguna **reserva pendiente** ni ningún **traslado abierto**. |
-| Cancelar una salida | Sus traslados seguían ocupando vehículos y conductores | Los traslados que no han salido se cancelan solos (queda en su historial). |
-| Editar una salida con reservas | Se podía cambiar el paquete que compraron los clientes | Bloqueado. Tampoco se reprograma a una fecha pasada. |
-| Confirmar una reserva | Sin condiciones | Exige un **pago aprobado** (adelanto). |
-| Completar una reserva | En cualquier momento | Solo cuando el viaje ya empezó. |
-| Vender un paquete inactivo | Permitido | Bloqueado. |
+| `kadmin` | Administrador | panel completo, usuarios y auditoría |
+| `kventas` | Ventas | reservas, pagos, clientes y cotizaciones |
+| `koperador` | Operador | salidas, traslados y logística (sin montos) |
+| `kguia` | Guía | solo *Mis asignaciones* (sus salidas) |
+| `kconductor` | Conductor | solo *Mis asignaciones* (sus traslados) |
+| `maria.rios@example.com` | Cliente | portal *Mis paquetes* |
 
-**Pantallas nuevas o mejoradas (frontend):**
+Cotizaciones de visitante de prueba: `KC-<año>-000001` (clave `DEMO-2026-KAMP`) y `KC-<año>-000002` (clave `SOLI-2026-KAMP`).
 
-- **Ficha de salida** (`/salidas/:id`): lista de verificación *"Lista para salir"* (guía, pasajeros, transporte,
-  reservas confirmadas y pagos), **manifiesto de pasajeros** imprimible con firma, notas para el guía, traslados del
-  día, ocupación y saldo por cobrar. Botones para confirmar, terminar, reabrir o cancelar según el estado y el rol.
-  API: `GET /salidas/{id}/manifiesto` (los datos de pago solo llegan a quien tiene `VER_MONTOS`).
-- **Panel → "Requiere atención"**: salidas de los próximos 7 días sin guía o sin transporte, reservas pendientes con
-  el viaje encima, pagos por validar, traslados sin vehículo, licencias por vencer y mantenimientos atrasados. Cada
-  aviso lleva a la pantalla donde se resuelve.
-- **Salidas**: las próximas primero, cuenta regresiva ("Sale mañana") y aviso de las que no tienen guía; el estado
-  solo ofrece las transiciones válidas.
-- Fechas y números en **español de Perú**; marcadores de carga, animaciones escalonadas y vista de impresión.
-- Las pantallas se cargan bajo demanda: el paquete inicial bajó de 780 kB a 500 kB.
-
-**Limpieza:** 13 hojas de estilo vacías, etiquetas y comentarios de objetos de la v3 que ya no existen
-(`PKG_ASIGNACION`, `PKG_RUTAS`, `trg_*`, `DOMINIO_ESTADOS`) y dependencias de prueba comentadas en `pom.xml`.
-Los estados `SUSPENDIDO`, `MANTENIMIENTO` y `OCUPADO` ahora tienen color y texto propios.
-
-**Datos de demostración:** sección 13 de `kampu_tours_v11.sql` (fechas relativas a hoy). Las claves de las cuentas
-de la aplicación las fija `UsuarioInicialConfig` al arrancar el backend.
-
-## Objetos críticos de backend (2 por categoría) y su justificación
-
-Todos están en `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`, comentados (la v10 suma `PKG_RESERVAS`, `TRG_RESERVAS_BIU`, `TRG_OPERACIONES_VALIDAR` y las vistas `VW_MANIFIESTO_SALIDA`, `VW_RECOJOS_SALIDA`, `VW_ALERTAS_OPERACION`, `VW_METRICAS_ESTADOS`, `VW_RESUMEN_CLIENTES`: ver `docs/MIGRACION_BACKEND_v10.md`).
-
-| Categoría | Objeto | Qué hace | Por qué este y no otro |
-|---|---|---|---|
-| PL/SQL | `FN_ESTADO_PAGO_PAQUETE(reserva_id)` | Devuelve `PAGADO_COMPLETO`, `FALTA_PAGAR`, `PENDIENTE_PAGO` o `ANULADO` usando solo pagos **APROBADOS**. | Es el "estado de pago" que pide el cliente. Al estar en la BD, la vista del cliente, el resumen interno y la boleta usan la misma regla. |
-| PL/SQL | `SP_REGISTRAR_CLIENTE_EXTERNO(...)` | Registro externo: valida documento, correo y teléfono únicos (errores `-20100`…`-20104`); si el cliente ya existía sin cuenta y coincide documento **y** correo, le activa la cuenta; deja fila en `AUDITORIA`. | El botón *Registrarse* necesita una operación atómica que no deje clientes duplicados aunque dos personas se registren a la vez (índices únicos + bloqueo). |
-| Trigger | `TRG_AUDITORIA_ESTADO_PAQUETE` | `AFTER UPDATE OF estado_reserva, estado_pago ON RESERVAS` → inserta quién (usuario y rol de la sesión), qué cambió y cuándo. | Trazabilidad de los estados que ve el cliente; funciona también si alguien cambia datos directo en SQL. |
-| Trigger | `TRG_VALIDAR_PAGO_PAQUETE` | Compound trigger en `PAGOS`: impide pagos en reservas anuladas/completadas (`-20201`) y que los aprobados superen el total (`-20202`). | Es la última barrera para el dinero: el portal permite que el cliente informe pagos y no se puede confiar solo en el frontend. |
-| Vista | `VW_PAQUETES_CLIENTE` | Paquetes del cliente **de la sesión** (`PKG_SEGURIDAD_ROLES.cliente_actual()`), con estado de ejecución, estado de pago, total, pagado, saldo y monto por validar. | El aislamiento entre clientes lo hace Oracle: aunque el backend tuviera un error, la vista nunca devuelve reservas ajenas. |
-| Vista | `VW_RESUMEN_PAQUETES_POR_ROL` | Resumen por salida (cupos, pasajeros, operaciones, guía, montos). Montos solo si el rol puede `VER_MONTOS`; el OPERADOR solo ve `POR_EMPEZAR`/`EN_CURSO`. | Un solo origen para el panel de los tres roles internos: la restricción la aplica la BD, no la pantalla. |
-| Paquete | `PKG_SEGURIDAD_ROLES` | Contexto de la sesión (`iniciar_sesion`, `usuario_actual`, `rol_actual`, `cliente_actual`), catálogo de acciones, matriz `puede(rol, acción)`, `permisos(rol)` (lista para el frontend), `exigir`, y administración de accesos (`asignar_rol`, `revocar_acceso`, `restablecer_acceso`). | Centraliza el "quién puede qué". El backend le pregunta en cada petición y las vistas y triggers lo usan. |
-| Paquete | `PKG_GESTION_PAQUETES_CLIENTE` | `estado_ejecucion`, `pertenece`, `exigir_propietario` (`-20080`), `listar_paquetes` y `detalle_paquete` (REF CURSOR) e `iniciar_pago` (pago PENDIENTE con `registrado_por = CLIENTE`, errores `-20081`…`-20083`). | Todo lo que el cliente puede hacer pasa por aquí: lectura y un único tipo de escritura controlada. |
-
-> El script v4 original traía además `TRG_GESTION_CUPOS`, `TRG_AUTO_HISTORIAL_OP`, `V_PORTAL_CLIENTE`, `V_TABLERO_FIDS` y
-> `PKG_TRANSACCIONES`. Para cumplir "exactamente dos por categoría" esa lógica pasó al backend: los cupos se descuentan
-> con `SELECT ... FOR UPDATE` en `ReservaServiceImpl` y el historial de operaciones lo escribe `OperacionTransporteServiceImpl`.
-
-### Matriz de permisos (`PKG_SEGURIDAD_ROLES.puede`)
-
-| Acción | ADMIN | VENDEDOR | OPERADOR | CLIENTE |
-|---|:-:|:-:|:-:|:-:|
-| Usuarios (ver / gestionar) · Auditoría | ✔ | — | — | — |
-| Clientes (ver / crear / editar) | ✔ | ✔ | — | — |
-| Reservas (ver / gestionar) | ✔ | ✔ | — | — |
-| Ver montos · Registrar/validar pagos | ✔ | ✔ | — | — |
-| Catálogo (paquetes y salidas) | ✔ | ✔ | solo ver | — |
-| Actualizar estado de ejecución | ✔ | ✔ | ✔ | — |
-| Logística (proveedores, personal, vehículos, lugares) | ✔ | ver | ✔ | — |
-| Operaciones de tráfico | ✔ | ver | ✔ | — |
-| Resumen de paquetes | ✔ | ✔ | ✔ (sin montos, sin terminados) | — |
-| Ver paquetes propios · Informar pago | — | — | — | ✔ |
-
-Una acción que no está en el catálogo se niega a todos (también a ADMIN). Cambiar un permiso es editar
-`PKG_SEGURIDAD_ROLES`: el frontend recibe la lista en `permisos` al iniciar sesión y con ella arma el menú, las rutas y
-los botones.
-
-## Auditoría (solo Administrador)
-
-Menú **Auditoría** (`/auditoria`, permiso `VER_AUDITORIA`). La tabla `AUDITORIA` guarda todo lo que pasa en el sistema:
-
-| Acción | Quién la registra | Qué guarda |
-|---|---|---|
-| Alta (`CREAR`) | `AuditoriaHibernateListener` (toda escritura JPA) | Resumen de los datos guardados |
-| Modificación (`ACTUALIZAR`) | El mismo listener · `TRG_AUDITORIA_ESTADO_PAQUETE` para estados de reserva | **Una fila por campo**: campo, valor anterior y valor nuevo |
-| Baja (`ELIMINAR`) | El listener | Los datos que tenía el registro |
-| Registro web (`REGISTRO`) | `SP_REGISTRAR_CLIENTE_EXTERNO` | Alta o activación de la cuenta |
-| Pago informado en el portal | `PortalClienteService` (el INSERT lo hace PL/SQL) | Reserva, monto, método y operación |
-| `LOGIN`, `LOGOUT`, `LOGIN_FALLIDO` | `AuthServiceImpl` | Usuario, rol y motivo del rechazo |
-
-Cada fila tiene usuario, rol, fecha y hora, entidad e id, y origen (`BD` = Oracle, `APP` = backend). Los cambios
-se registran en la **misma transacción** que el dato: si la operación falla, su registro también se deshace (los
-ingresos fallidos usan una transacción propia para que queden). Las contraseñas nunca se guardan (`******`).
-
-La pantalla permite filtrar por texto, rango de fechas (atajos Hoy / 7 días / 30 días), rol, acción, entidad y usuario;
-ver el **historial completo de un registro**; paginar en el servidor (50 por página) y **exportar a CSV** con los mismos filtros.
-
-## Roles de Oracle por nivel de usuario (incluidos en `kampu_tours_v11.sql`)
-
-El script crea `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR`, `ROL_CLIENTE` y (v11) `ROL_CAMPO` (guías y conductores), todos otorgados a `KAMPU_APP`; no crea usuarios de prueba
-ni una conexión aparte para el portal. El nivel de cada petición lo fija `PKG_SEGURIDAD_ROLES` con la identidad validada de la sesión. La v10 no usa particionamiento (funciona en cualquier XE).
-
-Requisito: ejecutar el script como `SYSTEM` en la **PDB** (`XEPDB1`), no en el contenedor raíz.
-
-## Especificación de cambios de interfaz
-
-| Pantalla | Antes | Ahora |
-|---|---|---|
-| Login (`/login`) | "o entra con una cuenta demo" + 3 botones | Enlace **Registrarse**; campo "Usuario o correo" (el cliente entra con correo o documento); **Volver al inicio** se mantiene. Tras entrar: personal → `/dashboard`, cliente → `/mi-cuenta`. |
-| Registro (`/registro`, nuevo) | — | Nombre, tipo y número de documento, correo (único), teléfono con país, contraseña (**mínimo 8**, indicador de fortaleza) y **confirmación**. Errores bajo cada campo; los de unicidad vienen de Oracle. Al registrarse queda **autenticado** y va a *Mis paquetes*. |
-| Mis paquetes (`/mi-cuenta`, nuevo) | — | Tarjetas con imagen, fechas, pasajeros, total, saldo y dos insignias: ejecución y pago. Filtros Todos / Por empezar / En curso / Terminados. Saldo total por pagar. |
-| Detalle (`/mi-cuenta/paquetes/:id`, nuevo) | — | Descripción, guía, pasajeros, barra de pago (pagado / por validar / saldo), historial de pagos e **Informar un pago** (monto ≤ saldo − por validar). Una reserva ajena muestra "no pertenece a tu cuenta". |
-| Cabecera del portal | — | Logo, **Volver al inicio**, Mis paquetes y Salir en todas las pantallas del cliente. |
-| Panel (`/dashboard`) | Igual para todos | Por rol: Admin/Ventas ven KPIs de dinero, reservas recientes y todos los estados; Operador ve por empezar / en curso, pasajeros y operaciones, **sin montos**. Botones *Confirmar salida* y *Marcar terminada*. |
-| Menú lateral | 8 opciones para todos | Según `permisos`: Admin 9 (incluye **Auditoría**), Ventas 8, Operador 4 (Panel, Salidas solo lectura, Tráfico, Logística). Cada ruta tiene `permisoGuard`. |
-| Botones de gestión | Visibles para todos | Solo con el permiso: Logística `GESTIONAR_LOGISTICA` (Ventas solo consulta), Tráfico `GESTIONAR_OPERACIONES` (Ventas solo consulta), Salidas `GESTIONAR_CATALOGO` (Operador solo consulta), Clientes, Reservas y Pagos con sus permisos. |
-| Volver al inicio (panel) | — | En la barra superior (escritorio), la cabecera (móvil) y el menú lateral. Lleva a la página principal **sin cerrar sesión**; allí "Ir al panel" regresa. |
-| Auditoría (`/auditoria`, nuevo) | — | Bitácora con filtros, historial por registro, paginación y exportación CSV (solo Admin). |
-| Clientes / Pagos | — | Insignia **Cuenta web** en clientes registrados; insignia **Portal** en pagos informados por el cliente (para validarlos). |
-| Nueva reserva | Modo "Invitado (sin registro)" | Modo **Cliente nuevo** con documento: se crea el cliente (en v4 toda reserva tiene cliente) y luego puede activar su cuenta. |
-| Página de inicio | "Acceso Admin" | "Iniciar sesión" y "Registrarse" (o "Mis paquetes"/"Ir al panel" con sesión). |
-
-## Manual de integración (frontend ↔ backend ↔ Oracle)
-
-**Cómo viaja la sesión.** `POST /auth/login` o `POST /auth/registro` devuelven `{usuarioId, clienteId, username, nombre, rol, permisos}`.
-Angular lo guarda (`tm4_session`) y `usuario.interceptor.ts` envía `X-Usuario`, `X-Rol`, `X-Usuario-Id` y `X-Cliente-Id` en
-cada llamada. En el backend, `UsuarioActualInterceptor` lee esas cabeceras y fija la sesión de la petición (no valida
-permisos). `SesionOracleDataSource` llama a
-`PKG_SEGURIDAD_ROLES.iniciar_sesion(usuario, rol, cliente)` en **cada conexión del pool** antes de usarla, así las vistas y
-los triggers saben quién está operando.
-
-| Pantalla (Angular) | Servicio | Endpoint | Objeto Oracle | Roles |
-|---|---|---|---|---|
-| Registro | `AuthService.registrar` | `POST /auth/registro` | `SP_REGISTRAR_CLIENTE_EXTERNO` | público |
-| Login | `AuthService.login` | `POST /auth/login` | `CLIENTES` / `USUARIOS_SISTEMA` + `PKG_SEGURIDAD_ROLES.permisos` | público |
-| Mis paquetes | `PortalService.misPaquetes` | `GET /portal/paquetes` | `VW_PAQUETES_CLIENTE` (+ `FN_ESTADO_PAGO_PAQUETE`) | CLIENTE |
-| Detalle del paquete | `PortalService.detalle` | `GET /portal/paquetes/{reservaId}` | `PKG_GESTION_PAQUETES_CLIENTE.exigir_propietario` + `detalle_paquete` | CLIENTE |
-| Informar pago | `PortalService.informarPago` | `POST /portal/paquetes/{reservaId}/pagos` | `PKG_GESTION_PAQUETES_CLIENTE.iniciar_pago` → `TRG_VALIDAR_PAGO_PAQUETE` | CLIENTE |
-| Panel | `TourStore.resumen` | `GET /resumen-paquetes` | `VW_RESUMEN_PAQUETES_POR_ROL` | ADMIN, VENDEDOR, OPERADOR |
-| Panel (botones) | `TourStore.marcarEjecucion` | `PATCH /salidas/{id}/ejecucion` `{estado: CONFIRMADA\|COMPLETADA}` | `TRG_AUDITORIA_ESTADO_PAQUETE` (reservas → COMPLETADA) | ADMIN, VENDEDOR, OPERADOR |
-| Validar pago | `TourStore` | `PATCH /pagos/{id}/resolver` | `TRG_VALIDAR_PAGO_PAQUETE`, `TRG_AUDITORIA_ESTADO_PAQUETE` | ADMIN, VENDEDOR |
-| Auditoría | `AuditoriaService` | `GET /auditoria?desde&hasta&rol&accion&entidad&entidadId&usuario&q&pagina&tamanio` · `GET /auditoria/filtros` · `GET /auditoria/exportar` (CSV) | `AUDITORIA` (particionada) | ADMIN |
-
-Resto de la API (bajo `/lp2_gp2/api/v1`). La columna "Permiso" es el que exige la pantalla en el frontend:
-
-| Recurso | Endpoints | Permiso |
-|---|---|---|
-| Auth | `POST /auth/login` · `POST /auth/registro` · `POST /auth/logout` (login y registro devuelven `permisos`) · `GET /contacto` | — |
-| Catálogo | `GET /paquetes[/{id}]`, `GET /salidas[/{id}]` (públicos) · `POST/PUT/DELETE /paquetes`, `/salidas` | `GESTIONAR_CATALOGO` |
-| Clientes | `GET /clientes`, `/clientes/buscar?q=`, `/clientes/{id}` · `POST/PUT/DELETE` | `VER_CLIENTES` / `GESTIONAR_CLIENTES` |
-| Reservas | `GET /reservas[/{id}]`, `/{id}/pasajeros`, `/{id}/boleta` · `POST /reservas`, `/{id}/boleta` · `PATCH /{id}/confirmar\|completar\|anular` | `VER_RESERVAS` / `GESTIONAR_RESERVAS` |
-| Pagos | `GET /pagos[?reservaId=]` · `POST /pagos` · `PATCH /pagos/{id}/resolver` | `VER_MONTOS` / `REGISTRAR_PAGO` |
-| Logística | `/proveedores`, `/personal`, `/vehiculos`, `/lugares` (CRUD) | `VER_LOGISTICA` / `GESTIONAR_LOGISTICA` |
-| Tráfico | `GET /operaciones`, `/operaciones/estados`, `/operaciones/estimar-duracion`, `/{id}`, `/{id}/historial`, `/{id}/candidatos` · `POST /operaciones`, `/{id}/asignar-automatico` · `PUT /{id}` · `PATCH /{id}/estado`, `/{id}/asignar` | `VER_OPERACIONES` / `GESTIONAR_OPERACIONES` |
-| Usuarios | `GET /usuarios` | `VER_USUARIOS` |
-
-Errores: `{ "status", "error", "timestamp" }` — 400 validación/regla, 403 portal de otro cliente,
-404 no existe, 409 duplicado. Los `RAISE_APPLICATION_ERROR` de Oracle se traducen a mensajes en español en `ErroresOracle`.
-
-## Rediseño visual del frontend (UI/UX)
-
-> Sección de la v4. El sistema visual vigente es el de la v5 (`tailwind.config.js` y `src/styles.css`).
-
-Esta versión solo cambia la **apariencia** del frontend (`kampu-frontend`). El backend, la base de datos, la API,
-los servicios, las rutas y la lógica de los componentes son los mismos.
-
-- **Identidad visual**: nuevo logotipo Kampu (isotipo "K" atravesada por un camino + wordmark con hoja) en `src/app/shared/logo.component.*` y como favicon.
-- **Sistema de diseño** (`src/index.html` + `src/styles.css`): esquinas redondeadas, sombras suaves, paleta KAMPU
-  del logotipo (verde oliva `#4B5B1D`, hoja lima `#C4BD45` y fondo crema), tipografía Nunito y clases reutilizables: `btn-dark` (principal), `btn-brand` (guardar/confirmar),
-  `btn-light` (secundario/cancelar), `btn-danger` (eliminar/anular), `icon-btn*`, `field`, `label`/`label req`,
-  `form-section`, `form-actions`, `card`, `tbl`, `seg`/`seg-btn` (filtros), `alert-*`, `empty`, `progress`, `chip`.
-- **Barra lateral fija y compacta**: en escritorio muestra solo los iconos y se expande suavemente al pasar el cursor
-  (o con el teclado), resaltando la sección activa; en móvil se abre como menú lateral.
-- **Formularios** organizados en secciones, con campos obligatorios (`*`) y opcionales marcados, foco visible,
-  selects y fechas estilizados.
-- **Tablas, tarjetas, KPIs, modales y alertas (SweetAlert2)** rediseñados, con animaciones discretas
-  (se desactivan si el sistema pide "reducir movimiento") y diseño responsive.
-
-## Validación de formularios (frontend + backend)
-
-Las mismas reglas se aplican en ambos lados: `kampu-frontend/src/app/core/utils/validacion.ts` y
-`kampu-backend/src/main/java/pe/edu/upeu/lp2_gp2/dto/Reglas.java`.
-
-| Campo | Regla |
-|---|---|
-| Nombres de personas (cliente, guía, pasajero) | Letras (con tildes y ñ), espacios y `. ' -` |
-| DNI / CE / Pasaporte / RUC | DNI: 8 dígitos · CE: 8 a 12 letras o números · Pasaporte: 6 a 12 letras o números · RUC (solo clientes y empresas): 11 dígitos que empiezan con 10, 15, 17 o 20 |
-| Teléfono (opcional) | Números con `+ ( ) -`, entre 6 y 15 dígitos |
-| Correo (opcional) | Formato `nombre@dominio.com` |
-| Placa | Letras, números y guion (3 a 10, `VEHICULO.placa` es `VARCHAR2(10)`) |
-| Días / noches / cupos / capacidad | Enteros: 1–99 / 0–99 (y noches ≤ días) / 1–999 / 1–999 |
-| Precio base / monto | Mayor a 0, máximo 2 decimales (cabe en `NUMBER(10,2)`); el pago aprobado no puede exceder el saldo |
-| Fecha de nacimiento (opcional) | Anterior a hoy y desde 1900 |
-
-- En el navegador, las funciones de `core/utils/filtro.ts` (enlazadas con `(beforeinput)` y `(paste)` en las plantillas) impiden escribir o pegar caracteres inválidos
-  (por ejemplo letras o la "e" en campos numéricos) y los mensajes aparecen debajo de cada campo.
-- En el backend, Bean Validation rechaza los datos con estado 400 y un mensaje claro; si llega un tipo incorrecto
-  (letras o decimales en un campo entero, fechas mal escritas) se indica qué campo falló.
-- Los tipos y longitudes coinciden con `kampu_tours_v11.sql` (VARCHAR2 en caracteres, igual que `@Size`); las reglas que dependen de otros datos (cupos, cruces de
-  horario, transiciones, capacidad) las valida la base de datos con sus triggers.
-
-## 1. Base de datos (Oracle Database 21c XE, PDB `XEPDB1`)
-
-Instalación nueva: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql` (borra y recrea el esquema).
-Base v10 con datos que deben conservarse: `migracion_v10_a_v11.sql` en el mismo directorio (respalda antes).
-
-1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`).
-2. Ejecuta el archivo completo como script (**F5**). Crea (o conserva, si ya existen):
-   - `KAMPU_BD`: dueño de tablas, vistas y PL/SQL. Si ya existe, **se conserva el usuario y su clave**
-     (si no existe, se crea con la clave `Kampu_Bd_2026`).
-   - `KAMPU_APP`: única conexión del backend, personal interno y portal de clientes (clave `Kampu_App_2026`).
-   - Roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE`, otorgados a `KAMPU_APP`.
-   - Si existen de una instalación anterior, elimina los usuarios `KAMPU_WEB`, `KADMIN`, `KVENTAS` y `KOPERADOR`.
-3. **Borra y recrea** los objetos de `KAMPU_BD` (18 tablas, paquetes PL/SQL, triggers, 7 vistas y datos demo con
-   **fechas relativas a hoy**). Cada bloque imprime `[OK]` (30 en total); al final todo debe quedar `VALID`.
-4. En SQL*Plus, para las tildes: `set NLS_LANG=AMERICAN_AMERICA.AL32UTF8` antes de entrar.
-
-> Se puede ejecutar las veces que haga falta. Recrea las tablas del sistema dentro de `KAMPU_BD` (sus datos se reemplazan por los de demostración): exporta antes los datos reales. Tablas tuyas con otros nombres no se tocan.
-> Qué cambió en el backend y el frontend para seguir este script: `docs/MIGRACION_BACKEND_v10.md`.
-
-### Correo (boleta informativa)
-
-La boleta se envía sola al **confirmar una reserva** o al **aprobar un pago**, y se puede reenviar desde el detalle.
-El correo sale por SMTP (Gmail por defecto) con credenciales en variables de entorno, para no subirlas a GitHub:
-
-```bash
-export MAIL_USERNAME=tu_correo@gmail.com
-export MAIL_PASSWORD=tu_contraseña_de_aplicación   # Gmail → Seguridad → Contraseñas de aplicaciones
-```
-
-En IntelliJ: *Run → Edit Configurations → Environment variables*. Sin `MAIL_USERNAME` el envío queda desactivado
-(la reserva funciona igual) y el botón "Ver" del detalle muestra la boleta en el navegador.
+---
 
 ## 2. Backend (`kampu-backend`)
-
-Conexión en `src/main/resources/application.yaml`. Puedes editarla ahí o usar variables de entorno:
-
-| Variable      | Valor por defecto                        |
-|---------------|------------------------------------------|
-| `DB_URL`      | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
-| `DB_USERNAME` | `KAMPU_APP`                                |
-| `DB_PASSWORD` | `Kampu_App_2026`                           |
-| `DB_SCHEMA`   | `KAMPU_BD` (esquema de trabajo: `CURRENT_SCHEMA` y `hibernate.default_schema`) |
-
-Oracle 23 Free → `jdbc:oracle:thin:@localhost:1521/FREEPDB1`.
-
-Contacto de la agencia que muestra la página principal (correo, teléfono y WhatsApp, ciudad y redes):
-`KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO` (con código de país), `KAMPU_CONTACTO_CIUDAD`,
-`KAMPU_CONTACTO_INSTAGRAM` y `KAMPU_CONTACTO_FACEBOOK` (URL completas; si quedan vacías no se muestra su botón).
-Los valores por defecto son de demostración: cámbialos antes de publicar el sitio.
 
 ```bash
 cd kampu-backend
 ./mvnw spring-boot:run
 ```
 
-(En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `Lp2Gp2Application` desde IntelliJ.)
+En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `Lp2Gp2Application` desde IntelliJ. Arranca en el puerto **8082**;
+la documentación de la API está en http://localhost:8082/lp2_gp2/swagger-ui/index.html.
 
-- Swagger: http://localhost:8082/lp2_gp2/swagger-ui/index.html .
-- Imágenes de paquetes: se guardan en la carpeta `images/` (propiedad `storage.location`) y se sirven en `/lp2_gp2/images/...`. La foto de demostración (`images/demo/`) nunca se borra al reemplazarla.
-- `spring.jpa.hibernate.ddl-auto` está en **`validate`**: Hibernate no crea ni altera tablas, pero al arrancar comprueba que cada entidad coincide con el esquema `KAMPU_BD` (si falta una columna, no arranca y dice cuál).
+La conexión está en `src/main/resources/application.yaml`. También se puede cambiar con variables de entorno:
 
-### Si el backend no arranca: "no tiene las tablas del sistema" / ORA-00942 / PLS-00201
+| Variable | Valor por defecto |
+|---|---|
+| `DB_URL` | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
+| `DB_USERNAME` / `DB_PASSWORD` | `KAMPU_APP` / `Kampu_App_2026` |
+| `DB_SCHEMA` | `KAMPU_BD` |
+| `KAMPU_SESION_SECRETO` | clave para firmar las sesiones (32+ caracteres). Sin ella, las sesiones se cierran al reiniciar el backend |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | correo para enviar la boleta (Gmail: contraseña de aplicación). Vacío = envío desactivado |
+| `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | datos de contacto de la página principal |
 
-El backend se conectó a un esquema donde **no está instalado el script**. Al arrancar muestra a qué usuario,
-esquema, contenedor y servicio se conectó. Opciones:
+`ddl-auto` está en `validate`: Hibernate no crea ni cambia tablas, solo comprueba al arrancar que coincidan con el esquema.
 
-1. Ejecuta `kampu_tours_v11.sql` como `SYSTEM` en esa misma PDB (crea o conserva `KAMPU_BD` y crea `KAMPU_APP`) y revisa `DB_USERNAME` y `DB_SCHEMA`.
-2. O apunta `DB_URL` a la base donde sí los ejecutaste. En **Oracle XE 21c**, el servicio `XE` es el contenedor raíz:
-   las tablas suelen estar en `XEPDB1` (`jdbc:oracle:thin:@localhost:1521/XEPDB1`). En Oracle 23 Free usa `FREEPDB1`.
+**Si no arranca con "no tiene las tablas del sistema", ORA-00942 o PLS-00201:** el backend se conectó a una base donde no
+se ejecutó el script. Revisa que `DB_URL` apunte a `XEPDB1` (no al servicio `XE`) y que el script se haya ejecutado ahí.
+Para comprobar dónde estás: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
 
-Para saber dónde estás, en SQL Developer: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
+---
 
 ## 3. Frontend (`kampu-frontend`)
 
@@ -464,33 +89,40 @@ npm install
 npm start
 ```
 
-Abre http://localhost:4200. `npm start` usa `proxy.config.json`: `/api` → `http://localhost:8082/lp2_gp2/api` y
-`/lp2_gp2/images` → `http://localhost:8082`. **Orden de arranque:** Oracle → backend → frontend.
+Abre http://localhost:4200. `proxy.config.json` redirige `/api` y `/lp2_gp2/images` al backend (puerto 8082).
+Producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
 
-## 4. Pruebas realizadas
+---
 
-**Verificación v10:** script instalado en Oracle 21c XE (`XEPDB1`) con 30 `[OK]`, backend arrancado con `ddl-auto=validate`, 56 pruebas de API del flujo nuevo (reserva por paquete y fecha, pasajeros, recojo, confirmación automática al pagar, anulación con reembolso, solicitudes, portal del cliente, registro, salidas, flota, operaciones con historial, auditoría) y recorrido de las pantallas de los cuatro roles.
+## 4. Qué hace el sistema
 
-- Auditoría y restauración (ver `INFORME_AUDITORIA.md`): scripts instalados dos veces seguidas sin errores, entidades
-  validadas contra el esquema (`ddl-auto=validate` y comparación columna por columna), 129 pruebas de API (permisos,
-  CRUD, reglas de negocio y rechazos) y recorrido de todas las pantallas por rol sin errores.
+- **Página principal:** secciones a pantalla completa, buscador y catálogo de destinos con la próxima fecha reservable.
+  Cada tour tiene dos botones: "Reservar" (con cuenta) y "Cotizar".
+- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, punto de recojo y servicios adicionales. El precio lo calcula
+  el servidor. Al guardar se obtiene un código y una clave para volver a verla, descargar el PDF o solicitar la reserva;
+  el estado se sigue en `/seguimiento`.
+- **Portal del cliente** (`/mi-cuenta`): reservar, ver sus paquetes, pasajeros y pagos, e informar un pago.
+- **Panel del personal:**
+  - panel general;
+  - reservas, salidas, paquetes y servicios adicionales;
+  - pagos, clientes y cotizaciones;
+  - tráfico (traslados) y logística (proveedores, personal, vehículos y lugares);
+  - usuarios y auditoría.
+- **Guía y conductor:** solo ven *Mis asignaciones*. La base de datos filtra lo que corresponde a cada uno.
+- **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.
+  La matriz de permisos vive en Oracle (`PKG_SEGURIDAD_ROLES`): sin sesión se responde 401, y sin permiso, 403.
 
-- v4.1: Logística con datos para Admin, Ventas y Operador; recorrido de las 11 rutas del panel por rol sin ningún 403
-  ni error de JavaScript; Ventas y Operador sin botones de gestión fuera de sus permisos; por API, Ventas no crea
-  lugares, el Operador no crea clientes ni ve pagos (403); la bitácora registra alta, modificación campo por campo,
-  baja, login, logout e ingreso fallido; "Volver al inicio" conserva la sesión.
+## 5. Estructura
 
-- Oracle 23ai Free: los 3 scripts se ejecutan sin errores (también dos veces seguidas); los 8 objetos `VALID`; 12 particiones y 4 roles creados.
-- Backend con `ddl-auto=validate` (las entidades coinciden con el esquema) y pruebas de API por rol (200/401/403, errores de Oracle).
-- Navegador (Playwright): login sin botones demo; registro con contraseña corta, confirmación distinta y correo repetido
-  (rechazados) y registro válido con ingreso automático; cliente redirigido fuera del panel; "Volver al inicio" en
-  registro, lista y detalle; cliente ve solo sus 2 paquetes y no una reserva ajena; informar pago por encima del saldo
-  (rechazado) y válido; Operador sin montos ni acceso a Pagos; Ventas con montos e insignia "Cuenta web".
-
-## 5. Limitaciones y decisiones
-
-- Seguridad al nivel del curso: la API no valida permisos ni contraseñas cifradas; no publicar así en internet.
-- La v4 no tiene tabla de rutas: la asignación automática de transporte no filtra por región del proveedor.
-- Los tipos de cambio son fijos: `TASAS` (frontend) y `ConversorMoneda` (backend) deben coincidir.
-- La duración de los traslados se estima con la distancia en línea recta entre las coordenadas de los lugares.
-- Producción: servir `ng build` detrás de un proxy (Nginx/Apache) que envíe `/api/v1` y `/lp2_gp2/images` al backend.
+```
+kampu-backend/
+  src/main/java/pe/edu/upeu/lp2_gp2/   controladores, servicios, repositorios, entidades, DTO y seguridad
+  src/main/resources/application.yaml  configuración
+  src/main/resources/db/               scripts de Oracle (v11 y migración desde v10)
+kampu-frontend/
+  src/app/core/      modelos, servicios (API, sesión, guards) y utilidades
+  src/app/features/  una carpeta por pantalla (página principal, login, portal, panel y módulos)
+  src/app/shared/    componentes reutilizables (íconos, logo, modal, estados…)
+  public/            imágenes (fotos de destinos y banderas)
+docs/ATRIBUCIONES_FOTOS.md   autores y licencias de las fotos (obligatorio por su licencia CC BY-SA)
+```
