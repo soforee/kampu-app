@@ -115,7 +115,16 @@ export class ShellComponent {
     });
   }
 
+  // Tooltip del menú compacto (solo escritorio): se ubica a la altura del ícono, fuera del menú
+  tip = signal<{ texto: string; top: number } | null>(null);
+  mostrarTip(texto: string, e: Event) {
+    if (!this.compacto() || window.innerWidth < 1024) return;
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    this.tip.set({ texto, top: Math.round(r.top + r.height / 2) });
+  }
+
   alternarMenu() {
+    this.tip.set(null);
     this.compacto.set(!this.compacto());
     try { localStorage.setItem('kampu.menuCompacto', this.compacto() ? '1' : '0'); } catch { /* sin almacenamiento: solo dura la sesión */ }
   }
