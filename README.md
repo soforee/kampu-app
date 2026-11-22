@@ -17,7 +17,7 @@ Sistema para una agencia de turismo: catálogo de paquetes, salidas, reservas, p
 
 Script (único): `kampu-backend/src/main/resources/db/kampu_bd.sql`
 
-1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`; en Oracle 23 Free, `FREEPDB1`).
+1. En SQL Developer conéctate como **`SYSTEM`** (o `SYS` como SYSDBA) al servicio **`xe`** (`localhost:1521/xe`), la misma base del backend.
 2. Abre el archivo y ejecútalo completo como script (**F5**, no Ctrl+Enter).
 3. Al final, las pruebas propias del script deben salir con `[OK]`. Los `ORA-` que aparecen junto a `[OK]` son pruebas que
    comprueban que la base **rechace** operaciones indebidas: no son errores.
@@ -29,7 +29,7 @@ Se puede volver a ejecutar cuando quieras: borra y recrea las tablas de `KAMPU_B
 | Usuario | Clave | Para qué |
 |---|---|---|
 | `SYSTEM` | la de tu instalación de Oracle | solo para ejecutar el script |
-| `KAMPU_BD` | `Kampu_Bd_2026` | dueño de tablas, vistas y paquetes, y conexión del backend |
+| `KAMPU_BD` | `tour1234` | dueño de tablas, vistas y paquetes, y conexión del backend |
 
 El backend se conecta directamente como `KAMPU_BD`. En cada petición indica a Oracle quién opera
 (`PKG_SEGURIDAD_ROLES.iniciar_sesion`), y así la auditoría y los permisos saben el usuario y el rol.
