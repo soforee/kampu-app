@@ -27,12 +27,12 @@
             <div class="rounded-xl bg-white p-3">
               <p class="text-xs text-zinc-500">Código de seguimiento</p>
               <p class="flex items-center justify-between gap-2 font-mono text-lg font-semibold text-zinc-900" data-testid="codigo">{{ c.codigo }}
-                <button type="button" class="icon-btn" (click)="copiar(c.codigo)" aria-label="Copiar código"><app-icon name="file-text" size="w-4 h-4" /></button></p>
+                <button type="button" class="icon-btn" (click)="copiar(c.codigo)" aria-label="Copiar código" data-tip="Copiar"><app-icon name="copy" size="w-4 h-4" /></button></p>
             </div>
             <div class="rounded-xl bg-white p-3">
               <p class="text-xs text-zinc-500">Clave de acceso (privada)</p>
               <p class="flex items-center justify-between gap-2 font-mono text-lg font-semibold tracking-wider text-zinc-900" data-testid="clave">{{ clave() }}
-                <button type="button" class="icon-btn" (click)="copiar(clave())" aria-label="Copiar clave"><app-icon name="lock" size="w-4 h-4" /></button></p>
+                <button type="button" class="icon-btn" (click)="copiar(clave())" aria-label="Copiar clave" data-tip="Copiar"><app-icon name="copy" size="w-4 h-4" /></button></p>
             </div>
           </div>
           <p class="mt-3 text-xs text-zinc-600">No compartas la clave: quien la tenga puede modificar o cancelar tu cotización. La agencia nunca te la pedirá.</p>

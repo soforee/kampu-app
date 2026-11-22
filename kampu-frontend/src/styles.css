@@ -203,6 +203,23 @@ body.swal2-toast-shown .swal2-container,
   * { animation: none !important; transition: none !important; }
 }
 
+/* Botones redondeados (página principal, cotizador y pantallas del visitante) */
+.boton-pill { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 3rem; padding: 0 1.4rem; border-radius: 999px;
+  background: #4B5B1D; color: #fff; font-size: 15px; font-weight: 600; box-shadow: 0 12px 28px -14px rgba(75, 91, 29, .8);
+  transition: background-color .2s, transform .15s; }
+.boton-pill:hover:not(:disabled) { background: #3F4C18; }
+.boton-pill:active:not(:disabled) { transform: scale(.98); }
+.boton-pill:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
+.boton-pill:focus-visible, .boton-pill-claro:focus-visible { outline: 2px solid #C4BD45; outline-offset: 2px; }
+.boton-pill-claro { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 3rem; padding: 0 1.3rem; border-radius: 999px;
+  border: 1px solid #E6E4DA; background: #fff; font-size: 15px; font-weight: 600; color: #4B5B1D; transition: background-color .2s, border-color .2s; }
+.boton-pill-claro:hover { background: #F4F6E4; border-color: #4B5B1D; }
+
+/* Entrada escalonada de textos al abrir una pantalla (aparece, aparece-1 … aparece-3) */
+.aparece { animation: aparece .8s cubic-bezier(.16, 1, .3, 1) both; }
+.aparece-1 { animation-delay: .1s; } .aparece-2 { animation-delay: .2s; } .aparece-3 { animation-delay: .3s; }
+@keyframes aparece { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+
 /* Tooltip de los botones solo con ícono: data-tip="Editar" (el botón lleva además su aria-label) */
 [data-tip] { position: relative; }
 [data-tip]::after {
