@@ -78,7 +78,8 @@
    ----------------------------------------------------------------------------
    COMO EJECUTAR
      1. En SQL Developer conectate como SYSTEM (o SYS AS SYSDBA) al servicio
-        XE (localhost:1521/xe), la misma base que usa el backend.
+        XE (localhost:1521/xe), la misma base que usa el backend. Si tu
+        conexion entra a XEPDB1, el script cambia solo al contenedor raiz.
      2. Ejecuta TODO el archivo como script (F5). Se detiene en el primer error.
      3. Es re-ejecutable: borra y recrea todos los objetos del esquema KAMPU_BD.
 
@@ -113,9 +114,11 @@ SET SQLBLANKLINES ON
 SET SERVEROUTPUT ON SIZE UNLIMITED
 
 -- ============================================================================
--- 0. BASE XE: permite crear usuario y roles sin el prefijo C## (Oracle XE
---    multitenant lo exige en el contenedor raiz si no se activa esto)
+-- 0. BASE XE (contenedor raiz CDB$ROOT, servicio xe): la misma del backend.
+--    Si la conexion entra a XEPDB1, la primera linea vuelve a la raiz.
+--    "_ORACLE_SCRIPT" permite crear usuario y roles sin el prefijo C##.
 -- ============================================================================
+ALTER SESSION SET CONTAINER = CDB$ROOT;
 ALTER SESSION SET "_ORACLE_SCRIPT" = TRUE;
 
 WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK
