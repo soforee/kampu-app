@@ -2,8 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import {
-  CalculoCotizacion, Cotizacion, CotizacionCreada, DatosCotizacion, EstadoCotizacion, ServicioAdicional, SolicitudReserva
-} from '../models';
+  CalculoCotizacion, Cotizacion, CotizacionCreada, DatosCotizacion, EstadoCotizacion, ServicioAdicional, SolicitudReserva, HotelCotizable } from '../models';
 import { API } from '../utils/api';
 
 /**
@@ -28,6 +27,11 @@ export class CotizacionService {
   }
 
   // clave vacía: el cliente con sesión abre las suyas
+  // Hoteles de proveedores de hospedaje con tarifa (sección 5 del cotizador)
+  hoteles(): Observable<HotelCotizable[]> {
+    return this.http.get<HotelCotizable[]>(`${this.url}/hoteles`);
+  }
+
   abrir(codigo: string, clave: string): Observable<Cotizacion> {
     return this.http.post<Cotizacion>(`${this.url}/acceso`, { codigo: codigo, clave: clave });
   }

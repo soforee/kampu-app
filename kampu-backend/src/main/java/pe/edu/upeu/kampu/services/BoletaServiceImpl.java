@@ -458,7 +458,8 @@ public class BoletaServiceImpl implements IBoletaService {
     private String bloqueRecojo(Datos d) {
         String hora = horaRecojo(d);
         if (d.recojo == null && d.paquete.getHoraInicio() == null) return "";
-        String lugar = d.recojo == null ? "Oficina de la agencia" : esc(d.recojo.getNombre())
+        if (d.recojo == null) hora = null;   // sin punto asignado no hay hora de recojo
+        String lugar = d.recojo == null ? "Por definir: la agencia te lo confirmará" : esc(d.recojo.getNombre())
                 + (d.recojo.getDireccion() == null || d.recojo.getDireccion().isBlank() ? "" : " · " + esc(d.recojo.getDireccion()));
         return """
                 <tr><td style="padding:0 22px 20px;">

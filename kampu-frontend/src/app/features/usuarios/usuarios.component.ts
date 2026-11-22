@@ -7,6 +7,7 @@ import { hoy } from '../../core/utils/date.util';
 import { AlertService } from '../../core/services/alert.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UsuarioService } from '../../core/services/usuario.service';
+import { TourStore } from '../../core/services/tour-store.service';
 import { mensajeError } from '../../core/utils/api';
 import { etiqueta } from '../../core/utils/etiquetas';
 import { FormValidacion, V } from '../../core/utils/validacion';
@@ -35,6 +36,7 @@ type FiltroRol = 'TODOS' | RolInterno | 'CAMPO';
 })
 export class UsuariosComponent {
   private api = inject(UsuarioService);
+  private store = inject(TourStore);
   private alerts = inject(AlertService);
   auth = inject(AuthService);
 
@@ -219,6 +221,7 @@ export class UsuariosComponent {
         this.ocupado.set(false);
         this.abierto.set(false);
         this.usuarios.set([...this.usuarios(), u]);
+        if (this.esCampo(u.rol)) this.store.cargarPersonal();   // su ficha aparece en Personal
         this.marcar(u.usuarioId);
         this.alerts.toast(`Usuario ${u.username} creado como ${etiqueta(u.rol)}`);
       },
@@ -292,6 +295,7 @@ export class UsuariosComponent {
 
   private reemplazar(u: UsuarioSistema) {
     this.usuarios.set(this.usuarios().map(x => x.usuarioId === u.usuarioId ? u : x));
+    if (this.esCampo(u.rol)) this.store.cargarPersonal();   // rol o estado también cambian su ficha en Personal
     this.marcar(u.usuarioId);
   }
 

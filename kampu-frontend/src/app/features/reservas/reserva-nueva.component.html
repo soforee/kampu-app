@@ -116,8 +116,8 @@
         <div>
           <label class="label">Punto de recojo <span class="opt">Opcional</span></label>
           <select class="field" [(ngModel)]="lugarRecojoId">
-            <option [ngValue]="null">Oficina de la agencia (punto de encuentro)</option>
-            @for (p of puntos(); track p.lugarId) { @if (!p.porDefecto) { <option [ngValue]="p.lugarId">{{ p.nombre }} · pasa a las {{ p.horaRecojo }}</option> } }
+            <option [ngValue]="null">Por definir</option>
+            @for (p of puntos(); track p.lugarId) { <option [ngValue]="p.lugarId">{{ p.nombre }} · pasa a las {{ p.horaRecojo }}</option> }
           </select>
         </div>
         <div>

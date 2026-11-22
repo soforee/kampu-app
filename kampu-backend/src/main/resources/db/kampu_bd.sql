@@ -29,8 +29,8 @@
        la hora de inicio del paquete se pasa por cada uno. La oficina (tipo
        OFICINA, una sola) es el punto de encuentro por defecto.
      * PAQUETES_TOUR.hora_inicio: hora a la que empieza el dia 1.
-     * RESERVAS.lugar_recojo_id: el cliente elige donde lo recogen al reservar
-       (si no elige, se le cita en la oficina) y puede cambiarlo hasta el viaje.
+     * RESERVAS.lugar_recojo_id: lo define la agencia (Admin o Ventas); hasta
+       entonces queda POR DEFINIR (NULL). El cliente no lo elige ni lo cambia.
      * Hora de recojo = fecha de la salida + hora de inicio - minutos del punto.
      * VW_RECOJOS_SALIDA: la lista de recojos del conductor, ordenada por hora.
 
@@ -343,7 +343,17 @@ CREATE TABLE LUGARES (
     longitud             NUMBER(9,6),
     es_punto_recojo      NUMBER(1)     DEFAULT ON NULL 0,        -- (+v10)
     minutos_antes_recojo NUMBER(3)     DEFAULT ON NULL 0,        -- (+v10)
+    -- Hotel de un proveedor de hospedaje: sale en la cotizacion (seccion 5) con su precio por noche
+    proveedor_id         NUMBER(10),
+    precio_noche         NUMBER(10,2),
+    modalidad_precio     VARCHAR2(20),                           -- POR_PERSONA / POR_GRUPO
+    imagen               VARCHAR2(300),
     CONSTRAINT pk_lugares PRIMARY KEY (lugar_id),
+    CONSTRAINT fk_lug_proveedor FOREIGN KEY (proveedor_id) REFERENCES PROVEEDORES (proveedor_id),
+    -- Solo un HOTEL tiene proveedor y tarifa; la tarifa va completa (proveedor, precio > 0 y modalidad)
+    CONSTRAINT chk_lug_hotel  CHECK ((proveedor_id IS NULL AND precio_noche IS NULL AND modalidad_precio IS NULL)
+                                     OR (tipo_lugar = 'HOTEL' AND proveedor_id IS NOT NULL AND precio_noche > 0
+                                         AND modalidad_precio IN ('POR_PERSONA', 'POR_GRUPO'))),
     CONSTRAINT uq_lug_nombre_ciudad UNIQUE (nombre, ciudad),
     CONSTRAINT chk_lug_tipo   CHECK (tipo_lugar IN ('AEROPUERTO', 'TERMINAL', 'HOTEL', 'ATRACTIVO', 'CIUDAD',
                                                     'OFICINA', 'OTRO')),
@@ -739,7 +749,13 @@ CREATE TABLE COTIZACIONES (
     cantidad_pasajeros NUMBER(3)     GENERATED ALWAYS AS (adultos + ninos) VIRTUAL,
     lugar_recojo_id    NUMBER(10),
     precio_unitario    NUMBER(10,2)  NOT NULL,                         -- precio por cupo al cotizar
-    monto_adicionales  NUMBER(10,2)  DEFAULT ON NULL 0,                -- suma de COTIZACION_SERVICIOS
+    monto_adicionales  NUMBER(10,2)  DEFAULT ON NULL 0,                -- COTIZACION_SERVICIOS + monto_hospedaje
+    -- Hotel elegido (opcional): tarifa por noche congelada al cotizar; noches = las del paquete
+    hotel_id           NUMBER(10),
+    precio_hotel       NUMBER(10,2),
+    modalidad_hotel    VARCHAR2(20),
+    noches_hotel       NUMBER(2),
+    monto_hospedaje    NUMBER(10,2)  DEFAULT ON NULL 0,
     monto_total        NUMBER(10,2)  GENERATED ALWAYS AS ((adultos + ninos) * precio_unitario + monto_adicionales) VIRTUAL,
     estado             VARCHAR2(20)  DEFAULT ON NULL 'GENERADA',
     vence_en           TIMESTAMP     NOT NULL,
@@ -767,6 +783,10 @@ CREATE TABLE COTIZACIONES (
     CONSTRAINT uq_cot_reserva   UNIQUE (reserva_id),
     CONSTRAINT fk_cot_paquete   FOREIGN KEY (paquete_id)      REFERENCES PAQUETES_TOUR (paquete_id),
     CONSTRAINT fk_cot_recojo    FOREIGN KEY (lugar_recojo_id) REFERENCES LUGARES (lugar_id),
+    CONSTRAINT fk_cot_hotel     FOREIGN KEY (hotel_id)        REFERENCES LUGARES (lugar_id),
+    CONSTRAINT chk_cot_hotel    CHECK ((hotel_id IS NULL AND monto_hospedaje = 0)
+                                    OR (hotel_id IS NOT NULL AND precio_hotel > 0 AND noches_hotel > 0
+                                        AND modalidad_hotel IN ('POR_PERSONA', 'POR_GRUPO') AND monto_hospedaje > 0)),
     CONSTRAINT fk_cot_cliente   FOREIGN KEY (cliente_id)      REFERENCES CLIENTES (cliente_id),
     CONSTRAINT fk_cot_reserva   FOREIGN KEY (reserva_id)      REFERENCES RESERVAS (reserva_id),
     CONSTRAINT fk_cot_usuario   FOREIGN KEY (atendida_por_id) REFERENCES USUARIOS_SISTEMA (usuario_id),
@@ -1317,7 +1337,7 @@ CREATE OR REPLACE PACKAGE PKG_RESERVAS AS
                         p_canal         VARCHAR2 DEFAULT 'PRESENCIAL',
                         p_descuento     NUMBER   DEFAULT 0,
                         p_observaciones VARCHAR2 DEFAULT NULL,
-                        p_lugar_recojo_id NUMBER DEFAULT NULL,    -- (v10) NULL = oficina
+                        p_lugar_recojo_id NUMBER DEFAULT NULL,    -- NULL = por definir por la agencia
                         -- (v11) Solo PKG_COTIZACIONES.confirmar: la reserva nace de una cotizacion
                         -- SOLICITADA; se exige GESTIONAR_COTIZACIONES y que los datos coincidan.
                         p_cotizacion_id NUMBER DEFAULT NULL);
@@ -2118,16 +2138,18 @@ CREATE OR REPLACE PACKAGE PKG_COTIZACIONES AS
     c_bloqueo_min   CONSTANT PLS_INTEGER := 30;
 
     -- Calcula sin guardar (vista previa). p_detalle: servicio_id, nombre, modalidad, cantidad,
-    -- precio_unitario, subtotal de cada servicio adicional elegido.
+    -- precio_unitario, subtotal de cada servicio adicional elegido. p_hotel_id (opcional): hotel de un
+    -- proveedor de hospedaje; su costo (precio por noche x noches del paquete, x pasajeros si es por
+    -- persona) va dentro de p_monto_adicionales. El punto de recojo ya no se cotiza: lo define la agencia.
     PROCEDURE calcular (p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER, p_ninos NUMBER,
-                        p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                        p_hotel_id NUMBER, p_servicios VARCHAR2,
                         p_precio_unitario OUT NUMBER, p_monto_adicionales OUT NUMBER,
                         p_cupos OUT NUMBER, p_estado_salida OUT VARCHAR2, p_faltan OUT NUMBER,
                         p_reservable_web OUT NUMBER, p_detalle OUT SYS_REFCURSOR);
 
     -- Guarda una cotizacion GENERADA. Si hay sesion de cliente, queda a su nombre.
     PROCEDURE crear (p_clave_hash VARCHAR2, p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER,
-                     p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                     p_ninos NUMBER, p_hotel_id NUMBER, p_servicios VARCHAR2,
                      p_observaciones VARCHAR2, p_cotizacion_id OUT NUMBER);
 
     -- Codigo + hash de la clave -> id de la cotizacion (ORA-20512 si no coincide; cuenta el intento)
@@ -2135,7 +2157,7 @@ CREATE OR REPLACE PACKAGE PKG_COTIZACIONES AS
 
     -- El visitante (clave) o el cliente duenio cambia su cotizacion GENERADA: se recalcula
     PROCEDURE modificar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_fecha DATE, p_adultos NUMBER,
-                         p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2);
+                         p_ninos NUMBER, p_hotel_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2);
 
     -- Acepta la cotizacion y pide reservar: GENERADA -> SOLICITADA (sin crear cuenta)
     PROCEDURE solicitar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_nombre VARCHAR2, p_tipo_doc VARCHAR2,
@@ -2285,6 +2307,37 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
         RETURN v_lista;
     END leer_servicios;
 
+    -- Costo del hotel elegido (0 sin hotel): precio por noche x noches del paquete (x pasajeros si es por persona)
+    FUNCTION hospedaje (p_hotel_id NUMBER, p_paquete_id NUMBER, p_cantidad NUMBER,
+                        p_precio OUT NUMBER, p_modalidad OUT VARCHAR2, p_noches OUT NUMBER) RETURN NUMBER IS
+        v_tipo   LUGARES.tipo_lugar%TYPE;
+        v_prov   PROVEEDORES.estado%TYPE;
+        v_ofrece PROVEEDORES.ofrece_hospedaje%TYPE;
+        v_nombre LUGARES.nombre%TYPE;
+    BEGIN
+        p_precio := NULL; p_modalidad := NULL; p_noches := NULL;
+        IF p_hotel_id IS NULL THEN
+            RETURN 0;
+        END IF;
+        BEGIN
+            SELECT l.nombre, l.tipo_lugar, l.precio_noche, l.modalidad_precio, pr.estado, pr.ofrece_hospedaje
+              INTO v_nombre, v_tipo, p_precio, p_modalidad, v_prov, v_ofrece
+              FROM LUGARES l LEFT JOIN PROVEEDORES pr ON pr.proveedor_id = l.proveedor_id
+             WHERE l.lugar_id = p_hotel_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20518, 'El hotel elegido no existe');
+        END;
+        IF v_tipo <> 'HOTEL' OR p_precio IS NULL OR NVL(v_prov, '-') <> 'ACTIVO' OR NVL(v_ofrece, 0) <> 1 THEN
+            RAISE_APPLICATION_ERROR(-20518, 'El hotel "' || v_nombre || '" no esta disponible para cotizar');
+        END IF;
+        SELECT noches INTO p_noches FROM PAQUETES_TOUR WHERE paquete_id = p_paquete_id;
+        IF NVL(p_noches, 0) < 1 THEN
+            RAISE_APPLICATION_ERROR(-20518, 'Este paquete es de un dia: no incluye noches de hospedaje');
+        END IF;
+        RETURN p_precio * p_noches * CASE WHEN p_modalidad = 'POR_PERSONA' THEN p_cantidad ELSE 1 END;
+    END hospedaje;
+
     FUNCTION total_servicios (p_lista t_servicios) RETURN NUMBER IS
         v_total NUMBER := 0;
     BEGIN
@@ -2356,20 +2409,22 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
     END registrar_intento;
 
     PROCEDURE calcular (p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER, p_ninos NUMBER,
-                        p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                        p_hotel_id NUMBER, p_servicios VARCHAR2,
                         p_precio_unitario OUT NUMBER, p_monto_adicionales OUT NUMBER,
                         p_cupos OUT NUMBER, p_estado_salida OUT VARCHAR2, p_faltan OUT NUMBER,
                         p_reservable_web OUT NUMBER, p_detalle OUT SYS_REFCURSOR) IS
         v_lista t_servicios;
         v_ids   VARCHAR2(4000);
+        v_hprecio NUMBER; v_hmodo VARCHAR2(20); v_hnoches NUMBER;
     BEGIN
         IF p_adultos IS NULL OR p_adultos < 1 THEN
             RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
         END IF;
-        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), NULL,
                       p_precio_unitario, p_cupos, p_estado_salida, p_faltan, p_reservable_web);
         v_lista := leer_servicios(p_servicios, p_paquete_id, p_adultos + NVL(p_ninos, 0));
-        p_monto_adicionales := total_servicios(v_lista);
+        p_monto_adicionales := total_servicios(v_lista)
+            + hospedaje(p_hotel_id, p_paquete_id, p_adultos + NVL(p_ninos, 0), v_hprecio, v_hmodo, v_hnoches);
         -- Detalle en el mismo orden en que se eligieron
         FOR k IN 1 .. v_lista.COUNT LOOP
             v_ids := v_ids || ',' || v_lista(k).servicio_id || ':' || v_lista(k).cantidad || ':' || k;
@@ -2387,7 +2442,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
     END calcular;
 
     PROCEDURE crear (p_clave_hash VARCHAR2, p_paquete_id NUMBER, p_fecha DATE, p_adultos NUMBER,
-                     p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2,
+                     p_ninos NUMBER, p_hotel_id NUMBER, p_servicios VARCHAR2,
                      p_observaciones VARCHAR2, p_cotizacion_id OUT NUMBER) IS
         v_precio NUMBER; v_cupos NUMBER; v_estado VARCHAR2(20); v_faltan NUMBER; v_web NUMBER;
         v_lista  t_servicios;
@@ -2396,6 +2451,7 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
         v_cliente NUMBER;
         v_adic   NUMBER;
         v_vence  TIMESTAMP;
+        v_hotel  NUMBER; v_hprecio NUMBER; v_hmodo VARCHAR2(20); v_hnoches NUMBER;
     BEGIN
         IF p_clave_hash IS NULL OR NOT REGEXP_LIKE(LOWER(p_clave_hash), '^[0-9a-f]{64}$') THEN
             RAISE_APPLICATION_ERROR(-20511, 'Clave de acceso no valida');
@@ -2403,10 +2459,11 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
         IF p_adultos IS NULL OR p_adultos < 1 THEN
             RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
         END IF;
-        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+        validar_viaje(p_paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), NULL,
                       v_precio, v_cupos, v_estado, v_faltan, v_web);
         v_lista := leer_servicios(p_servicios, p_paquete_id, p_adultos + NVL(p_ninos, 0));
-        v_adic  := total_servicios(v_lista);   -- (funciones privadas: no se usan dentro de SQL)
+        v_hotel := hospedaje(p_hotel_id, p_paquete_id, p_adultos + NVL(p_ninos, 0), v_hprecio, v_hmodo, v_hnoches);
+        v_adic  := total_servicios(v_lista) + v_hotel;   -- (funciones privadas: no se usan dentro de SQL)
         v_vence := vigencia(p_fecha);
 
         v_n := SEQ_CODIGO_COTIZACION.NEXTVAL;
@@ -2418,11 +2475,13 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
         END IF;
 
         INSERT INTO COTIZACIONES (codigo_cotizacion, clave_hash, paquete_id, fecha_viaje, adultos, ninos,
-                                  lugar_recojo_id, precio_unitario, monto_adicionales, estado, vence_en,
-                                  observaciones, cliente_id)
+                                  precio_unitario, monto_adicionales, estado, vence_en,
+                                  observaciones, cliente_id, hotel_id, precio_hotel, modalidad_hotel,
+                                  noches_hotel, monto_hospedaje)
         VALUES (v_codigo, LOWER(p_clave_hash), p_paquete_id, TRUNC(p_fecha), p_adultos, NVL(p_ninos, 0),
-                p_lugar_recojo_id, v_precio, v_adic, 'GENERADA', v_vence,
-                SUBSTR(TRIM(p_observaciones), 1, 500), v_cliente)
+                v_precio, v_adic, 'GENERADA', v_vence,
+                SUBSTR(TRIM(p_observaciones), 1, 500), v_cliente, p_hotel_id, v_hprecio, v_hmodo,
+                v_hnoches, v_hotel)
         RETURNING cotizacion_id INTO p_cotizacion_id;
         guardar_servicios(p_cotizacion_id, v_lista);
     END crear;
@@ -2454,12 +2513,13 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
     END acceder;
 
     PROCEDURE modificar (p_cotizacion_id NUMBER, p_clave_hash VARCHAR2, p_fecha DATE, p_adultos NUMBER,
-                         p_ninos NUMBER, p_lugar_recojo_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2) IS
+                         p_ninos NUMBER, p_hotel_id NUMBER, p_servicios VARCHAR2, p_observaciones VARCHAR2) IS
         v        COTIZACIONES%ROWTYPE;
         v_precio NUMBER; v_cupos NUMBER; v_estado VARCHAR2(20); v_faltan NUMBER; v_web NUMBER;
         v_lista  t_servicios;
         v_adic   NUMBER;
         v_vence  TIMESTAMP;
+        v_hotel  NUMBER; v_hprecio NUMBER; v_hmodo VARCHAR2(20); v_hnoches NUMBER;
     BEGIN
         vencer;
         v := leer_propia(p_cotizacion_id, p_clave_hash);
@@ -2470,16 +2530,18 @@ CREATE OR REPLACE PACKAGE BODY PKG_COTIZACIONES AS
             RAISE_APPLICATION_ERROR(-20502, 'Debe viajar al menos un adulto');
         END IF;
         marcar_invitado(v.codigo_cotizacion);
-        validar_viaje(v.paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), p_lugar_recojo_id,
+        validar_viaje(v.paquete_id, p_fecha, p_adultos + NVL(p_ninos, 0), NULL,
                       v_precio, v_cupos, v_estado, v_faltan, v_web);
         v_lista := leer_servicios(p_servicios, v.paquete_id, p_adultos + NVL(p_ninos, 0));
-        v_adic  := total_servicios(v_lista);
+        v_hotel := hospedaje(p_hotel_id, v.paquete_id, p_adultos + NVL(p_ninos, 0), v_hprecio, v_hmodo, v_hnoches);
+        v_adic  := total_servicios(v_lista) + v_hotel;
         v_vence := vigencia(p_fecha);
         -- Una cotizacion modificada se vuelve a calcular con el precio vigente y renueva su vigencia
         UPDATE COTIZACIONES
            SET fecha_viaje = TRUNC(p_fecha), adultos = p_adultos, ninos = NVL(p_ninos, 0),
-               lugar_recojo_id = p_lugar_recojo_id, precio_unitario = v_precio,
-               monto_adicionales = v_adic, vence_en = v_vence,
+               precio_unitario = v_precio, monto_adicionales = v_adic, vence_en = v_vence,
+               hotel_id = p_hotel_id, precio_hotel = v_hprecio, modalidad_hotel = v_hmodo,
+               noches_hotel = v_hnoches, monto_hospedaje = v_hotel,
                observaciones = SUBSTR(TRIM(p_observaciones), 1, 500)
          WHERE cotizacion_id = p_cotizacion_id;
         guardar_servicios(p_cotizacion_id, v_lista);
@@ -3220,9 +3282,10 @@ DECLARE
     END validar_recojo;
 BEGIN
     IF INSERTING THEN
-        -- (v10) Si el cliente no eligio donde lo recogen, se le cita en la oficina
-        IF :NEW.lugar_recojo_id IS NULL THEN
-            SELECT MIN(lugar_id) INTO :NEW.lugar_recojo_id FROM LUGARES WHERE tipo_lugar = 'OFICINA';
+        -- El punto de recojo lo define la agencia (Admin o Ventas): el cliente reserva sin elegirlo
+        -- y queda POR DEFINIR (NULL) hasta que el personal lo asigne.
+        IF PKG_SEGURIDAD_ROLES.rol_actual = 'CLIENTE' THEN
+            :NEW.lugar_recojo_id := NULL;
         END IF;
         validar_recojo(:NEW.lugar_recojo_id);
         IF :NEW.codigo_reserva IS NULL THEN
@@ -3260,8 +3323,11 @@ BEGIN
             :NEW.estado_pago  := :OLD.estado_pago;
         END IF;
 
-        -- (v10) Cambio de punto de recojo: solo en reservas abiertas
+        -- (v10) Cambio de punto de recojo: solo la agencia y solo en reservas abiertas
         IF NVL(:NEW.lugar_recojo_id, -1) <> NVL(:OLD.lugar_recojo_id, -1) THEN
+            IF PKG_SEGURIDAD_ROLES.rol_actual = 'CLIENTE' THEN
+                RAISE_APPLICATION_ERROR(-20409, 'El punto de recojo lo define la agencia');
+            END IF;
             IF :OLD.estado_reserva NOT IN ('PENDIENTE', 'CONFIRMADA') THEN
                 RAISE_APPLICATION_ERROR(-20409, 'La reserva esta ' || :OLD.estado_reserva
                     || ': ya no se cambia el punto de recojo');
@@ -3632,6 +3698,8 @@ COMPOUND TRIGGER
                 ON b.operacion_id <> a.operacion_id
                AND b.estado <> 'CANCELADO'
                AND (b.vehiculo_id = a.vehiculo_id OR b.conductor_id = a.conductor_id)
+               -- Traslados de la misma salida y el mismo dia pueden compartir vehiculo y conductor
+               AND NOT (b.salida_id = a.salida_id AND TRUNC(b.hora_salida) = TRUNC(a.hora_salida))
                AND b.hora_salida  < a.hora_llegada
                AND b.hora_llegada > a.hora_salida
              WHERE a.operacion_id = v_id;
@@ -3681,6 +3749,7 @@ BEGIN
 
     IF (:NEW.fecha_viaje <> :OLD.fecha_viaje OR :NEW.adultos <> :OLD.adultos OR :NEW.ninos <> :OLD.ninos
         OR NVL(:NEW.lugar_recojo_id, -1) <> NVL(:OLD.lugar_recojo_id, -1)
+        OR NVL(:NEW.hotel_id, -1) <> NVL(:OLD.hotel_id, -1)
         OR :NEW.precio_unitario <> :OLD.precio_unitario OR :NEW.monto_adicionales <> :OLD.monto_adicionales)
        AND NOT (:OLD.estado = 'GENERADA' AND :NEW.estado = 'GENERADA') THEN
         RAISE_APPLICATION_ERROR(-20522, 'La cotizacion esta ' || :OLD.estado || ': su viaje y precio ya no cambian');
@@ -3766,8 +3835,10 @@ SELECT r.reserva_id,
        NVL(pg.pendiente, 0)                       AS monto_por_validar,
        l.nombre                                   AS punto_recojo,
        l.direccion                                AS direccion_recojo,
+       -- Sin punto asignado (por definir por la agencia) no hay hora de recojo
+       CASE WHEN l.lugar_id IS NOT NULL THEN
        s.fecha_inicio + (TO_NUMBER(SUBSTR(p.hora_inicio, 1, 2)) * 60 + TO_NUMBER(SUBSTR(p.hora_inicio, 4, 2))
-                         - NVL(l.minutos_antes_recojo, 0)) / 1440 AS hora_recojo
+                         - NVL(l.minutos_antes_recojo, 0)) / 1440 END AS hora_recojo
   FROM RESERVAS r
   JOIN SALIDAS_PROGRAMADAS s ON s.salida_id  = r.salida_id
   JOIN PAQUETES_TOUR p       ON p.paquete_id = s.paquete_id
@@ -3909,8 +3980,10 @@ SELECT s.salida_id,
        pr.nacionalidad,
        TRUNC(MONTHS_BETWEEN(s.fecha_inicio, pr.fecha_nacimiento) / 12) AS edad_al_viajar,
        l.nombre           AS punto_recojo,
+       -- Sin punto asignado (por definir por la agencia) no hay hora de recojo
+       CASE WHEN l.lugar_id IS NOT NULL THEN
        s.fecha_inicio + (TO_NUMBER(SUBSTR(p.hora_inicio, 1, 2)) * 60 + TO_NUMBER(SUBSTR(p.hora_inicio, 4, 2))
-                         - NVL(l.minutos_antes_recojo, 0)) / 1440 AS hora_recojo
+                         - NVL(l.minutos_antes_recojo, 0)) / 1440 END AS hora_recojo
   FROM SALIDAS_PROGRAMADAS s
   JOIN PAQUETES_TOUR p      ON p.paquete_id = s.paquete_id
   JOIN RESERVAS r           ON r.salida_id  = s.salida_id
@@ -3974,9 +4047,11 @@ CREATE OR REPLACE VIEW VW_RECOJOS_SALIDA AS
 SELECT s.salida_id,
        p.nombre                                   AS paquete_nombre,
        s.fecha_inicio,
+       -- Sin punto asignado (por definir por la agencia) no hay hora de recojo
+       CASE WHEN l.lugar_id IS NOT NULL THEN
        s.fecha_inicio + (TO_NUMBER(SUBSTR(p.hora_inicio, 1, 2)) * 60 + TO_NUMBER(SUBSTR(p.hora_inicio, 4, 2))
-                         - NVL(l.minutos_antes_recojo, 0)) / 1440 AS hora_recojo,
-       NVL(l.nombre, 'Sin punto asignado')        AS punto_recojo,
+                         - NVL(l.minutos_antes_recojo, 0)) / 1440 END AS hora_recojo,
+       NVL(l.nombre, 'Por definir')               AS punto_recojo,
        l.direccion,
        l.latitud,
        l.longitud,
@@ -4173,6 +4248,10 @@ INSERT INTO LUGARES (nombre, tipo_lugar, ciudad, direccion, latitud, longitud, e
 VALUES ('Oficina Kampu Tours', 'OFICINA', 'Tarapoto', 'Jr. Principal 123, Tarapoto (referencial)', -6.488500, -76.362000, 1, 10);
 UPDATE LUGARES SET es_punto_recojo = 1, minutos_antes_recojo = 30,
                    direccion = 'Recepcion del hotel'
+ WHERE nombre = 'Hotel Centro Tarapoto';
+-- Hotel del proveedor de hospedaje: aparece en la cotizacion con su precio por noche
+UPDATE LUGARES SET proveedor_id = (SELECT proveedor_id FROM PROVEEDORES WHERE ruc = '20605544332'),
+                   precio_noche = 90, modalidad_precio = 'POR_PERSONA'
  WHERE nombre = 'Hotel Centro Tarapoto';
 UPDATE LUGARES SET es_punto_recojo = 1, minutos_antes_recojo = 20,
                    direccion = 'Puerta principal del terminal'
@@ -4847,12 +4926,12 @@ BEGIN
     END;
 
     PKG_RESERVAS.reservar(v_valeria, v_tarapoto, TRUNC(SYSDATE) + 10, 1, v_r);
-    SELECT l.tipo_lugar INTO v_txt
-      FROM RESERVAS r JOIN LUGARES l ON l.lugar_id = r.lugar_recojo_id
+    SELECT NVL(l.tipo_lugar, 'POR_DEFINIR') INTO v_txt
+      FROM RESERVAS r LEFT JOIN LUGARES l ON l.lugar_id = r.lugar_recojo_id
      WHERE r.reserva_id = v_r;
-    DBMS_OUTPUT.PUT_LINE(CASE WHEN v_txt = 'OFICINA'
-        THEN '[OK] Reserva sin punto elegido -> se cita al cliente en la oficina'
-        ELSE '[FALLA] La reserva no quedo con la oficina como punto de encuentro' END);
+    DBMS_OUTPUT.PUT_LINE(CASE WHEN v_txt = 'POR_DEFINIR'
+        THEN '[OK] Reserva sin punto elegido -> recojo por definir por la agencia'
+        ELSE '[FALLA] La reserva sin punto elegido no quedo por definir' END);
 
     -- Cotizaciones (v11) -----------------------------------------------------
     DECLARE

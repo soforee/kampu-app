@@ -131,7 +131,7 @@
             }
           </section>
 
-          <!-- 02 Pasajeros y recojo -->
+          <!-- 02 Pasajeros -->
           <section class="bloque">
             <h2 class="paso-titulo"><span class="paso-num">02</span> ¿Quiénes viajan?</h2>
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
@@ -147,14 +147,7 @@
                 </div>
               }
             </div>
-            <label class="label mt-5" for="cot-recojo">¿Dónde te recogemos?</label>
-            <div class="con-icono">
-              <span class="ico-campo"><app-icon name="map-pin" size="w-4 h-4" /></span>
-              <select id="cot-recojo" class="field !h-11" [(ngModel)]="lugarRecojoId" (ngModelChange)="recalcular()">
-                <option [ngValue]="null">Oficina de la agencia</option>
-                @for (x of puntos(); track x.lugarId) { @if (!x.porDefecto) { <option [ngValue]="x.lugarId">{{ x.nombre }} · pasamos a las {{ x.horaRecojo }}</option> } }
-              </select>
-            </div>
+            <p class="hint mt-4">El punto y la hora de recojo te los confirma la agencia al atender tu reserva.</p>
           </section>
 
           <!-- 03 Adicionales: tarjetas que se marcan -->
@@ -194,6 +187,31 @@
             <textarea id="cot-obs" class="field mt-4 min-h-[88px]" maxlength="500" [(ngModel)]="observaciones" (ngModelChange)="recalcular()" aria-label="Comentarios para la agencia"
                       placeholder="Ej. viajamos con niños de 6 y 9 años, llegamos un día antes…"></textarea>
           </section>
+
+          <!-- 05 Hotel: hoteles de nuestros proveedores (opcional, suma al total) -->
+          @if (hoteles().length && (paquete()?.noches ?? 0) > 0) {
+            <section class="bloque" data-testid="cotizar-hoteles">
+              <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '05' : '04' }}</span> ¿Dónde te hospedas? <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
+              <p class="mt-1 text-sm text-zinc-500">Hoteles de nuestros proveedores para tus {{ paquete()!.noches }} noche(s). El precio se suma a tu cotización.</p>
+              <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                <button type="button" class="extra text-left" [class.extra-elegido]="hotelId === null" (click)="hotelId !== null && elegirHotel(null)">
+                  <span class="block text-sm font-semibold text-zinc-900">Sin hotel</span>
+                  <span class="mt-0.5 block text-xs text-zinc-500">Me hospedo por mi cuenta.</span>
+                </button>
+                @for (h of hoteles(); track h.lugarId) {
+                  <button type="button" class="extra overflow-hidden !p-0 text-left" [class.extra-elegido]="hotelId === h.lugarId" (click)="elegirHotel(h.lugarId)" [attr.data-testid]="'hotel-' + h.lugarId">
+                    @if (fotoHotel(h); as src) { <img [src]="src" alt="" class="h-32 w-full object-cover" (error)="$any($event.target).hidden = true"> }
+                    <span class="block p-4">
+                      <span class="block text-sm font-semibold text-zinc-900">{{ h.nombre }}</span>
+                      <span class="mt-0.5 block text-xs text-zinc-500">{{ h.ciudad }}@if (h.direccion) { · {{ h.direccion }} }</span>
+                      <span class="mt-2 inline-flex items-baseline gap-1 text-sm font-semibold text-brand-700">S/ {{ h.precioNoche | number:'1.2-2' }} <small class="text-xs font-normal text-zinc-500">por noche · {{ h.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }}</small></span>
+                      <span class="mt-1 block text-xs text-zinc-600">Total estadía: S/ {{ costoHotel(h) | number:'1.2-2' }}</span>
+                    </span>
+                  </button>
+                }
+              </div>
+            </section>
+          }
         </div>
 
         <!-- Resumen calculado por el servidor (fijo al costado en escritorio) -->
@@ -215,6 +233,9 @@
                 @for (l of c.servicios; track l.servicioId) {
                   <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ l.subtotal | number:'1.2-2' }}</dd></div>
                 }
+                @if (c.hotel; as h) {
+                  <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ h.nombre }} · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ h.subtotal | number:'1.2-2' }}</dd></div>
+                }
                 <div class="flex items-end justify-between gap-3 border-t border-zinc-100 pt-4">
                   <dt class="font-semibold text-zinc-900">Total</dt>
                   <dd class="text-3xl font-semibold tracking-tight text-zinc-900" data-testid="cotizar-total">S/ {{ c.total | number:'1.2-2' }}</dd>
@@ -222,7 +243,7 @@
               </dl>
               <ul class="mt-5 space-y-2 text-xs text-zinc-600">
                 <li class="flex gap-2"><span class="text-brand-600"><app-icon name="check-circle" size="w-4 h-4" /></span> Quedan {{ c.cuposDisponibles }} cupos para esa fecha.</li>
-                <li class="flex gap-2"><span class="text-brand-600"><app-icon name="map-pin" size="w-4 h-4" /></span> Recojo: {{ c.puntoRecojo ?? 'Oficina de la agencia' }}@if (c.horaRecojo) { a las {{ c.horaRecojo }} }</li>
+                <li class="flex gap-2"><span class="text-brand-600"><app-icon name="map-pin" size="w-4 h-4" /></span> Recojo: lo define la agencia al confirmar</li>
                 <li class="flex gap-2"><span class="text-brand-600"><app-icon name="info" size="w-4 h-4" /></span>
                   @if (c.estadoSalida === 'GARANTIZADA' || c.faltanParaGarantizar === 0) { Salida garantizada con tu grupo. } @else { Se garantiza al sumar {{ c.faltanParaGarantizar }} pasajero(s) más. }</li>
                 @if (!c.reservableWeb) {

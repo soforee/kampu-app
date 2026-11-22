@@ -136,6 +136,11 @@ export interface Lugar {
   direccion: string;
   esPuntoRecojo: boolean;
   minutosAntesRecojo: number;
+  // Hotel de un proveedor de hospedaje: sale en la cotización con su precio por noche
+  proveedorId: number | null;
+  precioNoche: number | null;
+  modalidadPrecio: 'POR_PERSONA' | 'POR_GRUPO' | null;
+  imagen: string;
 }
 
 export interface Vehiculo {
@@ -509,6 +514,10 @@ export interface LugarForm {
   direccion: string;
   esPuntoRecojo: boolean;
   minutosAntesRecojo: number | null;
+  proveedorId: number | null;
+  precioNoche: number | null;
+  modalidadPrecio: 'POR_PERSONA' | 'POR_GRUPO' | '';
+  imagen: string;
 }
 
 export interface VehiculoForm {
@@ -658,6 +667,16 @@ export interface CambioRolForm {
 }
 
 // ---------- Cotizaciones (v11): visitante sin cuenta, cliente y personal ----------
+// Hotel elegido: precio por noche x noches del paquete (x pasajeros si es por persona)
+export interface HotelElegido {
+  lugarId: number; nombre: string; ciudad: string; imagen: string | null;
+  modalidad: 'POR_PERSONA' | 'POR_GRUPO'; precioNoche: number; noches: number; subtotal: number;
+}
+// Hotel que se puede elegir en la sección 5 del cotizador
+export interface HotelCotizable {
+  lugarId: number; nombre: string; ciudad: string; direccion: string | null; proveedor: string;
+  imagen: string | null; modalidad: 'POR_PERSONA' | 'POR_GRUPO'; precioNoche: number;
+}
 export type EstadoCotizacion = 'GENERADA' | 'SOLICITADA' | 'RESERVADA' | 'RECHAZADA' | 'CANCELADA' | 'VENCIDA';
 
 export interface ServicioAdicional {
@@ -678,7 +697,7 @@ export interface DatosCotizacion {
   fecha: string;
   adultos: number;
   ninos: number;
-  lugarRecojoId: number | null;
+  hotelId: number | null;            // hotel opcional (el punto de recojo lo define la agencia)
   servicios: ServicioElegido[];
   observaciones: string;
 }
@@ -699,7 +718,7 @@ export interface CalculoCotizacion {
   precioUnitario: number; montoPaquete: number; montoAdicionales: number; total: number;
   cuposDisponibles: number; estadoSalida: 'SIN_SALIDA' | 'PROGRAMADA' | 'GARANTIZADA'; faltanParaGarantizar: number;
   reservableWeb: boolean; anticipacionMinHoras: number;
-  puntoRecojo: string | null; horaRecojo: string | null;
+  montoHospedaje: number; hotel: HotelElegido | null;
   servicios: LineaCotizacion[];
 }
 
@@ -715,8 +734,8 @@ export interface Cotizacion {
   paqueteId: number; paquete: string; dias: number; noches: number; imagen: string | null;
   fechaViaje: string; fechaFin: string; horaInicio: string;
   adultos: number; ninos: number; cantidad: number;
-  lugarRecojoId: number | null; puntoRecojo: string | null; horaRecojo: string | null;
-  precioUnitario: number; montoPaquete: number; montoAdicionales: number; total: number;
+  hotel: HotelElegido | null;
+  precioUnitario: number; montoPaquete: number; montoAdicionales: number; montoHospedaje: number; total: number;
   servicios: LineaCotizacion[];
   venceEn: string | null; observaciones: string | null;
   nombreContacto: string | null; tipoDocumento: string | null; numeroDocumento: string | null;
