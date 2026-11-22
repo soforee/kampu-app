@@ -23,7 +23,7 @@ public class ContactoController {
 
     public ContactoController(@Value("${KAMPU_CONTACTO_EMAIL:reservas@kampu.pe}") String email,
                               @Value("${KAMPU_CONTACTO_TELEFONO:+51 984 000 000}") String telefono,
-                              @Value("${KAMPU_CONTACTO_CIUDAD:Cusco, Perú}") String ciudad,
+                              @Value("${KAMPU_CONTACTO_CIUDAD:Tarapoto, San Martín}") String ciudad,
                               @Value("${KAMPU_CONTACTO_INSTAGRAM:}") String instagram,
                               @Value("${KAMPU_CONTACTO_FACEBOOK:}") String facebook) {
         this.contacto = new ContactoDTO(email, telefono, ciudad, instagram, facebook);
