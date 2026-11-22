@@ -27,7 +27,7 @@ import java.util.List;
  * (v11) Cotizaciones.
  *  - Visitante (sin cuenta): calcula, guarda, abre/modifica/solicita/cancela/descarga con código + clave.
  *    La clave viaja siempre en el cuerpo (POST/PUT), nunca en la URL. Límite de intentos por IP.
- *  - Invitado con la cotización ya RESERVADA: gestiona esa reserva como un cliente (pasajeros, pagos, recojo,
+ *  - Invitado con la cotización ya RESERVADA: gestiona esa reserva como un cliente (pasajeros, pagos y
  *    anulación) con el mismo código + clave, sin crear cuenta.
  *  - Personal (VER_/GESTIONAR_COTIZACIONES): lista, detalle, confirmar (crea la reserva) o rechazar.
  */
@@ -48,6 +48,13 @@ public class CotizacionController {
     }
 
     // ------------------------------------------------------------ visitante
+    // Hoteles que se pueden sumar a la cotización (sección 5)
+    @Publico
+    @GetMapping("/hoteles")
+    public List<HotelCotizable> hoteles() {
+        return servicio.hoteles();
+    }
+
     @Publico
     @PostMapping("/calcular")
     public Calculo calcular(@Valid @RequestBody Datos datos, HttpServletRequest req) {
@@ -129,14 +136,6 @@ public class CotizacionController {
                                                 HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return new ResponseEntity<>(portal.informarPagoInvitado(codigo, p.clave(), p.pago()), HttpStatus.CREATED);
-    }
-
-    @Publico
-    @PostMapping("/{codigo}/reserva/recojo")
-    public PortalPaqueteDTO cambiarRecojo(@PathVariable String codigo, @Valid @RequestBody RecojoInvitado r,
-                                          HttpServletRequest req) {
-        limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
-        return portal.cambiarRecojoInvitado(codigo, r.clave(), r.lugarRecojoId());
     }
 
     // Respuesta: {"resultado": "ANULADA"} o {"resultado": "SOLICITUD_REGISTRADA"}

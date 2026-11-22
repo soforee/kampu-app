@@ -75,7 +75,7 @@ public class ReservaController {
         return ResponseEntity.ok(reservaService.anular(id, dto.motivo(), dto.formaReembolso()));
     }
 
-    // Punto de recojo (v10): solo reservas abiertas; vacío = la oficina
+    // Punto de recojo: lo define la agencia (Admin o Ventas), solo en reservas abiertas; vacío = por definir
     @Permiso("GESTIONAR_RESERVAS")
     @PatchMapping("/{id}/recojo")
     public ResponseEntity<ReservaDTO> recojo(@PathVariable Long id, @RequestBody RecojoRequestDTO dto) {

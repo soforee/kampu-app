@@ -11,4 +11,7 @@ public interface ILugarService {
     LugarDTO crear(LugarRequestDTO dto);
     LugarDTO actualizar(Long id, LugarRequestDTO dto);
     void eliminar(Long id);
+
+    // Foto del hotel (aparece en la cotización)
+    String subirImagen(org.springframework.web.multipart.MultipartFile file);
 }

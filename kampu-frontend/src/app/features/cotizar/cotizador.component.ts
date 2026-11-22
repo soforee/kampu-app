@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, switchMap, catchError, of, tap } from 'rxjs';
 import {
-  ActividadItinerario, CalculoCotizacion, CalendarioDia, DatosCotizacion, PaqueteTour, PuntoRecojo, ServicioAdicional
+  ActividadItinerario, CalculoCotizacion, CalendarioDia, DatosCotizacion, HotelCotizable, PaqueteTour, ServicioAdicional
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CotizacionService } from '../../core/services/cotizacion.service';
@@ -45,7 +45,7 @@ export class CotizadorComponent {
   paquete = signal<PaqueteTour | null>(null);
   itinerario = signal<ActividadItinerario[]>([]);
   calendario = signal<CalendarioDia[]>([]);
-  puntos = signal<PuntoRecojo[]>([]);
+  hoteles = signal<HotelCotizable[]>([]);
   servicios = signal<ServicioAdicional[]>([]);
   cargando = signal(true);
   errorCarga = signal('');
@@ -106,7 +106,7 @@ export class CotizadorComponent {
   fecha = '';
   adultos = 2;
   ninos = 0;
-  lugarRecojoId: number | null = null;
+  hotelId: number | null = null;      // sección 5: hotel opcional
   observaciones = '';
   elegidos: Record<number, number> = {};   // servicioId -> cantidad (0 = no)
 
@@ -140,7 +140,7 @@ export class CotizadorComponent {
         if (p.estado !== 'ACTIVO') { this.errorCarga.set('Este paquete no está a la venta por el momento.'); this.cargando.set(false); return; }
         this.paquete.set(p);
         this.store.itinerario(p.paqueteId).subscribe({ next: i => this.itinerario.set(i), error: () => undefined });
-        this.store.puntosRecojo(p.paqueteId).subscribe({ next: x => this.puntos.set(x), error: () => undefined });
+        if (p.noches > 0) this.api.hoteles().subscribe({ next: h => this.hoteles.set(h), error: () => undefined });
         this.api.serviciosDe(p.paqueteId).subscribe({ next: s => this.servicios.set(s), error: () => undefined });
         this.store.calendario(p.paqueteId, hoy(), 120).subscribe({
           next: c => {
@@ -169,7 +169,7 @@ export class CotizadorComponent {
         this.mesElegido.set(c.fechaViaje.slice(0, 7));
         this.adultos = c.adultos;
         this.ninos = c.ninos;
-        this.lugarRecojoId = c.lugarRecojoId;
+        this.hotelId = c.hotel?.lugarId ?? null;
         this.observaciones = c.observaciones ?? '';
         this.elegidos = Object.fromEntries(c.servicios.map(s => [s.servicioId, s.cantidad]));
         this.recalcular();
@@ -212,12 +212,20 @@ export class CotizadorComponent {
 
   recalcular() { this.cambios.next(); }
 
+  elegirHotel(id: number | null) { this.hotelId = this.hotelId === id ? null : id; this.recalcular(); }
+  // Costo estimado del hotel para la tarjeta (el total lo confirma el servidor)
+  costoHotel(h: HotelCotizable): number {
+    const noches = this.paquete()?.noches ?? 0;
+    return h.precioNoche * noches * (h.modalidad === 'POR_PERSONA' ? this.cantidad : 1);
+  }
+  fotoHotel(h: HotelCotizable) { return this.imagenes.url(h.imagen); }
+
   private datos(): DatosCotizacion | null {
     const p = this.paquete();
     if (!p || !this.fecha || this.adultos < 1) return null;
     return {
       paqueteId: p.paqueteId, fecha: this.fecha, adultos: this.adultos, ninos: this.ninos || 0,
-      lugarRecojoId: this.lugarRecojoId,
+      hotelId: this.hotelId,
       servicios: Object.entries(this.elegidos).filter(([, c]) => c > 0).map(([id, c]) => ({ servicioId: Number(id), cantidad: c })),
       observaciones: this.observaciones.trim()
     };

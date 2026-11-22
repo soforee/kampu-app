@@ -18,9 +18,15 @@ import java.util.Optional;
 public class LugarServiceImpl implements ILugarService {
     private final LugarRepository lugarRepository;
     private final OperacionTransporteRepository operacionRepository;
+    private final pe.edu.upeu.kampu.repository.ProveedorRepository proveedorRepository;
+    private final IFileStorageService archivos;
 
     public LugarServiceImpl(LugarRepository lugarRepository,
-                            OperacionTransporteRepository operacionRepository) {
+                            OperacionTransporteRepository operacionRepository,
+                            pe.edu.upeu.kampu.repository.ProveedorRepository proveedorRepository,
+                            IFileStorageService archivos) {
+        this.proveedorRepository = proveedorRepository;
+        this.archivos = archivos;
         this.lugarRepository = lugarRepository;
         this.operacionRepository = operacionRepository;
     }
@@ -96,5 +102,29 @@ public class LugarServiceImpl implements ILugarService {
         boolean recojo = oficina || Boolean.TRUE.equals(dto.esPuntoRecojo());
         l.setEsPuntoRecojo(recojo ? 1 : 0);
         l.setMinutosAntesRecojo(recojo && dto.minutosAntesRecojo() != null ? dto.minutosAntesRecojo() : 0);
+
+        // Hotel con tarifa: proveedor de hospedaje + precio por noche + modalidad (chk_lug_hotel)
+        boolean hotel = "HOTEL".equals(dto.tipoLugar());
+        boolean tarifa = hotel && (dto.proveedorId() != null || dto.precioNoche() != null
+                || (dto.modalidadPrecio() != null && !dto.modalidadPrecio().isBlank()));
+        if (tarifa) {
+            if (dto.proveedorId() == null || dto.precioNoche() == null || dto.modalidadPrecio() == null || dto.modalidadPrecio().isBlank()) {
+                throw new BusinessException("Para cotizar el hotel indica el proveedor, el precio por noche y si es por persona o por grupo.");
+            }
+            var prov = proveedorRepository.findById(dto.proveedorId())
+                    .orElseThrow(() -> new BusinessException("El proveedor seleccionado no existe."));
+            if (!Integer.valueOf(1).equals(prov.getOfreceHospedaje())) {
+                throw new BusinessException("El proveedor " + prov.getNombreComercial() + " no brinda hospedaje.");
+            }
+        }
+        l.setProveedorId(tarifa ? dto.proveedorId() : null);
+        l.setPrecioNoche(tarifa ? dto.precioNoche() : null);
+        l.setModalidadPrecio(tarifa ? dto.modalidadPrecio() : null);
+        l.setImagen(hotel && dto.imagen() != null && !dto.imagen().isBlank() ? dto.imagen().trim() : null);
+    }
+
+    @Override
+    public String subirImagen(org.springframework.web.multipart.MultipartFile file) {
+        return archivos.store(file, "hoteles");
     }
 }
