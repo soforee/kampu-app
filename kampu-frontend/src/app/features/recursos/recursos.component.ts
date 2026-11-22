@@ -87,6 +87,13 @@ export class RecursosComponent {
   editId: number | null = null;
 
 
+  // Al entrar se piden de nuevo: el personal propio se crea desde Usuarios (otra pantalla)
+  constructor() {
+    this.store.cargarPersonal();
+    this.store.cargarVehiculos();
+    this.store.cargarProveedores();
+  }
+
   proveedor: ProveedorForm = this.proveedorVacio();
   persona: PersonalForm = this.personaVacia();
   vehiculo: VehiculoForm = this.vehiculoVacio();
