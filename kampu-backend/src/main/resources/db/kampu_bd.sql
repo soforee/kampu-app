@@ -78,14 +78,13 @@
    ----------------------------------------------------------------------------
    COMO EJECUTAR
      1. En SQL Developer conectate como SYSTEM (o SYS AS SYSDBA) al servicio
-        XEPDB1 (localhost:1521/XEPDB1). Si entras al CDB (servicio XE), la
-        primera sentencia cambia de contenedor.
+        XE (localhost:1521/xe), la misma base que usa el backend.
      2. Ejecuta TODO el archivo como script (F5). Se detiene en el primer error.
      3. Es re-ejecutable: borra y recrea todos los objetos del esquema KAMPU_BD.
 
    USUARIO DE BASE DE DATOS (unico; cambia la clave fuera de clase)
-     KAMPU_BD / Kampu_Bd_2026   dueno de tablas, vistas y PL/SQL. El backend
-                                Spring Boot se conecta directamente con el.
+     KAMPU_BD / tour1234   dueno de tablas, vistas y PL/SQL. El backend
+                           Spring Boot se conecta directamente con el.
 
    ROLES DE LA APLICACION (definitivos)
      ADMIN, VENTAS, GUIA, CONDUCTOR   -> personal interno (USUARIOS_SISTEMA)
@@ -114,23 +113,15 @@ SET SQLBLANKLINES ON
 SET SERVEROUTPUT ON SIZE UNLIMITED
 
 -- ============================================================================
--- 0. CONTENEDOR (multitenant): todo vive en el PDB XEPDB1, nunca en CDB$ROOT
+-- 0. BASE XE: permite crear usuario y roles sin el prefijo C## (Oracle XE
+--    multitenant lo exige en el contenedor raiz si no se activa esto)
 -- ============================================================================
--- Si ya estas conectado a XEPDB1 y esta linea da error, se ignora (aun no hay WHENEVER)
-ALTER SESSION SET CONTAINER = XEPDB1;
+ALTER SESSION SET "_ORACLE_SCRIPT" = TRUE;
 
 WHENEVER SQLERROR EXIT SQL.SQLCODE ROLLBACK
 
-BEGIN
-    IF SYS_CONTEXT('USERENV', 'CON_NAME') <> 'XEPDB1' THEN
-        RAISE_APPLICATION_ERROR(-20000, 'Ejecuta este script en el PDB XEPDB1 (contenedor actual: '
-            || SYS_CONTEXT('USERENV', 'CON_NAME') || ')');
-    END IF;
-END;
-/
-
 -- ============================================================================
--- 1. SEGURIDAD: PERFIL, USUARIO KAMPU_BD Y ROLES LOCALES DEL PDB (sin prefijo C##)
+-- 1. SEGURIDAD: PERFIL, USUARIO KAMPU_BD Y ROLES (sin prefijo C##)
 --    Idempotente: si ya existen, no falla.
 -- ============================================================================
 DECLARE
@@ -149,8 +140,8 @@ BEGIN
        || 'FAILED_LOGIN_ATTEMPTS 10 PASSWORD_LOCK_TIME 1/24', -2379);
 
     -- Unico usuario: KAMPU_BD (dueno de los objetos y conexion del backend).
-    -- Si ya existe, se conserva el usuario y su clave.
-    crear('CREATE USER KAMPU_BD IDENTIFIED BY "Kampu_Bd_2026" DEFAULT TABLESPACE USERS '
+    -- Si ya existe, se conserva el usuario (la clave se fija abajo).
+    crear('CREATE USER KAMPU_BD IDENTIFIED BY "tour1234" DEFAULT TABLESPACE USERS '
        || 'TEMPORARY TABLESPACE TEMP QUOTA UNLIMITED ON USERS PROFILE PRF_KAMPU_SERVICIO', -1920);
 
     -- Roles de versiones anteriores que ya no existen
@@ -166,6 +157,7 @@ BEGIN
 END;
 /
 
+ALTER USER KAMPU_BD IDENTIFIED BY "tour1234" ACCOUNT UNLOCK;
 ALTER USER KAMPU_BD QUOTA UNLIMITED ON USERS;
 ALTER USER KAMPU_BD PROFILE PRF_KAMPU_SERVICIO;
 GRANT CREATE SESSION, CREATE TABLE, CREATE VIEW, CREATE SEQUENCE, CREATE PROCEDURE, CREATE TRIGGER TO KAMPU_BD;
