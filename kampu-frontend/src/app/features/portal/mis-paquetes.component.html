@@ -45,12 +45,7 @@
             @if (paqueteElegido; as pq) { <p class="hint">Se reserva por la web con al menos {{ pq.anticipacionMinHoras }} h de anticipación.</p> }
           </div>
           <div><label class="label req" for="r-cantidad">Pasajeros</label><input id="r-cantidad" type="number" min="1" max="99" class="field" [(ngModel)]="nueva.cantidad"></div>
-          <div><label class="label" for="r-recojo">Punto de recojo</label>
-            <select id="r-recojo" class="field" [(ngModel)]="nueva.lugarRecojoId">
-              <option [ngValue]="null">Oficina de la agencia</option>
-              @for (x of puntos(); track x.lugarId) { @if (!x.porDefecto) { <option [ngValue]="x.lugarId">{{ x.nombre }} · {{ x.horaRecojo }}</option> } }
-            </select>
-          </div>
+          <p class="hint sm:col-span-2">El punto y la hora de recojo te los confirma la agencia.</p>
         </div>
         @if (paqueteElegido; as pq) {
           <p class="mt-3 text-sm text-zinc-600">Total estimado: <b>S/ {{ pq.precioBase * (nueva.cantidad || 0) | number:'1.2-2' }}</b>. Tu reserva queda pendiente y se confirma al validarse tu primer pago.</p>

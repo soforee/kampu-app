@@ -32,7 +32,8 @@ public final class CotizacionDtos {
             @Max(value = 99, message = "Como máximo 99 pasajeros.") Integer adultos,
             @Min(value = 0, message = "Los niños no pueden ser negativos.")
             @Max(value = 98, message = "Como máximo 99 pasajeros.") Integer ninos,
-            Long lugarRecojoId,
+            // Hotel opcional de un proveedor de hospedaje (el punto de recojo ya no se cotiza: lo define la agencia)
+            Long hotelId,
             @Valid @Size(max = 20, message = "Como máximo 20 servicios adicionales.") List<ServicioElegido> servicios,
             @Size(max = 500, message = "Los comentarios admiten máximo 500 caracteres.") String observaciones) {
         public int cantidad() {
@@ -55,10 +56,6 @@ public final class CotizacionDtos {
 
     public record PagoInvitado(@Size(max = 40) String clave,
                                @NotNull(message = "Faltan los datos del pago.") @Valid InformarPagoRequestDTO pago) {
-    }
-
-    // lugarRecojoId null = la oficina de la agencia
-    public record RecojoInvitado(@Size(max = 40) String clave, Long lugarRecojoId) {
     }
 
     public record AnulacionInvitado(@Size(max = 40) String clave,
@@ -97,7 +94,18 @@ public final class CotizacionDtos {
             BigDecimal precioUnitario, BigDecimal montoPaquete, BigDecimal montoAdicionales, BigDecimal total,
             Integer cuposDisponibles, String estadoSalida, Integer faltanParaGarantizar,
             boolean reservableWeb, Integer anticipacionMinHoras,
-            String puntoRecojo, String horaRecojo, List<Linea> servicios) {
+            // montoAdicionales: solo servicios; montoHospedaje: el hotel; total = paquete + ambos
+            BigDecimal montoHospedaje, HotelElegido hotel, List<Linea> servicios) {
+    }
+
+    // Hotel elegido en la cotización: precio por noche x noches del paquete (x pasajeros si es por persona)
+    public record HotelElegido(Long lugarId, String nombre, String ciudad, String imagen, String modalidad,
+                               BigDecimal precioNoche, Integer noches, BigDecimal subtotal) {
+    }
+
+    // Hotel que el visitante puede elegir (sección 5 del cotizador)
+    public record HotelCotizable(Long lugarId, String nombre, String ciudad, String direccion, String proveedor,
+                                 String imagen, String modalidad, BigDecimal precioNoche) {
     }
 
     public record Evento(LocalDateTime fecha, String campo, String anterior, String nuevo, String detalle, String actor) {
@@ -113,9 +121,9 @@ public final class CotizacionDtos {
             Long paqueteId, String paquete, Integer dias, Integer noches, String imagen,
             LocalDate fechaViaje, LocalDate fechaFin, String horaInicio,
             Integer adultos, Integer ninos, Integer cantidad,
-            Long lugarRecojoId, String puntoRecojo, String horaRecojo,
-            BigDecimal precioUnitario, BigDecimal montoPaquete, BigDecimal montoAdicionales, BigDecimal total,
-            List<Linea> servicios, LocalDateTime venceEn, String observaciones,
+            HotelElegido hotel,
+            BigDecimal precioUnitario, BigDecimal montoPaquete, BigDecimal montoAdicionales, BigDecimal montoHospedaje,
+            BigDecimal total, List<Linea> servicios, LocalDateTime venceEn, String observaciones,
             String nombreContacto, String tipoDocumento, String numeroDocumento, String email, String telefono,
             LocalDateTime fechaCreacion, LocalDateTime fechaSolicitud, LocalDateTime fechaAtencion,
             String atendidaPor, String motivoRechazo,

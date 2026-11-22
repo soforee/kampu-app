@@ -57,7 +57,7 @@
       </div>
       <dl class="grid gap-3 text-sm sm:grid-cols-2">
         <div><dt class="text-xs text-zinc-500">Viaje</dt><dd class="font-medium text-zinc-900">{{ c.fechaViaje | date:'EEEE d MMM y' }} · {{ c.adultos }} adulto(s)@if (c.ninos) { y {{ c.ninos }} niño(s) }</dd></div>
-        <div><dt class="text-xs text-zinc-500">Recojo</dt><dd class="font-medium text-zinc-900">{{ c.puntoRecojo ?? 'Oficina' }}@if (c.horaRecojo) { · {{ c.horaRecojo }} }</dd></div>
+        <div><dt class="text-xs text-zinc-500">Hotel</dt><dd class="font-medium text-zinc-900">{{ c.hotel ? c.hotel.nombre + ' · ' + c.hotel.noches + ' noche(s)' : 'Sin hotel' }}</dd></div>
         @if (c.nombreContacto) {
           <div class="sm:col-span-2"><dt class="text-xs text-zinc-500">Contacto</dt>
             <dd class="text-zinc-900">{{ c.nombreContacto }} · {{ c.tipoDocumento }} {{ c.numeroDocumento }} · <a class="link" [href]="'mailto:' + c.email">{{ c.email }}</a> · {{ c.telefono }}</dd></div>
@@ -69,6 +69,9 @@
         <tr class="border-b border-zinc-100"><td class="py-1.5">Paquete · {{ c.cantidad }} × S/ {{ c.precioUnitario | number:'1.2-2' }}</td><td class="text-right tabular-nums">S/ {{ c.montoPaquete | number:'1.2-2' }}</td></tr>
         @for (l of c.servicios; track l.servicioId) {
           <tr class="border-b border-zinc-100"><td class="py-1.5">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</td><td class="text-right tabular-nums">S/ {{ l.subtotal | number:'1.2-2' }}</td></tr>
+        }
+        @if (c.hotel; as h) {
+          <tr class="border-b border-zinc-100"><td class="py-1.5">Hotel {{ h.nombre }} · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }}</td><td class="text-right tabular-nums">S/ {{ h.subtotal | number:'1.2-2' }}</td></tr>
         }
         <tr><td class="pt-2 font-semibold">Total</td><td class="pt-2 text-right text-lg font-semibold">S/ {{ c.total | number:'1.2-2' }}</td></tr>
       </table>

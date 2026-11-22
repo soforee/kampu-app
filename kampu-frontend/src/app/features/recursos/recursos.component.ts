@@ -17,6 +17,8 @@ import { FormValidacion, telefonoRepetido, V } from '../../core/utils/validacion
 import { etiqueta, iconoLugar } from '../../core/utils/etiquetas';
 import { addDays, hoy } from '../../core/utils/date.util';
 import { ModalComponent } from '../../shared/modal.component';
+import { ImagenService } from '../../core/services/imagen.service';
+import { of, switchMap } from 'rxjs';
 
 type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'lugares';
 // Sección del menú (data.seccion de la ruta):
@@ -39,6 +41,10 @@ export class RecursosComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
   private auth = inject(AuthService);
+  imagenes = inject(ImagenService);
+  // Foto del hotel elegida en el formulario (se sube al guardar)
+  fotoHotel: File | null = null;
+  vistaFoto = signal<string | null>(null);
 
   private ruta = inject(ActivatedRoute);
   seccion: Seccion = (this.ruta.snapshot.data['seccion'] as Seccion) ?? 'proveedores';
@@ -86,6 +92,13 @@ export class RecursosComponent {
   abierto = signal(false);
   editId: number | null = null;
 
+
+  // Al entrar se piden de nuevo: el personal propio se crea desde Usuarios (otra pantalla)
+  constructor() {
+    this.store.cargarPersonal();
+    this.store.cargarVehiculos();
+    this.store.cargarProveedores();
+  }
 
   proveedor: ProveedorForm = this.proveedorVacio();
   persona: PersonalForm = this.personaVacia();
@@ -153,6 +166,10 @@ export class RecursosComponent {
           lNombre: V.texto(l.nombre, 'El nombre', 150, true),
           lCiudad: V.texto(l.ciudad, 'La ciudad', 100, true),
           lDireccion: V.texto(l.direccion, 'La dirección', 200),
+          lTarifa: !this.tarifaHotel ? null
+            : !l.proveedorId ? 'Elige el proveedor de hospedaje.'
+            : !l.precioNoche || l.precioNoche <= 0 ? 'Ingresa el precio por noche (mayor a 0).'
+            : !l.modalidadPrecio ? 'Elige si el precio es por persona o por grupo.' : null,
           lMinutos: l.esPuntoRecojo || l.tipoLugar === 'OFICINA' ? V.entero(l.minutosAntesRecojo, 'Los minutos', 0, 240) : null,
           lLatitud: vacioLat ? (vacioLon ? null : 'Indica también la latitud.') : (l.latitud! < -90 || l.latitud! > 90 ? 'La latitud va de -90 a 90.' : null),
           lLongitud: vacioLon ? (vacioLat ? null : 'Indica también la longitud.') : (l.longitud! < -180 || l.longitud! > 180 ? 'La longitud va de -180 a 180.' : null)
@@ -201,7 +218,27 @@ export class RecursosComponent {
       capacidadPax: 12, proxMantenimiento: addDays(hoy(), 180), estado: 'OPERATIVO' };
   }
   private lugarVacio(): LugarForm {
-    return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0 };
+    return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0,
+      proveedorId: null, precioNoche: null, modalidadPrecio: '', imagen: '' };
+  }
+  // Hotel con tarifa (sale en la cotización): basta con empezar a llenar proveedor, precio o modalidad
+  get tarifaHotel(): boolean {
+    const l = this.lugar;
+    return l.tipoLugar === 'HOTEL' && (!!l.proveedorId || !!l.precioNoche || !!l.modalidadPrecio);
+  }
+  proveedoresHospedaje = computed(() => this.store.proveedores().filter(p => p.ofreceHospedaje && p.estado === 'ACTIVO'));
+  elegirFoto(evento: Event) {
+    const file = (evento.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    const error = this.imagenes.validar(file);
+    if (error) { this.alerts.toast(error, 'error'); return; }
+    this.fotoHotel = file;
+    this.vistaFoto.set(URL.createObjectURL(file));
+  }
+  quitarFoto() {
+    this.fotoHotel = null;
+    this.vistaFoto.set(null);
+    this.lugar.imagen = '';
   }
   // Licencia: la exige el cargo (CARGOS.requiere_licencia)
   get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
@@ -214,6 +251,8 @@ export class RecursosComponent {
     this.persona = this.personaVacia();
     this.vehiculo = this.vehiculoVacio();
     this.lugar = this.lugarVacio();
+    this.fotoHotel = null;
+    this.vistaFoto.set(null);
     this.abrir();
   }
 
@@ -243,7 +282,10 @@ export class RecursosComponent {
     const l = this.store.getLugar(id)!;
     this.editId = id;
     this.lugar = { nombre: l.nombre, tipoLugar: l.tipoLugar, ciudad: l.ciudad, latitud: l.latitud, longitud: l.longitud,
-      direccion: l.direccion, esPuntoRecojo: l.esPuntoRecojo, minutosAntesRecojo: l.minutosAntesRecojo };
+      direccion: l.direccion, esPuntoRecojo: l.esPuntoRecojo, minutosAntesRecojo: l.minutosAntesRecojo,
+      proveedorId: l.proveedorId, precioNoche: l.precioNoche, modalidadPrecio: l.modalidadPrecio ?? '', imagen: l.imagen ?? '' };
+    this.fotoHotel = null;
+    this.vistaFoto.set(this.imagenes.url(l.imagen));
     this.abrir();
   }
 
@@ -280,8 +322,16 @@ export class RecursosComponent {
       default: {
         const l = this.lugar;
         const recojo = l.esPuntoRecojo || l.tipoLugar === 'OFICINA';
-        peticion = this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad), latitud: num(l.latitud), longitud: num(l.longitud),
-          direccion: t(l.direccion), esPuntoRecojo: recojo, minutosAntesRecojo: recojo ? num(l.minutosAntesRecojo) ?? 0 : 0 }, this.editId);
+        const hotel = l.tipoLugar === 'HOTEL';
+        const tarifa = this.tarifaHotel;
+        const id = this.editId;
+        // La foto se sube primero; luego se guarda el lugar con su ruta
+        const subida = hotel && this.fotoHotel ? this.imagenes.subirHotel(this.fotoHotel) : of({ imagen: hotel ? l.imagen : '' });
+        peticion = subida.pipe(switchMap(r => this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad),
+          latitud: num(l.latitud), longitud: num(l.longitud), direccion: t(l.direccion), esPuntoRecojo: recojo,
+          minutosAntesRecojo: recojo ? num(l.minutosAntesRecojo) ?? 0 : 0,
+          proveedorId: tarifa ? l.proveedorId : null, precioNoche: tarifa ? num(l.precioNoche) : null,
+          modalidadPrecio: tarifa ? l.modalidadPrecio : '', imagen: r.imagen }, id)));
       }
     }
     this.store.ocupado.set(true);

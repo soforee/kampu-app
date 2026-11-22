@@ -18,9 +18,9 @@ export class PortalService {
   }
 
   // El cliente elige paquete + fecha + cantidad (canal WEB; respeta la anticipación mínima del paquete)
-  reservar(paqueteId: number, fecha: string, cantidad: number, lugarRecojoId: number | null): Observable<PortalPaquete> {
-    return this.http.post<PortalPaquete>(`${API}/portal/reservas`,
-      { paqueteId: paqueteId, fecha: fecha, cantidad: cantidad, lugarRecojoId: lugarRecojoId });
+  // El punto de recojo lo define la agencia: la reserva queda con el recojo por definir
+  reservar(paqueteId: number, fecha: string, cantidad: number): Observable<PortalPaquete> {
+    return this.http.post<PortalPaquete>(`${API}/portal/reservas`, { paqueteId: paqueteId, fecha: fecha, cantidad: cantidad });
   }
 
   informarPago(reservaId: number, monto: number, metodoPago: string, codigoTransaccion: string): Observable<Pago> {
@@ -37,10 +37,6 @@ export class PortalService {
 
   eliminarPasajero(pasajeroId: number): Observable<void> {
     return this.http.delete<void>(`${API}/portal/pasajeros/${pasajeroId}`);
-  }
-
-  cambiarRecojo(reservaId: number, lugarRecojoId: number): Observable<PortalPaquete> {
-    return this.http.patch<PortalPaquete>(`${API}/portal/paquetes/${reservaId}/recojo`, { lugarRecojoId: lugarRecojoId });
   }
 
   // ---------- Invitado sin cuenta: la reserva de su cotización, con el código + clave ----------
@@ -63,10 +59,6 @@ export class PortalService {
 
   eliminarPasajeroInvitado(codigo: string, clave: string, pasajeroId: number): Observable<void> {
     return this.http.post<void>(`${this.cot(codigo)}/pasajeros/${pasajeroId}/eliminar`, { clave });
-  }
-
-  cambiarRecojoInvitado(codigo: string, clave: string, lugarRecojoId: number): Observable<PortalPaquete> {
-    return this.http.post<PortalPaquete>(`${this.cot(codigo)}/recojo`, { clave, lugarRecojoId });
   }
 
   solicitarAnulacionInvitado(codigo: string, clave: string, motivo: string): Observable<{ resultado: 'ANULADA' | 'SOLICITUD_REGISTRADA' }> {

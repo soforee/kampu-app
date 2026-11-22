@@ -60,12 +60,6 @@ public class PortalClienteController {
         return ResponseEntity.noContent().build();
     }
 
-    @Permiso("VER_PAQUETES_PROPIOS")
-    @PatchMapping("/paquetes/{reservaId}/recojo")
-    public ResponseEntity<PortalPaqueteDTO> cambiarRecojo(@PathVariable Long reservaId, @RequestBody RecojoRequestDTO dto) {
-        return ResponseEntity.ok(portalService.cambiarRecojo(reservaId, dto.lugarRecojoId()));
-    }
-
     // Respuesta: {"resultado": "ANULADA"} o {"resultado": "SOLICITUD_REGISTRADA"}
     @Permiso("VER_PAQUETES_PROPIOS")
     @PostMapping("/paquetes/{reservaId}/anulacion")

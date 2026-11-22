@@ -51,11 +51,12 @@
             @if (gestiona && abierta()) {
               <dd class="flex flex-wrap gap-2">
                 <select class="field max-w-sm" [(ngModel)]="recojoSel" aria-label="Punto de recojo">
+                  <option [ngValue]="null">Por definir</option>
                   @for (p of puntos(); track p.lugarId) { <option [ngValue]="p.lugarId">{{ p.nombre }} · {{ p.horaRecojo }}</option> }
                 </select>
                 <button type="button" class="btn-light btn-sm" [disabled]="store.ocupado() || recojoSel === r.lugarRecojoId" (click)="cambiarRecojo()">Guardar</button>
               </dd>
-            } @else { <dd class="font-medium">{{ r.puntoRecojo ?? 'Oficina de la agencia' }}</dd> }
+            } @else { <dd class="font-medium">{{ r.puntoRecojo ?? 'Por definir' }}</dd> }
           </div>
         </dl>
         @if (r.observaciones) {

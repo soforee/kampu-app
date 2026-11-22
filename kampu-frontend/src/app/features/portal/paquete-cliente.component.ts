@@ -3,7 +3,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CotizacionesLocales } from '../../core/services/cotizaciones-locales.service';
-import { PasajeroDraft, PortalDetalle, PuntoRecojo, TipoDocumento } from '../../core/models';
+import { PasajeroDraft, PortalDetalle, TipoDocumento } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { etiqueta, METODOS_PAGO } from '../../core/utils/etiquetas';
@@ -20,8 +20,7 @@ import { PortalHeaderComponent } from './portal-header.component';
 
 // Detalle de un paquete del cliente: GET /portal/paquetes/{id}
 // (PKG_GESTION_PAQUETES_CLIENTE.detalle_paquete; exigir_propietario impide ver reservas ajenas).
-// v10: hasta antes del viaje el cliente registra o quita pasajeros, cambia su punto de recojo y pide la
-// anulación (sin pagos aprobados se anula al instante; con pagos queda una solicitud para Ventas).
+// v10: hasta antes del viaje el cliente registra o quita pasajeros, y pide la anulación (el punto de recojo lo define la agencia) (sin pagos aprobados se anula al instante; con pagos queda una solicitud para Ventas).
 // Sus pagos informados quedan PENDIENTES hasta que Ventas los valide.
 // Invitado sin cuenta (/cotizacion/:codigo/reserva): lo mismo sobre la reserva de su cotización, con el código + clave.
 @Component({
@@ -97,10 +96,6 @@ export class PaqueteClienteComponent {
     nacionalidad: V.nacionalidad(this.nuevo.nacionalidad)
   }));
 
-  // Punto de recojo
-  puntos = signal<PuntoRecojo[]>([]);
-  recojoSel: number | null = null;
-
   v = new FormValidacion(() => ({
     monto: V.importe(this.pago.monto, 'El monto')
       ?? ((this.pago.monto ?? 0) > this.maximo() ? `El monto no puede superar S/ ${this.maximo().toFixed(2)}.` : null),
@@ -119,14 +114,6 @@ export class PaqueteClienteComponent {
       next: d => {
         this.detalle.set(d);
         this.cargando.set(false);
-        if (!this.puntos().length) {
-          this.store.puntosRecojo(d.paquete.paqueteId).subscribe({
-            next: p => {
-              this.puntos.set(p);
-              this.recojoSel = p.find(x => x.nombre === d.paquete.puntoRecojo)?.lugarId ?? null;
-            }
-          });
-        }
       },
       error: err => { this.error.set(mensajeError(err)); this.cargando.set(false); }
     });
@@ -182,15 +169,6 @@ export class PaqueteClienteComponent {
     (this.invitado ? this.portal.eliminarPasajeroInvitado(this.codigo, this.clave, pasajeroId)
       : this.portal.eliminarPasajero(pasajeroId)).subscribe({
       next: () => { this.alerts.toast('Pasajero quitado'); this.cargar(); },
-      error: err => this.alerts.error(mensajeError(err))
-    });
-  }
-
-  cambiarRecojo() {
-    if (!this.recojoSel) return;
-    (this.invitado ? this.portal.cambiarRecojoInvitado(this.codigo, this.clave, this.recojoSel)
-      : this.portal.cambiarRecojo(this.id, this.recojoSel)).subscribe({
-      next: () => { this.alerts.toast('Punto de recojo actualizado'); this.cargar(); },
       error: err => this.alerts.error(mensajeError(err))
     });
   }

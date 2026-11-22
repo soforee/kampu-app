@@ -21,7 +21,7 @@ import java.util.Optional;
  * identidad fijada por PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente:
  *  - VW_PAQUETES_CLIENTE: la vista ya devuelve solo las reservas del cliente de la sesión.
  *  - PKG_GESTION_PAQUETES_CLIENTE: reservar, detalle_paquete, iniciar_pago, registrar_pasajero,
- *    eliminar_pasajero, cambiar_recojo y solicitar_anulacion (cada uno exige que la reserva sea suya).
+ *    eliminar_pasajero y solicitar_anulacion (el punto de recojo lo define la agencia) (cada uno exige que la reserva sea suya).
  * Los pagos y el guía se leen por la conexión interna, después de comprobar en la vista que la reserva es del cliente.
  * El invitado sin cuenta usa las mismas operaciones con el código + clave de su cotización ya RESERVADA.
  */
@@ -76,8 +76,7 @@ public class PortalClienteService {
                 cs.setDate(3, Date.valueOf(dto.fecha()));
                 cs.setInt(4, dto.cantidad());
                 cs.registerOutParameter(5, Types.NUMERIC);
-                if (dto.lugarRecojoId() == null) cs.setNull(6, Types.NUMERIC);
-                else cs.setLong(6, dto.lugarRecojoId());
+                cs.setNull(6, Types.NUMERIC);   // el punto de recojo lo define la agencia (queda por definir)
                 cs.execute();
                 return cs.getLong(5);
             }
@@ -98,11 +97,6 @@ public class PortalClienteService {
     public void eliminarPasajero(Long pasajeroId) {
         Long clienteId = clienteActual();
         portal.ejecutar(con -> eliminarPasajero(con, clienteId, pasajeroId));
-    }
-
-    public PortalPaqueteDTO cambiarRecojo(Long reservaId, Long lugarRecojoId) {
-        Long clienteId = clienteActual();
-        return portal.ejecutar(con -> cambiarRecojo(con, clienteId, reservaId, lugarRecojoId));
     }
 
     // Sin pagos aprobados se anula al instante (ANULADA); con pagos queda una solicitud para Ventas (SOLICITUD_REGISTRADA)
@@ -140,10 +134,6 @@ public class PortalClienteService {
             }
             return eliminarPasajero(con, clienteId, pasajeroId);
         });
-    }
-
-    public PortalPaqueteDTO cambiarRecojoInvitado(String codigo, String clave, Long lugarRecojoId) {
-        return comoInvitado(codigo, clave, (con, clienteId, reservaId) -> cambiarRecojo(con, clienteId, reservaId, lugarRecojoId));
     }
 
     public String solicitarAnulacionInvitado(String codigo, String clave, String motivo) {
@@ -274,17 +264,6 @@ public class PortalClienteService {
             cs.execute();
         }
         return null;
-    }
-
-    private PortalPaqueteDTO cambiarRecojo(Connection con, Long clienteId, Long reservaId, Long lugarRecojoId) throws SQLException {
-        try (CallableStatement cs = con.prepareCall("{call PKG_GESTION_PAQUETES_CLIENTE.cambiar_recojo(?, ?, ?)}")) {
-            cs.setLong(1, clienteId);
-            cs.setLong(2, reservaId);
-            if (lugarRecojoId == null) cs.setNull(3, Types.NUMERIC);
-            else cs.setLong(3, lugarRecojoId);
-            cs.execute();
-        }
-        return propia(con, reservaId);
     }
 
     private String solicitarAnulacion(Connection con, Long clienteId, Long reservaId, String motivo) throws SQLException {

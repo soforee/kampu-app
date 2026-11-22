@@ -350,8 +350,8 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         if (v.getProxMantenimiento() != null && !v.getProxMantenimiento().isAfter(o.getHoraLlegada().toLocalDate())) {
             return "mantenimiento programado el " + v.getProxMantenimiento().format(FECHA);
         }
-        List<OperacionTransporte> cruces = operacionRepository.crucesVehiculo(v.getVehiculoId(), idOMenosUno(o),
-                o.getHoraSalida().minusMinutes(MARGEN_MIN), o.getHoraLlegada().plusMinutes(MARGEN_MIN));
+        List<OperacionTransporte> cruces = otraSalidaODia(o, operacionRepository.crucesVehiculo(v.getVehiculoId(), idOMenosUno(o),
+                o.getHoraSalida().minusMinutes(MARGEN_MIN), o.getHoraLlegada().plusMinutes(MARGEN_MIN)));
         return cruces.isEmpty() ? null : "cruce de horario con " + cruces.get(0).getCodigoOperacion();
     }
 
@@ -368,9 +368,17 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         if (horas > MAX_HORAS_DIA) {
             return String.format(Locale.US, "excede %.0f h de conducción en el día (%.1f h)", MAX_HORAS_DIA, horas);
         }
-        List<OperacionTransporte> cruces = operacionRepository.crucesConductor(c.getPersonalId(), idOMenosUno(o),
-                o.getHoraSalida().minusMinutes(MARGEN_MIN), o.getHoraLlegada().plusMinutes(MARGEN_MIN));
+        List<OperacionTransporte> cruces = otraSalidaODia(o, operacionRepository.crucesConductor(c.getPersonalId(), idOMenosUno(o),
+                o.getHoraSalida().minusMinutes(MARGEN_MIN), o.getHoraLlegada().plusMinutes(MARGEN_MIN)));
         return cruces.isEmpty() ? null : "cruce de horario con " + cruces.get(0).getCodigoOperacion();
+    }
+
+    // Los traslados de la MISMA salida y el mismo día pueden compartir vehículo y conductor (no son un cruce);
+    // el límite de horas de conducción en el día sí los cuenta a todos.
+    private static List<OperacionTransporte> otraSalidaODia(OperacionTransporte o, List<OperacionTransporte> cruces) {
+        if (o.getSalidaId() == null) return cruces;
+        return cruces.stream().filter(x -> !(o.getSalidaId().equals(x.getSalidaId())
+                && o.getHoraSalida().toLocalDate().equals(x.getHoraSalida().toLocalDate()))).toList();
     }
 
     // Horas ya programadas del conductor en el día de la operación (sin contarla)
