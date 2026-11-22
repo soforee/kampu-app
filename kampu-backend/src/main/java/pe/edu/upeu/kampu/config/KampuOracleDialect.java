@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.config;
 
 import org.hibernate.dialect.OracleDialect;
-import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
 
 /**
  * OracleDialect sin "ALTER TABLE ... MODIFY" de columnas.
@@ -11,15 +10,6 @@ import org.hibernate.engine.jdbc.dialect.spi.DialectResolutionInfo;
  * Así, update solo crea lo que falte (tablas o columnas nuevas) y nunca modifica las existentes.
  */
 public class KampuOracleDialect extends OracleDialect {
-    public KampuOracleDialect() {
-        super();
-    }
-
-    // Hibernate lo usa para conocer la versión real de Oracle (sin él asume la mínima, 19)
-    public KampuOracleDialect(DialectResolutionInfo info) {
-        super(info);
-    }
-
     @Override
     public boolean supportsAlterColumnType() {
         return false;
