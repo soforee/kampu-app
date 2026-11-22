@@ -17,7 +17,7 @@ Sistema para una agencia de turismo: catálogo de paquetes, salidas, reservas, p
 
 Script (único): `kampu-backend/src/main/resources/db/kampu_bd.sql`
 
-1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`; en Oracle 23 Free, `FREEPDB1`).
+1. En SQL Developer conéctate como **`SYSTEM`** (o `SYS` como SYSDBA) al servicio **`xe`** (`localhost:1521/xe`), la misma base del backend.
 2. Abre el archivo y ejecútalo completo como script (**F5**, no Ctrl+Enter).
 3. Al final, las pruebas propias del script deben salir con `[OK]`. Los `ORA-` que aparecen junto a `[OK]` son pruebas que
    comprueban que la base **rechace** operaciones indebidas: no son errores.
@@ -29,7 +29,7 @@ Se puede volver a ejecutar cuando quieras: borra y recrea las tablas de `KAMPU_B
 | Usuario | Clave | Para qué |
 |---|---|---|
 | `SYSTEM` | la de tu instalación de Oracle | solo para ejecutar el script |
-| `KAMPU_BD` | `Kampu_Bd_2026` | dueño de tablas, vistas y paquetes, y conexión del backend |
+| `KAMPU_BD` | `tour1234` | dueño de tablas, vistas y paquetes, y conexión del backend |
 
 El backend se conecta directamente como `KAMPU_BD`. En cada petición indica a Oracle quién opera
 (`PKG_SEGURIDAD_ROLES.iniciar_sesion`), y así la auditoría y los permisos saben el usuario y el rol.
@@ -61,12 +61,11 @@ cd kampu-backend
 En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `KampuApplication` desde IntelliJ. Arranca en el puerto **8082**;
 la documentación de la API está en http://localhost:8082/kampu/swagger-ui/index.html.
 
-La conexión está en `src/main/resources/application.yaml`. También se puede cambiar con variables de entorno:
+La conexión está en `src/main/resources/application.yaml`: `jdbc:oracle:thin:@localhost:1521/xe`, usuario `kampu_bd`,
+clave `tour1234`. Otros valores se pueden cambiar con variables de entorno:
 
 | Variable | Valor por defecto |
 |---|---|
-| `DB_URL` | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
-| `DB_USERNAME` / `DB_PASSWORD` | `KAMPU_BD` / `Kampu_Bd_2026` |
 | `KAMPU_SESION_SECRETO` | clave para firmar las sesiones (32+ caracteres). Sin ella, las sesiones se cierran al reiniciar el backend |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | correo para enviar la boleta (Gmail: contraseña de aplicación). Vacío = envío desactivado |
 | `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | datos de contacto de la agencia (página principal, boleta y PDF de cotización). Por defecto: Tarapoto, San Martín |
@@ -74,7 +73,7 @@ La conexión está en `src/main/resources/application.yaml`. También se puede c
 `ddl-auto` está en `update` con el dialecto `OracleDialect`. Las tablas, vistas y PL/SQL los crea `kampu_bd.sql`; ejecútalo antes de arrancar.
 
 **Si no arranca con "no tiene las tablas del sistema", ORA-00942 o PLS-00201:** el backend se conectó a una base donde no
-se ejecutó el script. Revisa que `DB_URL` apunte a `XEPDB1` (no al servicio `XE`) y que el script se haya ejecutado ahí.
+se ejecutó el script. Revisa que la `url` del `application.yaml` apunte a la base donde ejecutaste el script.
 Para comprobar dónde estás: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
 
 ---
