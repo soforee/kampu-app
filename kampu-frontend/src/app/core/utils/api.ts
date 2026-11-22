@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 
 export const API = '/api/v1';
 
-export const IMAGENES = '/lp2_gp2/images';
+export const IMAGENES = '/kampu/images';
 
 export function mensajeError(e: unknown): string {
   if (e instanceof HttpErrorResponse) {

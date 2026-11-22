@@ -15,7 +15,7 @@ Sistema para una agencia de turismo: catálogo de paquetes, salidas, reservas, p
 
 ## 1. Base de datos
 
-Script: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`
+Script (único): `kampu-backend/src/main/resources/db/kampu_bd.sql`
 
 1. En SQL Developer conéctate como **`SYSTEM`** al servicio **`XEPDB1`** (`localhost:1521/XEPDB1`; en Oracle 23 Free, `FREEPDB1`).
 2. Abre el archivo y ejecútalo completo como script (**F5**, no Ctrl+Enter).
@@ -23,27 +23,26 @@ Script: `kampu-backend/src/main/resources/db/kampu_tours_v11.sql`
    comprueban que la base **rechace** operaciones indebidas: no son errores.
 
 Se puede volver a ejecutar cuando quieras: borra y recrea las tablas de `KAMPU_BD` con los datos de demostración.
-Si tienes una base **v10 con datos que quieras conservar**, usa en su lugar `migracion_v10_a_v11.sql` (respalda antes).
 
 ### Usuarios de Oracle
 
 | Usuario | Clave | Para qué |
 |---|---|---|
 | `SYSTEM` | la de tu instalación de Oracle | solo para ejecutar el script |
-| `KAMPU_BD` | `Kampu_Bd_2026` | dueño de tablas, vistas y paquetes (mantenimiento) |
-| `KAMPU_APP` | `Kampu_App_2026` | conexión del backend; recibe los roles `ROL_ADMIN`, `ROL_VENTAS`, `ROL_OPERADOR` y `ROL_CLIENTE` |
+| `KAMPU_BD` | `Kampu_Bd_2026` | dueño de tablas, vistas y paquetes, y conexión del backend |
 
-El backend se conecta como `KAMPU_APP` y trabaja sobre las tablas de `KAMPU_BD`
-(`ALTER SESSION SET CURRENT_SCHEMA = KAMPU_BD`). En cada petición indica a Oracle quién opera
+El backend se conecta directamente como `KAMPU_BD`. En cada petición indica a Oracle quién opera
 (`PKG_SEGURIDAD_ROLES.iniciar_sesion`), y así la auditoría y los permisos saben el usuario y el rol.
 
-### Usuarios de la aplicación (clave de todos: `Kampu2026*`)
+### Roles y usuarios de la aplicación (clave de todos: `Kampu2026*`)
+
+Roles definitivos: **ADMIN, CLIENTE, VENTAS, GUIA y CONDUCTOR** (en Oracle: `ROL_ADMIN`, `ROL_CLIENTE`, `ROL_VENTAS`,
+`ROL_GUIA` y `ROL_CONDUCTOR`).
 
 | Usuario | Rol | Entra a |
 |---|---|---|
-| `kadmin` | Administrador | panel completo, usuarios y auditoría |
+| `kadmin` | Administrador | panel completo: usuarios, auditoría, tráfico y logística |
 | `kventas` | Ventas | reservas, pagos, clientes y cotizaciones |
-| `koperador` | Operador | salidas, traslados y logística (sin montos) |
 | `kguia` | Guía | solo *Mis asignaciones* (sus salidas) |
 | `kconductor` | Conductor | solo *Mis asignaciones* (sus traslados) |
 | `maria.rios@example.com` | Cliente | portal *Mis paquetes* |
@@ -59,21 +58,20 @@ cd kampu-backend
 ./mvnw spring-boot:run
 ```
 
-En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `Lp2Gp2Application` desde IntelliJ. Arranca en el puerto **8082**;
-la documentación de la API está en http://localhost:8082/lp2_gp2/swagger-ui/index.html.
+En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `KampuApplication` desde IntelliJ. Arranca en el puerto **8082**;
+la documentación de la API está en http://localhost:8082/kampu/swagger-ui/index.html.
 
 La conexión está en `src/main/resources/application.yaml`. También se puede cambiar con variables de entorno:
 
 | Variable | Valor por defecto |
 |---|---|
 | `DB_URL` | `jdbc:oracle:thin:@localhost:1521/XEPDB1` |
-| `DB_USERNAME` / `DB_PASSWORD` | `KAMPU_APP` / `Kampu_App_2026` |
-| `DB_SCHEMA` | `KAMPU_BD` |
+| `DB_USERNAME` / `DB_PASSWORD` | `KAMPU_BD` / `Kampu_Bd_2026` |
 | `KAMPU_SESION_SECRETO` | clave para firmar las sesiones (32+ caracteres). Sin ella, las sesiones se cierran al reiniciar el backend |
 | `MAIL_USERNAME` / `MAIL_PASSWORD` | correo para enviar la boleta (Gmail: contraseña de aplicación). Vacío = envío desactivado |
 | `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | datos de contacto de la agencia (página principal, boleta y PDF de cotización). Por defecto: Tarapoto, San Martín |
 
-`ddl-auto` está en `validate`: Hibernate no crea ni cambia tablas, solo comprueba al arrancar que coincidan con el esquema.
+`ddl-auto` está en `update` con el dialecto `OracleDialect`. Las tablas, vistas y PL/SQL los crea `kampu_bd.sql`; ejecútalo antes de arrancar.
 
 **Si no arranca con "no tiene las tablas del sistema", ORA-00942 o PLS-00201:** el backend se conectó a una base donde no
 se ejecutó el script. Revisa que `DB_URL` apunte a `XEPDB1` (no al servicio `XE`) y que el script se haya ejecutado ahí.
@@ -89,8 +87,8 @@ npm install
 npm start
 ```
 
-Abre http://localhost:4200. `proxy.config.json` redirige `/api` y `/lp2_gp2/images` al backend (puerto 8082).
-Producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
+Abre http://localhost:4200. `proxy.config.json` redirige `/api` y `/kampu/images` al backend (puerto 8082).
+Producción: `npm run build` (queda en `dist/frontend_kampu`).
 
 ---
 
@@ -116,9 +114,9 @@ Producción: `npm run build` (queda en `dist/frontend_lp2_gp2`).
 
 ```
 kampu-backend/
-  src/main/java/pe/edu/upeu/lp2_gp2/   controladores, servicios, repositorios, entidades, DTO y seguridad
+  src/main/java/pe/edu/upeu/kampu/     controladores, servicios, repositorios, entidades, DTO y seguridad
   src/main/resources/application.yaml  configuración
-  src/main/resources/db/               scripts de Oracle (v11 y migración desde v10)
+  src/main/resources/db/               script único de Oracle (kampu_bd.sql)
 kampu-frontend/
   src/app/core/      modelos, servicios (API, sesión, guards) y utilidades
   src/app/features/  una carpeta por pantalla (página principal, login, portal, panel y módulos)
