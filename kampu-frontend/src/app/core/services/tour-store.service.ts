@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal, WritableSignal } from '@angular/c
 import { Observable } from 'rxjs';
 import {
   ActividadItinerario, CalendarioDia, Cargo, Cliente, ClienteForm, FormaReembolso, MetodoPago, PuntoRecojo, SolicitudAnulacion, ContactoReserva, EstadoOperacion, EstadoOperacionInfo, EstadoTransaccion, EstimacionDuracion,
-  Habitacion, HabitacionForm, HistorialOperacion, Lugar, LugarForm, Manifiesto, Moneda, Operacion, OperacionForm, PaqueteForm, PaqueteTour, Pago, PasajeroDraft,
+  Habitacion, HabitacionForm, HistorialOperacion, Lugar, LugarForm, LugarSugerido, Manifiesto, Moneda, Operacion, OperacionForm, PaqueteForm, PaqueteTour, Pago, PasajeroDraft,
   PasajeroReserva, Permiso, Personal, PersonalForm, Proveedor, ProveedorForm, RecursoCandidato, Reserva, ResumenPaquete, Rol,
   SalidaForm, SalidaProgramada, Sesion, Vehiculo, VehiculoForm
 } from '../models';
@@ -212,6 +212,8 @@ export class TourStore {
   eliminarVehiculo(id: number) { return this.http.delete<void>(`${API}/vehiculos/${id}`); }
   guardarLugar(d: LugarForm, id: number | null) { return this.guardarEn<Lugar>('lugares', d, id); }
   eliminarLugar(id: number) { return this.http.delete<void>(`${API}/lugares/${id}`); }
+  // Buscador de OpenStreetMap (por el backend) para autocompletar un lugar
+  buscarLugares(texto: string) { return this.http.get<LugarSugerido[]>(`${API}/lugares/buscar`, { params: { q: texto } }); }
   guardarHabitacion(d: HabitacionForm, id: number | null) { return this.guardarEn<Habitacion>('habitaciones', d, id); }
   eliminarHabitacion(id: number) { return this.http.delete<void>(`${API}/habitaciones/${id}`); }
 

@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.kampu.dto.LugarDTO;
 import pe.edu.upeu.kampu.dto.LugarRequestDTO;
+import pe.edu.upeu.kampu.dto.LugarSugeridoDTO;
+import pe.edu.upeu.kampu.services.MapasOsmService;
 import pe.edu.upeu.kampu.services.ILugarService;
 
 import java.util.List;
@@ -16,9 +18,18 @@ import java.util.List;
 @RequestMapping("/api/v1/lugares")
 public class LugarController {
     private final ILugarService lugarService;
+    private final MapasOsmService mapas;
 
-    public LugarController(ILugarService lugarService) {
+    public LugarController(ILugarService lugarService, MapasOsmService mapas) {
         this.lugarService = lugarService;
+        this.mapas = mapas;
+    }
+
+    // Buscador de OpenStreetMap: sugerencias para autocompletar el formulario (va antes de /{id})
+    @Permiso("GESTIONAR_LOGISTICA")
+    @GetMapping("/buscar")
+    public ResponseEntity<List<LugarSugeridoDTO>> buscar(@RequestParam("q") String texto) {
+        return ResponseEntity.ok(mapas.buscar(texto));
     }
 
     @Permiso("VER_LOGISTICA")
