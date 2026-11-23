@@ -1,15 +1,13 @@
-<div class="raiz min-h-screen" [class.compacto]="compacto()">
+<div class="raiz min-h-screen" [class.compacto]="compacto()" (document:click)="clicFuera($event)">
   @if (abierto()) {
     <div class="lg:hidden fixed inset-0 z-40 bg-zinc-900/30 animate-fade-in" (click)="abierto.set(false)"></div>
   }
 
-  <!-- Menú lateral: desplegado (íconos y nombres) o compacto (solo íconos con su nombre al pasar el cursor); el botón de abajo cambia entre ambos -->
   <aside class="sidebar fixed inset-y-0 left-0 z-50 flex w-64 flex-col overflow-hidden border-r border-zinc-200/80 bg-white
                 transition-[width,transform] duration-300 ease-out lg:translate-x-0"
          [class.-translate-x-full]="!abierto()">
 
     <div class="flex h-[76px] shrink-0 items-center border-b border-zinc-100 px-4">
-      <!-- Logotipo de la marca: completo con el menú desplegado; solo el ícono con el menú compacto -->
       <a routerLink="/" class="flex items-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand-600/30" aria-label="Kampu: ir a la página principal">
         <span class="logo-completo pl-1"><app-logo variante="horizontal" [alto]="28" /></span>
         <span class="logo-compacto hidden h-11 w-11 shrink-0 place-items-center rounded-xl border border-zinc-200/80 bg-white shadow-soft"><app-logo variante="isotipo" [alto]="19" /></span>
@@ -45,7 +43,6 @@
           <span class="lbl whitespace-nowrap">Nueva reserva</span>
         </a>
     }
-      <!-- Contraer o desplegar el menú (solo escritorio) -->
       <button type="button" class="nav-item hidden h-10 w-full items-center gap-3 rounded-xl px-[13px] text-sm text-zinc-500 outline-none transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-600/30 lg:flex"
               (click)="alternarMenu()" [attr.aria-label]="compacto() ? 'Desplegar menú' : 'Contraer menú'" [attr.aria-expanded]="!compacto()"
               (mouseenter)="mostrarTip('Desplegar menú', $event)" (mouseleave)="tip.set(null)" (focus)="mostrarTip('Desplegar menú', $event)" (blur)="tip.set(null)">
@@ -55,12 +52,10 @@
     </div>
   </aside>
 
-  <!-- Nombre de la opción con el menú compacto: flota fuera del menú, así la lista puede desplazarse sin recortarlo -->
   @if (tip(); as t) {
     <div class="tip-flotante" role="tooltip" [style.top.px]="t.top">{{ t.texto }}</div>
   }
 
-  <!-- Barra superior única: sección actual, búsqueda, avisos y usuario -->
   <header data-barra class="no-print sticky top-0 z-30 flex h-[76px] items-center gap-3 border-b border-zinc-200/80 bg-white/90 px-4 backdrop-blur sm:px-8 lg:px-10">
     <button type="button" class="icon-btn-box !h-10 !w-10 lg:hidden" aria-label="Abrir menú" (click)="abierto.set(true)"><app-icon name="menu" size="w-[18px] h-[18px]" /></button>
     <div class="flex min-w-0 items-center gap-3">
@@ -71,7 +66,6 @@
     </div>
 
     <div class="ml-auto flex items-center gap-2">
-      <!-- Búsqueda -->
       <div class="relative hidden md:block">
         <div class="search w-64 lg:w-80">
           <span class="search-icon"><app-icon name="search" size="w-4 h-4" /></span>
@@ -93,7 +87,6 @@
         }
       </div>
 
-      <!-- Avisos -->
       <div class="relative">
         <button type="button" class="icon-btn-box relative !h-10 !w-10" aria-label="Avisos" [attr.aria-expanded]="desplegado() === 'avisos'" (click)="alternar('avisos')">
           <app-icon name="bell" size="w-[18px] h-[18px]" />
@@ -129,7 +122,6 @@
         }
       </div>
 
-      <!-- Usuario -->
       <div class="relative">
         <button type="button" class="grid h-10 w-10 place-items-center rounded-full bg-brand-600 text-xs font-semibold text-white ring-2 ring-brand-100 outline-none focus-visible:ring-brand-300"
                 [attr.aria-label]="'Cuenta de ' + auth.usuario()?.username" [attr.aria-expanded]="desplegado() === 'usuario'" (click)="alternar('usuario')">{{ iniciales() }}</button>

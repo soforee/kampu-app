@@ -1,9 +1,6 @@
-import { Component, ElementRef, EventEmitter, HostListener, Input, OnChanges, Output, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, ViewChild, computed, inject, signal } from '@angular/core';
 import { PAISES, PaisTelefono, banderaUrl, normalizar, separarTelefono, unirTelefono } from '../core/utils/paises';
 
-// Teléfono con código de país. Uso: <app-telefono-input [(valor)]="form.telefono" />
-// El valor es "+51 987654321"; el campo no deja escribir más dígitos de los que admite el país.
-// El país se elige en una lista propia con banderas y buscador (la lista nativa no admite imágenes).
 @Component({
   selector: 'app-telefono-input',
   standalone: true,
@@ -28,7 +25,6 @@ export class TelefonoInputComponent implements OnChanges {
   activo = signal(0);
   private ultimoEmitido: string | null = null;
 
-  // Países que coinciden con lo escrito: nombre (sin tildes) o código ("+56", "56")
   filtrados = computed(() => {
     const q = normalizar(this.texto()).replace(/^\+/, '');
     if (!q) return PAISES;
@@ -36,7 +32,6 @@ export class TelefonoInputComponent implements OnChanges {
   });
 
   ngOnChanges() {
-    // Solo se vuelve a separar si el valor cambió desde fuera (al abrir el formulario de edición)
     if (this.valor === this.ultimoEmitido) return;
     const t = separarTelefono(this.valor);
     this.pais = t.pais;
@@ -102,15 +97,12 @@ export class TelefonoInputComponent implements OnChanges {
   }
 
   escribir(campo: HTMLInputElement) {
-    // Solo dígitos y como máximo los que admite el país
     const limpio = campo.value.replace(/\D/g, '').slice(0, this.pais.max);
     if (campo.value !== limpio) campo.value = limpio;
     this.numero = limpio;
     this.emitir();
   }
 
-  // Cierra la lista al hacer clic fuera del componente
-  @HostListener('document:mousedown', ['$event'])
   alHacerClic(evento: MouseEvent) {
     if (this.abierto() && !this.host.nativeElement.contains(evento.target as Node)) this.cerrar();
   }

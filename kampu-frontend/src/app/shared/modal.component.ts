@@ -1,10 +1,9 @@
-import { AfterViewInit, Component, ElementRef, EventEmitter, HostListener, Input, OnDestroy, Output, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
 import { IconComponent } from './icon.component';
 
 let siguienteId = 0;
 const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-// Ventana modal accesible: Esc cierra, el foco entra al abrir, Tab no sale de la ventana y al cerrar vuelve a donde estaba
 @Component({
   selector: 'app-modal',
   standalone: true,
@@ -15,18 +14,15 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
   @Input({ required: true }) titulo = '';
   @Input() subtitulo = '';
   @Input() icono = '';
-  // Ancho en escritorio: sm (formularios cortos), md (por defecto) o lg (formularios con varias columnas)
   @Input() ancho: 'sm' | 'md' | 'lg' = 'md';
   @Output() cerrar = new EventEmitter<void>();
 
   idTitulo = 'modal-titulo-' + (++siguienteId);
-  // Al cerrar con Esc, el fondo o la X, la ventana se desvanece (160 ms) antes de avisar al padre
   saliendo = signal(false);
   private el = inject(ElementRef<HTMLElement>);
   private previo = document.activeElement as HTMLElement | null;
 
   ngAfterViewInit() {
-    // Primer campo del formulario (o el botón de cerrar si no hay campos)
     const panel = this.el.nativeElement.querySelector('[data-panel]') as HTMLElement;
     const campos = this.enfocables();
     const primero = campos.find(e => !e.matches('[data-cerrar]')) ?? campos[0];
@@ -45,7 +41,6 @@ export class ModalComponent implements AfterViewInit, OnDestroy {
     this.previo?.focus?.({ preventScroll: true });
   }
 
-  @HostListener('keydown', ['$event'])
   teclado(e: KeyboardEvent) {
     if (e.key === 'Escape') { e.stopPropagation(); this.pedirCierre(); return; }
     if (e.key !== 'Tab') return;
