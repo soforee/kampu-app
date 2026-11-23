@@ -18,9 +18,11 @@ export class PortalService {
   }
 
   // El cliente elige paquete + fecha + cantidad (canal WEB; respeta la anticipación mínima del paquete)
-  // El punto de recojo lo define la agencia: la reserva queda con el recojo por definir
-  reservar(paqueteId: number, fecha: string, cantidad: number): Observable<PortalPaquete> {
-    return this.http.post<PortalPaquete>(`${API}/portal/reservas`, { paqueteId: paqueteId, fecha: fecha, cantidad: cantidad });
+  // El punto de recojo lo define la agencia: la reserva queda con el recojo por definir.
+  // habitacionId: habitación de hotel, obligatoria si el paquete tiene noches.
+  reservar(paqueteId: number, fecha: string, cantidad: number, habitacionId: number | null): Observable<PortalPaquete> {
+    return this.http.post<PortalPaquete>(`${API}/portal/reservas`,
+      { paqueteId: paqueteId, fecha: fecha, cantidad: cantidad, habitacionId: habitacionId });
   }
 
   informarPago(reservaId: number, monto: number, metodoPago: string, codigoTransaccion: string): Observable<Pago> {

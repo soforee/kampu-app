@@ -33,6 +33,10 @@ public record PortalPaqueteDTO(
         BigDecimal montoPorValidar,
         String puntoRecojo,
         String direccionRecojo,
-        LocalDateTime horaRecojo
+        LocalDateTime horaRecojo,
+        // Habitación de hotel elegida (paquetes con noches) y su costo (incluido en montoTotal)
+        String habitacion,
+        String hotel,
+        BigDecimal montoHospedaje
 ) {
 }

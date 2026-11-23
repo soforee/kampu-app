@@ -15,6 +15,8 @@ public record PortalReservaRequestDTO(
         @NotNull(message = "Indica cuántos pasajeros viajan.")
         @Min(value = 1, message = "La cantidad de pasajeros debe estar entre 1 y 99.")
         @Max(value = 99, message = "La cantidad de pasajeros debe estar entre 1 y 99.")
-        Integer cantidad
+        Integer cantidad,
+        // Habitación de hotel: obligatoria si el paquete tiene noches (lo valida la BD)
+        Long habitacionId
 ) {
 }
