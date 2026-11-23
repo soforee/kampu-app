@@ -22,11 +22,11 @@ export class ImagenService {
     return '';
   }
 
-  // Foto de un hotel (Proveedores > Lugares): sale en la cotización
-  subirHotel(file: File): Observable<{ imagen: string }> {
+  // Foto de una habitación de hotel (Proveedores > Habitaciones de hotel): sale en la cotización
+  subirHabitacion(file: File): Observable<{ imagen: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    return this.http.post<{ imagen: string }>(`${API}/lugares/imagen`, formData);
+    return this.http.post<{ imagen: string }>(`${API}/habitaciones/imagen`, formData);
   }
 
   subir(file: File): Observable<{ imagen: string }> {

@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subject, debounceTime, switchMap, catchError, of, tap } from 'rxjs';
 import {
-  ActividadItinerario, CalculoCotizacion, CalendarioDia, DatosCotizacion, HotelCotizable, PaqueteTour, ServicioAdicional
+  ActividadItinerario, CalculoCotizacion, CalendarioDia, DatosCotizacion, HabitacionCotizable, PaqueteTour, ServicioAdicional
 } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { CotizacionService } from '../../core/services/cotizacion.service';
@@ -45,7 +45,7 @@ export class CotizadorComponent {
   paquete = signal<PaqueteTour | null>(null);
   itinerario = signal<ActividadItinerario[]>([]);
   calendario = signal<CalendarioDia[]>([]);
-  hoteles = signal<HotelCotizable[]>([]);
+  habitaciones = signal<HabitacionCotizable[]>([]);
   servicios = signal<ServicioAdicional[]>([]);
   cargando = signal(true);
   errorCarga = signal('');
@@ -106,7 +106,7 @@ export class CotizadorComponent {
   fecha = '';
   adultos = 2;
   ninos = 0;
-  hotelId: number | null = null;      // sección 5: hotel opcional
+  habitacionId: number | null = null; // sección 5: habitación de hotel (obligatoria si hay noches)
   observaciones = '';
   elegidos: Record<number, number> = {};   // servicioId -> cantidad (0 = no)
 
@@ -140,7 +140,14 @@ export class CotizadorComponent {
         if (p.estado !== 'ACTIVO') { this.errorCarga.set('Este paquete no está a la venta por el momento.'); this.cargando.set(false); return; }
         this.paquete.set(p);
         this.store.itinerario(p.paqueteId).subscribe({ next: i => this.itinerario.set(i), error: () => undefined });
-        if (p.noches > 0) this.api.hoteles().subscribe({ next: h => this.hoteles.set(h), error: () => undefined });
+        if (p.noches > 0) this.api.habitaciones().subscribe({
+          next: h => {
+            this.habitaciones.set(h);
+            // Sin la opción «sin hotel»: se parte de la más económica y el visitante puede cambiarla
+            if (this.habitacionId === null && h.length) { this.habitacionId = h[0].habitacionId; this.recalcular(); }
+          },
+          error: () => undefined
+        });
         this.api.serviciosDe(p.paqueteId).subscribe({ next: s => this.servicios.set(s), error: () => undefined });
         this.store.calendario(p.paqueteId, hoy(), 120).subscribe({
           next: c => {
@@ -169,7 +176,7 @@ export class CotizadorComponent {
         this.mesElegido.set(c.fechaViaje.slice(0, 7));
         this.adultos = c.adultos;
         this.ninos = c.ninos;
-        this.hotelId = c.hotel?.lugarId ?? null;
+        this.habitacionId = c.habitacion?.habitacionId ?? this.habitacionId;
         this.observaciones = c.observaciones ?? '';
         this.elegidos = Object.fromEntries(c.servicios.map(s => [s.servicioId, s.cantidad]));
         this.recalcular();
@@ -212,20 +219,22 @@ export class CotizadorComponent {
 
   recalcular() { this.cambios.next(); }
 
-  elegirHotel(id: number | null) { this.hotelId = this.hotelId === id ? null : id; this.recalcular(); }
-  // Costo estimado del hotel para la tarjeta (el total lo confirma el servidor)
-  costoHotel(h: HotelCotizable): number {
+  elegirHabitacion(id: number) { if (this.habitacionId !== id) { this.habitacionId = id; this.recalcular(); } }
+  // Costo estimado de la estadía para la tarjeta (el total lo confirma el servidor)
+  costoHabitacion(h: HabitacionCotizable): number {
     const noches = this.paquete()?.noches ?? 0;
     return h.precioNoche * noches * (h.modalidad === 'POR_PERSONA' ? this.cantidad : 1);
   }
-  fotoHotel(h: HotelCotizable) { return this.imagenes.url(h.imagen); }
+  fotoHabitacion(h: HabitacionCotizable) { return this.imagenes.url(h.imagen); }
+  // Paquete con noches: la habitación es obligatoria
+  get faltaHabitacion(): boolean { return (this.paquete()?.noches ?? 0) > 0 && this.habitacionId === null; }
 
   private datos(): DatosCotizacion | null {
     const p = this.paquete();
     if (!p || !this.fecha || this.adultos < 1) return null;
     return {
       paqueteId: p.paqueteId, fecha: this.fecha, adultos: this.adultos, ninos: this.ninos || 0,
-      hotelId: this.hotelId,
+      habitacionId: (p.noches ?? 0) > 0 ? this.habitacionId : null,
       servicios: Object.entries(this.elegidos).filter(([, c]) => c > 0).map(([id, c]) => ({ servicioId: Number(id), cantidad: c })),
       observaciones: this.observaciones.trim()
     };
@@ -234,6 +243,7 @@ export class CotizadorComponent {
   guardar() {
     const d = this.datos();
     if (!d || !this.calculo() || this.guardando()) return;
+    if (this.faltaHabitacion) { this.errorCalculo.set('Elige la habitación de hotel para tus noches.'); return; }
     this.guardando.set(true);
     if (this.editar) {
       this.api.modificar(this.editar, this.claveEdicion, d).subscribe({
