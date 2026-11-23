@@ -1,13 +1,10 @@
-import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, inject, signal } from '@angular/core';
-import { Subject, Subscription, catchError, debounceTime, distinctUntilChanged, filter, map, of, switchMap, tap } from 'rxjs';
+import { Component, ElementRef, EventEmitter, Input, OnDestroy, Output, ViewChild, inject, signal } from '@angular/core';
 import { Cliente } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { IconComponent } from '../../shared/icon.component';
 
 interface Trozo { texto: string; marca: boolean; }
 
-// Buscador de clientes con autocompletado: busca en el servidor mientras se escribe
-// (espera 300 ms sin teclear) por nombre, DNI/pasaporte o correo.
 @Component({
   selector: 'app-cliente-selector',
   standalone: true,
@@ -15,7 +12,7 @@ interface Trozo { texto: string; marca: boolean; }
   templateUrl: './cliente-selector.component.html',
   styleUrl: './cliente-selector.component.css'
 })
-export class ClienteSelectorComponent implements OnInit, OnDestroy {
+export class ClienteSelectorComponent implements OnDestroy {
   @Input() seleccionado: Cliente | null = null;
   @Input() invalido = false;
   @Output() seleccionar = new EventEmitter<Cliente | null>();
@@ -24,8 +21,9 @@ export class ClienteSelectorComponent implements OnInit, OnDestroy {
   @ViewChild('entrada') entrada?: ElementRef<HTMLInputElement>;
 
   private store = inject(TourStore);
-  private textos = new Subject<string>();
-  private sub?: Subscription;
+  private temporizador: ReturnType<typeof setTimeout> | null = null;
+  private ultimoTexto: string | null = null;
+  private numeroBusqueda = 0;
 
   texto = signal('');
   resultados = signal<Cliente[]>([]);
@@ -35,45 +33,54 @@ export class ClienteSelectorComponent implements OnInit, OnDestroy {
   activo = signal(-1);
   error = signal('');
 
-  ngOnInit() {
-    this.sub = this.textos.pipe(
-      map(t => t.trim()),
-      debounceTime(300),
-      distinctUntilChanged(),
-      tap(t => {
-        this.error.set('');
-        if (t.length < 2) {
-          this.resultados.set([]);
-          this.buscado.set(false);
-          this.cargando.set(false);
-        }
-      }),
-      filter(t => t.length >= 2),
-      tap(() => this.cargando.set(true)),
-      // switchMap cancela la búsqueda anterior si el usuario sigue escribiendo
-      switchMap(t => this.store.buscarClientes(t).pipe(
-        catchError(e => {
-          this.error.set(this.store.error(e));
-          return of([] as Cliente[]);
-        })
-      ))
-    ).subscribe(lista => {
+  ngOnDestroy() {
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.numeroBusqueda++;
+  }
+
+  private programarBusqueda(valor: string) {
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.temporizador = setTimeout(() => this.buscar(valor.trim()), 300);
+  }
+
+  private buscar(t: string) {
+    if (t === this.ultimoTexto) return;
+    this.ultimoTexto = t;
+    this.error.set('');
+    if (t.length < 2) {
+      this.numeroBusqueda++;
+      this.resultados.set([]);
+      this.buscado.set(false);
       this.cargando.set(false);
-      this.buscado.set(true);
-      this.resultados.set(lista);
-      this.activo.set(lista.length > 0 ? 0 : -1);
+      return;
+    }
+    this.cargando.set(true);
+    const numero = ++this.numeroBusqueda;
+    this.store.buscarClientes(t).subscribe({
+      next: lista => {
+        if (numero !== this.numeroBusqueda) return;
+        this.mostrar(lista);
+      },
+      error: e => {
+        if (numero !== this.numeroBusqueda) return;
+        this.error.set(this.store.error(e));
+        this.mostrar([]);
+      }
     });
   }
 
-  ngOnDestroy() {
-    this.sub?.unsubscribe();
+  private mostrar(lista: Cliente[]) {
+    this.cargando.set(false);
+    this.buscado.set(true);
+    this.resultados.set(lista);
+    this.activo.set(lista.length > 0 ? 0 : -1);
   }
 
   escribir(valor: string) {
     this.texto.set(valor);
     this.abierto.set(true);
     if (valor.trim().length >= 2) this.cargando.set(true);
-    this.textos.next(valor);
+    this.programarBusqueda(valor);
   }
 
   teclear(evento: KeyboardEvent) {
@@ -106,7 +113,7 @@ export class ClienteSelectorComponent implements OnInit, OnDestroy {
     this.texto.set('');
     this.resultados.set([]);
     this.buscado.set(false);
-    this.textos.next('');
+    this.programarBusqueda('');
   }
 
   cambiar() {
@@ -119,8 +126,6 @@ export class ClienteSelectorComponent implements OnInit, OnDestroy {
     this.sinRegistro.emit(this.texto().trim());
   }
 
-
-  // Divide el texto para resaltar la parte que coincide con la búsqueda
   resaltar(valor: string): Trozo[] {
     const q = this.texto().trim();
     if (!valor || q.length < 2) return [{ texto: valor ?? '', marca: false }];
