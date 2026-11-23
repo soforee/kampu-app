@@ -30,7 +30,7 @@ public class PortalClienteService {
     private static final String COLUMNAS = "reserva_id, codigo_reserva, salida_id, paquete_id, paquete_nombre, imagen, dias, noches, "
             + "fecha_inicio, fecha_fin, estado_salida, salida_garantizada, pasajeros, precio_unitario, descuento, fecha_reserva, "
             + "estado_reserva, estado_ejecucion, estado_pago, monto_total, monto_pagado, saldo, monto_por_validar, "
-            + "punto_recojo, direccion_recojo, hora_recojo";
+            + "punto_recojo, direccion_recojo, hora_recojo, habitacion, hotel, monto_hospedaje";
 
     private final PortalJdbc portal;
     private final PaqueteTourRepository paqueteRepository;
@@ -55,7 +55,9 @@ public class PortalClienteService {
 
     public List<PortalPaqueteDTO> misPaquetes() {
         clienteActual();
-        return portal.jdbc().query("SELECT " + COLUMNAS + " FROM VW_PAQUETES_CLIENTE ORDER BY fecha_inicio DESC",
+        // Las reservas anuladas ya no se muestran al cliente (quedan en el historial de la agencia)
+        return portal.jdbc().query("SELECT " + COLUMNAS + " FROM VW_PAQUETES_CLIENTE WHERE estado_reserva <> 'ANULADA' "
+                        + "ORDER BY fecha_inicio DESC",
                 (rs, i) -> fila(rs));
     }
 
@@ -66,17 +68,20 @@ public class PortalClienteService {
         return portal.ejecutar(con -> detalle(con, clienteId, reservaId));
     }
 
-    // El cliente elige paquete + fecha + cantidad (canal WEB): PKG_GESTION_PAQUETES_CLIENTE.reservar
+    // El cliente elige paquete + fecha + cantidad y, si el paquete tiene noches, la habitación de hotel
+    // (canal WEB): PKG_GESTION_PAQUETES_CLIENTE.reservar
     public PortalPaqueteDTO reservar(PortalReservaRequestDTO dto) {
         Long clienteId = clienteActual();
         Long reservaId = portal.ejecutar(con -> {
-            try (CallableStatement cs = con.prepareCall("{call PKG_GESTION_PAQUETES_CLIENTE.reservar(?, ?, ?, ?, ?, ?)}")) {
+            try (CallableStatement cs = con.prepareCall("{call PKG_GESTION_PAQUETES_CLIENTE.reservar(?, ?, ?, ?, ?, ?, ?)}")) {
                 cs.setLong(1, clienteId);
                 cs.setLong(2, dto.paqueteId());
                 cs.setDate(3, Date.valueOf(dto.fecha()));
                 cs.setInt(4, dto.cantidad());
                 cs.registerOutParameter(5, Types.NUMERIC);
                 cs.setNull(6, Types.NUMERIC);   // el punto de recojo lo define la agencia (queda por definir)
+                if (dto.habitacionId() == null) cs.setNull(7, Types.NUMERIC);
+                else cs.setLong(7, dto.habitacionId());
                 cs.execute();
                 return cs.getLong(5);
             }
@@ -307,7 +312,8 @@ public class PortalClienteService {
                 rs.getString("estado_reserva"), rs.getString("estado_ejecucion"), rs.getString("estado_pago"),
                 rs.getBigDecimal("monto_total"), rs.getBigDecimal("monto_pagado"), rs.getBigDecimal("saldo"),
                 rs.getBigDecimal("monto_por_validar"), rs.getString("punto_recojo"), rs.getString("direccion_recojo"),
-                recojo == null ? null : recojo.toLocalDateTime());
+                recojo == null ? null : recojo.toLocalDateTime(), rs.getString("habitacion"), rs.getString("hotel"),
+                rs.getBigDecimal("monto_hospedaje"));
     }
 
     private Long clienteActual() {
