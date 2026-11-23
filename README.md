@@ -1,170 +1,381 @@
-# KAMPU · Tour Manager
+<p align="center">
+  <img src="kampu-backend/src/main/resources/boleta/logo-kampu.png" alt="Kampu Tour Manager" width="300" />
+</p>
 
-Sistema para una agencia de turismo: catálogo de paquetes, salidas, reservas, pagos, traslados y logística, con
-**portal del cliente**, **cotización en línea sin cuenta** y **seguridad por roles** aplicada en la base de datos.
+<h3 align="center">Plataforma integral de gestión operativa y comercial<br />para agencias de turismo y operadores de viajes</h3>
 
-| Capa | Carpeta | Tecnología |
-|---|---|---|
-| Base de datos | `kampu-backend/src/main/resources/db/` | Oracle Database 21c XE (también Oracle 23 Free) |
-| Backend | `kampu-backend` | Spring Boot 3.4 · JPA · JdbcTemplate (paquetes PL/SQL) |
-| Frontend | `kampu-frontend` | Angular 18 · Tailwind CSS 3 · SweetAlert2 |
+<p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/angular/angular-original.svg" alt="Angular" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/java/java-original.svg" alt="Java" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/spring/spring-original.svg" alt="Spring Boot" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/oracle/oracle-original.svg" alt="Oracle" height="40" />
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@v2.16.0/icons/tailwindcss/tailwindcss-original.svg" alt="Tailwind CSS" height="40" />
+</p>
 
-**Orden de arranque:** Oracle → backend → frontend.
+<p align="center">
+  <img src="https://img.shields.io/badge/Angular-18-DD0031?style=flat-square&logo=angular&logoColor=white" alt="Angular 18" />
+  <img src="https://img.shields.io/badge/Spring_Boot-3.4-6DB33F?style=flat-square&logo=springboot&logoColor=white" alt="Spring Boot 3.4" />
+  <img src="https://img.shields.io/badge/Java-21-ED8B00?style=flat-square&logo=openjdk&logoColor=white" alt="Java 21" />
+  <img src="https://img.shields.io/badge/Oracle-21c_XE-F80000?style=flat-square&logo=oracle&logoColor=white" alt="Oracle 21c XE" />
+  <img src="https://img.shields.io/badge/Seguridad-Spring_Security_+_JWT-1F2937?style=flat-square&logo=springsecurity&logoColor=white" alt="Spring Security + JWT" />
+</p>
 
----
-
-## 1. Base de datos
-
-Script (único): `kampu-backend/src/main/resources/db/kampu_bd.sql`
-
-1. En SQL Developer conéctate como **`SYSTEM`** (o `SYS` como SYSDBA) al servicio **`xe`** (`localhost:1521/xe`), la misma base del backend.
-2. Abre el archivo y ejecútalo completo como script (**F5**, no Ctrl+Enter).
-3. Al final, las pruebas propias del script deben salir con `[OK]`. Los `ORA-` que aparecen junto a `[OK]` son pruebas que
-   comprueban que la base **rechace** operaciones indebidas: no son errores.
-
-Se puede volver a ejecutar cuando quieras: borra y recrea las tablas de `KAMPU_BD` con los datos de demostración.
-
-### Usuarios de Oracle
-
-| Usuario | Clave | Para qué |
-|---|---|---|
-| `SYSTEM` | la de tu instalación de Oracle | solo para ejecutar el script |
-| `KAMPU_BD` | `tour1234` | dueño de tablas, vistas y paquetes, y conexión del backend |
-
-El backend se conecta directamente como `KAMPU_BD`. En cada petición indica a Oracle quién opera
-(`PKG_SEGURIDAD_ROLES.iniciar_sesion`), y así la auditoría y los permisos saben el usuario y el rol.
-
-### Roles y usuarios de la aplicación (clave de todos: `Kampu2026*`)
-
-Roles definitivos: **ADMIN, CLIENTE, VENTAS, GUIA y CONDUCTOR** (en Oracle: `ROL_ADMIN`, `ROL_CLIENTE`, `ROL_VENTAS`,
-`ROL_GUIA` y `ROL_CONDUCTOR`).
-
-| Usuario | Rol | Entra a |
-|---|---|---|
-| `kadmin` | Administrador | panel completo: usuarios, auditoría, tráfico, personal, vehículos y proveedores |
-| `kventas` | Ventas | reservas, pagos, clientes y cotizaciones |
-| `kguia` | Guía | solo *Mis asignaciones* (sus salidas) |
-| `kconductor` | Conductor | solo *Mis asignaciones* (sus traslados) |
-| `maria.rios@example.com` | Cliente | portal *Mis paquetes* |
-
-Cotizaciones de visitante de prueba: `KC-<año>-000001` (clave `DEMO-2026-KAMP`) y `KC-<año>-000002` (clave `SOLI-2026-KAMP`).
+<p align="center">
+  <a href="#descripción-general">Descripción</a> &nbsp;·&nbsp;
+  <a href="#módulos-principales">Módulos</a> &nbsp;·&nbsp;
+  <a href="#roles-y-permisos">Roles</a> &nbsp;·&nbsp;
+  <a href="#arquitectura">Arquitectura</a> &nbsp;·&nbsp;
+  <a href="#instalación">Instalación</a> &nbsp;·&nbsp;
+  <a href="#equipo">Equipo</a>
+</p>
 
 ---
 
-## 2. Backend (`kampu-backend`)
+## Descripción general
+
+**Kampu** es una solución *Full Stack* que centraliza la operación completa de una agencia de viajes en una sola plataforma:
+
+- **Lo comercial:** catálogo de paquetes, cotizaciones en línea, reservas, pagos multimoneda y la boleta por correo.
+- **La logística:** salidas programadas, traslados, flota, personal de campo y proveedores.
+- **La atención al viajero:** portal del cliente y gestión de la reserva sin crear cuenta.
+
+Cada usuario ve solo lo que le corresponde: administración, ventas, guías, conductores y clientes trabajan sobre los mismos datos con permisos distintos. La base de datos Oracle aplica las reglas de negocio y la auditoría de cada cambio.
+
+<table>
+  <tr>
+    <td align="center" width="25%"><b>5</b><br /><sub>roles con permisos propios</sub></td>
+    <td align="center" width="25%"><b>Cotización</b><br /><sub>en línea sin crear cuenta</sub></td>
+    <td align="center" width="25%"><b>Multimoneda</b><br /><sub>pagos con tipo de cambio</sub></td>
+    <td align="center" width="25%"><b>Auditoría</b><br /><sub>de cada operación</sub></td>
+  </tr>
+</table>
+
+---
+
+## Módulos principales
+
+<details>
+<summary><b>Página principal y catálogo público</b></summary>
+<br />
+
+- Secciones a pantalla completa, un buscador de destinos y un catálogo de tours con la próxima fecha reservable.
+- Cada tour ofrece **Reservar** (con cuenta) o **Cotizar** (sin cuenta).
+</details>
+
+<details>
+<summary><b>Cotizador en línea sin cuenta</b></summary>
+<br />
+
+- El visitante elige la fecha, los pasajeros, los servicios adicionales y la habitación de hotel. El precio lo calcula el servidor.
+- Al guardar recibe un **código y una clave** con los que puede:
+  - volver a abrir la cotización y descargarla en PDF;
+  - solicitar la reserva y seguir su estado en `/seguimiento`;
+  - una vez confirmada, gestionar su reserva (pasajeros, pagos y anulación) sin registrarse.
+</details>
+
+<details>
+<summary><b>Portal del cliente</b></summary>
+<br />
+
+- Registro de la cuenta web e inicio de sesión con correo o documento.
+- Reservas, pasajeros, pagos informados, solicitudes de anulación y seguimiento de cada paquete.
+</details>
+
+<details>
+<summary><b>Panel de control (Dashboard)</b></summary>
+<br />
+Resumen de métricas operativas, ocupación de salidas, alertas de operación y estado general de la agencia.
+</details>
+
+<details>
+<summary><b>Catálogo de paquetes y servicios adicionales</b></summary>
+<br />
+Tours con itinerario por día, tarifas, días de operación, hora de inicio, puntos de recojo, fotos y servicios adicionales que se cobran por persona o por grupo.
+</details>
+
+<details>
+<summary><b>Salidas, reservas y pasajeros</b></summary>
+<br />
+
+- **Salidas:** fecha, cupos y guía asignado.
+- **Reservas:** registro, manifiesto de pasajeros y punto de recojo, con anulaciones y reembolsos.
+- **Solicitudes de anulación:** las que envía el cliente las aprueba o rechaza el área de ventas.
+</details>
+
+<details>
+<summary><b>Cotizaciones recibidas</b></summary>
+<br />
+Bandeja de solicitudes que llegan desde el cotizador público. Ventas las convierte en reservas o las rechaza.
+</details>
+
+<details>
+<summary><b>Pagos multimoneda y boleta</b></summary>
+<br />
+
+- Registro y validación de pagos en soles o en otra moneda, con conversión automática.
+- Al aprobar un pago, la **boleta informativa** se envía por correo.
+</details>
+
+<details>
+<summary><b>Tráfico y traslados</b></summary>
+<br />
+
+- Traslados agrupados por salida, con la asignación de vehículo y conductor.
+- La duración se estima por carretera con **OpenStreetMap (OSRM)**.
+- Estados del traslado: programado → asignado → embarque → en ruta → finalizado.
+</details>
+
+<details>
+<summary><b>Logística: personal, flota y proveedores</b></summary>
+<br />
+
+- **Personal y flota propios:** guías, conductores y vehículos de la agencia. Para la flota se registran el mantenimiento, el SOAT y la revisión técnica.
+- **Proveedores externos:** su personal, sus vehículos y sus habitaciones de hotel.
+- **Lugares:** se buscan en el mapa (Photon / OpenStreetMap).
+</details>
+
+<details>
+<summary><b>Panel de campo: guías y conductores</b></summary>
+<br />
+
+**Conductor:**
+- Avanza cada traslado y marca qué pasajeros abordaron.
+- Abre la ruta en Google Maps o Waze.
+- Registra el kilometraje y el combustible de su vehículo, y consulta su historial de viajes.
+
+**Guía:**
+- Inicia y finaliza el tour, y marca la asistencia de los pasajeros por día.
+- Ve el transporte de cada salida y descarga el manifiesto en PDF.
+- Registra sus certificaciones (carné e idiomas).
+
+**Ambos:**
+- Reportan novedades en ruta y bloquean horarios en los que no están disponibles.
+- Reciben avisos cuando les asignan, cambian o cancelan un trabajo.
+</details>
+
+<details>
+<summary><b>Usuarios y auditoría</b></summary>
+<br />
+Alta de cuentas internas con su rol y bitácora completa de altas, cambios campo por campo, bajas, inicios de sesión e intentos fallidos. La bitácora tiene filtros y se puede exportar.
+</details>
+
+<details>
+<summary><b>Autenticación y seguridad</b></summary>
+<br />
+
+- **Spring Security + JWT:** el login entrega un token que el frontend envía en cada petición como `Authorization: Bearer`.
+- **Contraseñas** guardadas con **BCrypt**. La cuenta se bloquea tras 5 intentos fallidos, y el mensaje de error es el mismo exista o no el usuario.
+- **Permisos por endpoint** con `@PreAuthorize`. Sin sesión se responde **401** y sin permiso **403**, siempre en JSON.
+- **En cada petición** se vuelve a comprobar que la cuenta siga activa y con su rol actual.
+- **En el frontend**, *guards* de Angular protegen cada ruta según el permiso del usuario.
+</details>
+
+---
+
+## Roles y permisos
+
+| Rol | Usuario de prueba | Accede a |
+|---|---|---|
+| **Administrador** | `kadmin` | Todo el panel: usuarios, auditoría, tráfico, personal, vehículos y proveedores |
+| **Ventas** | `kventas` | Reservas, pagos, clientes, cotizaciones y catálogo |
+| **Guía** | `kguia` | Sus salidas asignadas, la asistencia, su historial de tours y su disponibilidad |
+| **Conductor** | `kconductor` | Sus traslados, su vehículo, su historial de viajes y su disponibilidad |
+| **Cliente** | `maria.rios@example.com` | Portal *Mi cuenta*: sus paquetes, pasajeros y pagos |
+
+> La clave de todos los usuarios de prueba es `Kampu2026*`.
+> Cotizaciones de visitante de prueba: `KC-<año>-000001` (clave `DEMO-2026-KAMP`) y `KC-<año>-000002` (clave `SOLI-2026-KAMP`).
+
+---
+
+## Arquitectura
+
+```text
+ ┌───────────────────────┐   HTTP + JWT   ┌──────────────────────────┐   JDBC    ┌──────────────────────────┐
+ │  Angular 18 (SPA)     │ ─────────────► │  Spring Boot 3.4 (API)   │ ────────► │  Oracle Database 21c XE  │
+ │  Tailwind · Signals   │ ◄───────────── │  Spring Security · JPA   │ ◄──────── │  Tablas · Vistas · PL/SQL│
+ │  Guards · Interceptor │      JSON      │  JdbcTemplate · Swagger  │           │  Triggers · Auditoría    │
+ └───────────────────────┘                └──────────────────────────┘           └──────────────────────────┘
+        :4200                                    :8082/kampu                            :1521/xe
+```
+
+Monorepo desacoplado en dos aplicaciones:
+
+<details open>
+<summary><b>Estructura del proyecto</b></summary>
+
+```text
+kampu-tour-manager/
+├── docs/                          # Atribuciones y licencias de las fotos
+├── kampu-frontend/                # Single Page Application (Angular 18)
+│   ├── public/                    # Fotos de destinos y banderas
+│   └── src/app/
+│       ├── core/                  # Modelos, servicios HTTP, sesión, guards, interceptor y utilidades
+│       ├── features/              # Una carpeta por módulo (landing, cotizar, portal, reservas, pagos, campo...)
+│       ├── layout/                # Contenedor del panel y navegación
+│       └── shared/                # Componentes reutilizables (modal, íconos, logo, buscador...)
+│
+└── kampu-backend/                 # API REST (Java 21 / Spring Boot 3.4)
+    └── src/main/
+        ├── java/pe/edu/upeu/kampu/
+        │   ├── auditoria/         # Bitácora de cambios y su consulta
+        │   ├── config/            # Spring Security, CORS, OpenAPI y usuarios iniciales
+        │   ├── controller/        # Controladores REST
+        │   ├── dto/               # Objetos de transferencia y validaciones
+        │   ├── entity/            # Entidades JPA
+        │   ├── exception/         # Manejador global de excepciones y respuestas 401 / 403
+        │   ├── repository/        # Spring Data JPA y acceso a paquetes PL/SQL
+        │   ├── seguridad/         # JWT, filtro de autenticación y sesión actual
+        │   └── services/          # Lógica de negocio, PDF, correo, mapas y moneda
+        └── resources/
+            ├── application.yaml   # Configuración
+            └── db/kampu_bd.sql    # Script único de Oracle (esquema, PL/SQL y datos de demostración)
+```
+
+</details>
+
+<details>
+<summary><b>Tecnologías</b></summary>
+<br />
+
+| Capa | Tecnología |
+|---|---|
+| Frontend | Angular 18 (standalone, signals), Tailwind CSS 3, SweetAlert2 |
+| Backend | Java 21, Spring Boot 3.4, Spring Data JPA, Spring Security, JWT (jjwt 0.11.5), Bean Validation |
+| Base de datos | Oracle Database 21c XE: tablas, vistas, paquetes PL/SQL, triggers y roles |
+| Documentos | OpenPDF (cotización y manifiesto), JavaMail (boleta) |
+| Mapas | OpenStreetMap: Photon (búsqueda de lugares) y OSRM (rutas por carretera) |
+| Documentación de la API | Swagger / OpenAPI (springdoc) |
+</details>
+
+---
+
+## Instalación
+
+### Requisitos previos
+
+* **Java JDK 21**
+* **Node.js 18+** y **npm**
+* **Oracle Database 21c XE** (también funciona con Oracle 23 Free) y **SQL Developer**
+
+> Orden de arranque: **Oracle → backend → frontend**.
+
+### 1. Clonar el repositorio
+
+```bash
+git clone https://github.com/soforee/kampu-tour-manager.git
+```
+
+```bash
+cd kampu-tour-manager
+```
+
+### 2. Base de datos
+
+<details>
+<summary><b>Ver pasos de la base de datos</b></summary>
+<br />
+
+1. En SQL Developer conéctate como **`SYSTEM`** al servicio `localhost:1521/xe`.
+2. Abre `kampu-backend/src/main/resources/db/kampu_bd.sql` y ejecútalo completo como script (**F5**).
+3. El script crea el usuario `KAMPU_BD` (clave `tour1234`), las tablas, las vistas, los paquetes PL/SQL y los datos de demostración.
+4. Al final, sus pruebas internas deben mostrar `[OK]`. Los `ORA-` junto a un `[OK]` son pruebas que comprueban que la base **rechace** operaciones indebidas; no son errores.
+
+> ⚠️ Cada ejecución del script **borra y vuelve a crear** todas las tablas de `KAMPU_BD`. No lo ejecutes sobre una base con datos reales.
+
+</details>
+
+### 3. Backend
+
+<details>
+<summary><b>Ver pasos del backend</b></summary>
+<br />
 
 ```bash
 cd kampu-backend
+```
+
+```bash
 ./mvnw spring-boot:run
 ```
 
-En Windows: `mvnw.cmd spring-boot:run`, o ejecutar `KampuApplication` desde IntelliJ. Arranca en el puerto **8082**;
-la documentación de la API está en http://localhost:8082/kampu/swagger-ui/index.html.
+- En Windows usa `mvnw.cmd spring-boot:run`, o ejecuta `KampuApplication` desde IntelliJ.
+- El servidor arranca en **http://localhost:8082/kampu**.
+- La documentación interactiva está en **http://localhost:8082/kampu/swagger-ui/index.html**.
 
-La conexión está en `src/main/resources/application.yaml`: `jdbc:oracle:thin:@localhost:1521/xe`, usuario `kampu_bd`,
-clave `tour1234`. Otros valores se pueden cambiar con variables de entorno:
+**Configuración opcional (variables de entorno):**
 
-| Variable | Valor por defecto |
+| Variable | Uso |
 |---|---|
-| `KAMPU_SESION_SECRETO` | clave para firmar las sesiones (32+ caracteres). Sin ella, las sesiones se cierran al reiniciar el backend |
-| `MAIL_USERNAME` / `MAIL_PASSWORD` | correo para enviar la boleta (Gmail: contraseña de aplicación). Vacío = envío desactivado |
-| `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | datos de contacto de la agencia (página principal, boleta y PDF de cotización). Por defecto: Tarapoto, San Martín |
+| `KAMPU_JWT_SECRETO` | Clave en Base64 para firmar los tokens JWT. **Defínela antes de cualquier uso real** |
+| `MAIL_USERNAME` / `MAIL_PASSWORD` | Cuenta de correo para enviar la boleta (en Gmail, una contraseña de aplicación). Si están vacías, no se envían correos |
+| `KAMPU_CONTACTO_EMAIL`, `KAMPU_CONTACTO_TELEFONO`, `KAMPU_CONTACTO_CIUDAD`, `KAMPU_CONTACTO_INSTAGRAM`, `KAMPU_CONTACTO_FACEBOOK` | Datos de contacto de la agencia para la web, la boleta y el PDF |
 
-`ddl-auto` está en `update` con el dialecto `OracleDialect`. Las tablas, vistas y PL/SQL los crea `kampu_bd.sql`; ejecútalo antes de arrancar.
+Los mapas usan los servidores públicos de OpenStreetMap: solo se necesita internet en la PC del backend. Sin conexión, los lugares se llenan a mano y la duración de los traslados se estima en línea recta.
 
-**Si no arranca con "no tiene las tablas del sistema", ORA-00942 o PLS-00201:** el backend se conectó a una base donde no
-se ejecutó el script. Revisa que la `url` del `application.yaml` apunte a la base donde ejecutaste el script.
-Para comprobar dónde estás: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
+> Si al arrancar aparece *"no tiene las tablas del sistema"* o `ORA-00942`, el backend se conectó a una base donde no se ejecutó el script. Revisa la `url` de `application.yaml`.
 
-### Mapas (OpenStreetMap): buscador de lugares y rutas OSRM
+</details>
 
-No hay que instalar nada ni crear claves: el backend usa los servidores públicos y gratuitos de OpenStreetMap,
-configurados en `application.yaml`:
+### 4. Frontend
 
-```yaml
-kampu:
-  mapas:
-    buscador-url: https://photon.komoot.io        # Photon: autocompleta el formulario de Lugares
-    osrm-url: https://router.project-osrm.org     # OSRM: duración y distancia por carretera
-```
+<details>
+<summary><b>Ver pasos del frontend</b></summary>
+<br />
 
-- Solo se necesita **internet** en la PC donde corre el backend.
-- **Buscador** (Proveedores → Lugares → Nuevo lugar → "Buscar en el mapa"): al elegir un resultado se llenan nombre,
-  tipo, ciudad, latitud, longitud y dirección. Se pueden corregir a mano antes de guardar.
-- **OSRM** (Tráfico → nuevo traslado): con las coordenadas del origen y el destino calcula el tiempo por carretera
-  (más 5 o 10 minutos de embarque). El aviso dice "Ruta por carretera (OpenStreetMap)".
-- **Sin internet**, o si el servidor no responde: el buscador no muestra resultados (se llena a mano) y la duración
-  se estima en línea recta × 1.3. El sistema sigue funcionando.
-- Para comprobar que llegan: abre en el navegador
-  `https://photon.komoot.io/api/?q=tarapoto&limit=1` y
-  `https://router.project-osrm.org/route/v1/driving/-76.3732,-6.5087;-76.3600,-6.4900?overview=false`.
-  Deben devolver un JSON (el de OSRM con `"code":"Ok"`).
-- Los servidores públicos son para uso moderado. Si la agencia crece, se puede instalar un OSRM propio
-  (Docker, con el mapa de Perú) y cambiar solo `osrm-url`.
-
----
-
-## 3. Frontend (`kampu-frontend`)
+En una nueva terminal:
 
 ```bash
 cd kampu-frontend
+```
+
+```bash
 npm install
+```
+
+```bash
 npm start
 ```
 
-Abre http://localhost:4200. `proxy.config.json` redirige `/api` y `/kampu/images` al backend (puerto 8082).
-Producción: `npm run build` (queda en `dist/frontend_kampu`).
+- Abre la aplicación en **http://localhost:4200**.
+- El archivo `proxy.config.json` redirige `/api` y `/kampu/images` al backend en el puerto 8082.
+- Para producción, ejecuta `npm run build`; el resultado queda en `dist/frontend_kampu`.
+
+</details>
 
 ---
 
-## 4. Qué hace el sistema
+## Equipo
 
-- **Página principal:** secciones a pantalla completa, buscador y catálogo de destinos con la próxima fecha reservable.
-  Cada tour tiene dos botones: "Reservar" (con cuenta) y "Cotizar".
-- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, servicios adicionales y la habitación de hotel
-  (obligatoria si el paquete tiene noches; sale de *Proveedores → Habitaciones de hotel*). El punto de recojo lo define la agencia. El precio lo calcula
-  el servidor. Al guardar se obtiene un código y una clave para volver a verla, descargar el PDF o solicitar la reserva;
-  el estado se sigue en `/seguimiento`. Cuando la agencia confirma la solicitud, con el mismo código y clave el
-  visitante gestiona su reserva sin crear cuenta (`/cotizacion/:codigo/reserva`): pasajeros, pagos, punto de recojo y
-  anulación.
-- **Portal del cliente** (`/mi-cuenta`): reservar, ver sus paquetes, pasajeros y pagos, e informar un pago.
-- **Panel del personal:**
-  - panel general;
-  - reservas, salidas, paquetes y servicios adicionales;
-  - pagos, clientes y cotizaciones;
-  - tráfico (traslados);
-  - **Personal**: guías y conductores propios. Se registran en *Usuarios* al crear su cuenta; aquí solo se activan o desactivan;
-  - **Vehículos**: flota propia;
-  - **Proveedores**: proveedores externos con su personal, sus vehículos y sus habitaciones de hotel (precio por noche,
-    por persona o por grupo, y foto), y los lugares (puntos de recojo, hoteles…);
-  - usuarios y auditoría.
-- **Guía y conductor:** ven solo lo suyo (la base de datos filtra lo que corresponde a cada uno):
-  - *Mis asignaciones*. El conductor avanza cada traslado (en camino al recojo → pasajeros a bordo → finalizado),
-    abre la ruta en Google Maps o Waze, llama o escribe por WhatsApp al titular, al guía o a la agencia, marca qué
-    pasajeros abordaron y muestra un cartel de recepción a pantalla completa;
-  - *Historial de viajes* y *Mi vehículo* (conductor): traslados finalizados con filtros y horas trabajadas;
-    mantenimiento, SOAT y revisión técnica de la unidad, y kilometraje y combustible del día;
-  - *Reportar novedad* y *Disponibilidad* (guía y conductor): imprevistos en ruta que la agencia responde en
-    *Novedades en ruta*, y bloqueos de horario que impiden asignarles trabajo;
-  - la campana avisa cuando les asignan, reasignan o cancelan un traslado, cambia su horario o un punto de recojo.
-  - el guía, en cada salida: marca *Iniciar tour / En atractivo / Finalizar tour* (al finalizar se avisa a la agencia
-    y una salida garantizada se cierra), ve el transporte con su conductor, marca la asistencia por día
-    (presente, no-show o rezago), escribe por WhatsApp al titular y descarga el manifiesto en PDF;
-  - *Historial de tours* (guía) y sus certificaciones (carné DIRCETUR / MINCETUR e idiomas) en *Disponibilidad*.
-- **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.
-  La matriz de permisos vive en Oracle (`PKG_SEGURIDAD_ROLES`): sin sesión se responde 401, y sin permiso, 403.
+<div align="center">
+<table>
+  <tr>
+    <td align="center" width="200">
+      <a href="https://github.com/soforee">
+        <img src="https://github.com/soforee.png?size=100" width="90" alt="Russell Diaz Nuñez" /><br />
+        <sub><b>Russell Diaz Nuñez</b></sub>
+      </a><br />
+      <sub>@soforee</sub>
+    </td>
+    <td align="center" width="200">
+      <a href="https://github.com/stardolllar">
+        <img src="https://github.com/stardolllar.png?size=100" width="90" alt="Doriann Gonzales Navarro" /><br />
+        <sub><b>Doriann Gonzales Navarro</b></sub>
+      </a><br />
+      <sub>@stardolllar</sub>
+    </td>
+    <td align="center" width="200">
+      <a href="https://github.com/ssh4123">
+        <img src="https://github.com/ssh4123.png?size=100" width="90" alt="Rodrigo Usuriaga Salas" /><br />
+        <sub><b>Rodrigo Usuriaga Salas</b></sub>
+      </a><br />
+      <sub>@ssh4123</sub>
+    </td>
+  </tr>
+</table>
+</div>
 
-## 5. Estructura
-
-```
-kampu-backend/
-  src/main/java/pe/edu/upeu/kampu/     controladores, servicios, repositorios, entidades, DTO y seguridad
-  src/main/resources/application.yaml  configuración
-  src/main/resources/db/               script único de Oracle (kampu_bd.sql)
-kampu-frontend/
-  src/app/core/      modelos, servicios (API, sesión, guards) y utilidades
-  src/app/features/  una carpeta por pantalla (página principal, login, portal, panel y módulos)
-  src/app/shared/    componentes reutilizables (íconos, logo, modal, estados…)
-  public/            imágenes (fotos de destinos y banderas)
-docs/ATRIBUCIONES_FOTOS.md   autores y licencias de las fotos (obligatorio por su licencia CC BY-SA)
-```
+<p align="center"><sub>Las fotos de destinos se usan bajo licencia CC BY-SA. Autores y licencias en <a href="docs/ATRIBUCIONES_FOTOS.md">docs/ATRIBUCIONES_FOTOS.md</a>.</sub></p>
