@@ -16,7 +16,6 @@ export class LandingFooterComponent {
 
   anio = new Date().getFullYear();
 
-  // Solo las redes configuradas en el backend; WhatsApp usa el teléfono de contacto
   get redes(): { nombre: string; url: string }[] {
     const whatsapp = this.contacto.telefono.replace(/\D/g, '');
     return [

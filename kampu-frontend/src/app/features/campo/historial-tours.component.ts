@@ -9,7 +9,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-// Guía: salidas que ya terminaron, con los pasajeros atendidos (asistencia) y las observaciones de cierre
 @Component({
   selector: 'app-historial-tours',
   standalone: true,

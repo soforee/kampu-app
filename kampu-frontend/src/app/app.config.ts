@@ -7,7 +7,6 @@ import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { usuarioInterceptor } from './core/services/usuario.interceptor';
 
-// Fechas y números en español de Perú ("nov.", "lunes 10 de noviembre", "1,850.00")
 registerLocaleData(localeEsPe);
 
 export const appConfig: ApplicationConfig = {

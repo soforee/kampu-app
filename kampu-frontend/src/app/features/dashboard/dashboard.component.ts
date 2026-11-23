@@ -10,8 +10,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { TarjetaDatoComponent } from '../../shared/tarjeta-dato.component';
 
-// Panel por rol (v4). El bloque "Paquetes" sale de VW_RESUMEN_PAQUETES_POR_ROL:
-//  - ADMIN / VENTAS: todos los estados y montos (los filtra Oracle, no Angular).
 import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-dashboard',
@@ -25,13 +23,11 @@ export class DashboardComponent {
   private alerts = inject(AlertService);
   private avisos = inject(AlertasService);
 
-  // Lo que hay que resolver hoy (salidas sin guía o transporte, reservas sin confirmar, pagos por validar...)
   alertas = this.avisos.lista;
   verTodas = signal(false);
   alertasVisibles = computed(() => this.verTodas() ? this.alertas() : this.alertas().slice(0, 4));
   urgentes = computed(() => this.alertas().filter(a => a.nivel === 'alta').length);
 
-  // Bloques comerciales (dinero y reservas) solo con VER_MONTOS / VER_RESERVAS
   comercial = computed(() => this.auth.puede('VER_MONTOS') && this.auth.puede('VER_RESERVAS'));
   nuevaReserva = computed(() => this.auth.puede('GESTIONAR_RESERVAS'));
   ejecuta = computed(() => this.auth.puede('ACTUALIZAR_EJECUCION'));
@@ -85,14 +81,12 @@ export class DashboardComponent {
         paquete: this.store.getPaquete(this.store.getSalida(r.salidaId)?.paqueteId)
       })));
 
-  // ---------- Comparación con el mes anterior ----------
   private claveMes(d: Date) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; }
   private mesActual = this.claveMes(new Date());
   private mesAnterior = this.claveMes(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
   private variacion(actual: number, anterior: number): number | null {
     return anterior > 0 ? Math.round((actual - anterior) * 100 / anterior) : null;
   }
-  // Pagos aprobados (en soles) de este mes y del anterior
   cobros = computed(() => {
     let esteMes = 0, mesPasado = 0;
     for (const p of this.store.pagos()) {
@@ -103,7 +97,6 @@ export class DashboardComponent {
     return { esteMes, variacion: this.variacion(esteMes, mesPasado) };
   });
   cobradoEsteMes = computed(() => this.cobros().esteMes);
-  // Reservas creadas este mes frente al anterior
   reservasMes = computed(() => {
     const lista = this.store.reservas().filter(r => r.estadoReserva !== 'ANULADA');
     const actual = lista.filter(r => r.fechaReserva.startsWith(this.mesActual)).length;
@@ -111,8 +104,6 @@ export class DashboardComponent {
     return { actual, variacion: this.variacion(actual, anterior) };
   });
 
-  // ---------- Gráfico: últimos 6 meses ----------
-  // Comercial: monto vendido por mes (reservas no anuladas). Sin VER_MONTOS: pasajeros por mes de inicio de la salida.
   grafico = computed(() => {
     const hoy = new Date();
     const meses = Array.from({ length: 6 }, (_, i) => {
@@ -139,7 +130,6 @@ export class DashboardComponent {
     return v >= 1000 ? `S/ ${(Math.round(v / 100) / 10).toLocaleString('es-PE')}K` : `S/ ${Math.round(v)}`;
   }
 
-  // ---------- Acciones rápidas (solo las que el rol puede hacer) ----------
   acciones = computed(() => {
     const a: { icono: string; titulo: string; detalle: string; boton: string; ruta: string }[] = [];
     if (this.auth.puede('GESTIONAR_RESERVAS')) a.push({ icono: 'ticket', titulo: 'Nueva reserva', detalle: 'Cliente, salida y pasajeros en 4 pasos', boton: 'Crear', ruta: '/reservas/nueva' });
@@ -156,7 +146,6 @@ export class DashboardComponent {
     return a.slice(0, 4);
   });
 
-  // ---------- Barras de progreso ----------
   progreso = computed(() => {
     const proximas = this.store.salidas().filter(s => (s.estado === 'PROGRAMADA' || s.estado === 'GARANTIZADA') && s.fechaFin >= this.fechaLocal(new Date()));
     const vendidos = proximas.reduce((a, s) => a + s.cuposMaximos - s.cuposDisponibles, 0);
@@ -176,7 +165,6 @@ export class DashboardComponent {
   });
   reservasConSaldo = computed(() => this.store.reservas().filter(r => r.estadoReserva !== 'ANULADA' && this.store.saldo(r) > 0).length);
 
-  // ---------- Hoy: traslados del día, salidas que empiezan y pagos por validar ----------
   private fechaLocal(d: Date) { return `${this.claveMes(d)}-${String(d.getDate()).padStart(2, '0')}`; }
   hoyDatos = computed(() => {
     const dia = this.fechaLocal(new Date());
@@ -192,9 +180,6 @@ export class DashboardComponent {
     return r.cuposMaximos ? Math.round((r.cuposMaximos - r.cuposDisponibles) * 100 / r.cuposMaximos) : 0;
   }
 
-  // Ciclo de la salida (v10, ACTUALIZAR_EJECUCION: Admin y Ventas)
-  // Garantizar: PROGRAMADA -> GARANTIZADA (la BD lo hace sola al llegar al mínimo; aquí se adelanta)
-  // Terminar: GARANTIZADA -> COMPLETADA (sus reservas confirmadas pasan a COMPLETADA)
   puedeIniciar(r: ResumenPaquete) { return this.ejecuta() && r.estadoSalida === 'PROGRAMADA' && r.estadoEjecucion !== 'TERMINADO' && r.pasajeros > 0; }
   puedeTerminar(r: ResumenPaquete) { return this.ejecuta() && r.estadoSalida === 'GARANTIZADA' && r.estadoEjecucion !== 'POR_EMPEZAR'; }
 
@@ -209,7 +194,7 @@ export class DashboardComponent {
         this.procesando.set(null);
         this.alerts.toast(estado === 'COMPLETADA' ? 'Salida terminada' : 'Salida garantizada');
         this.store.cargarSalidas();
-        this.store.cargarReservas();   // al terminar, sus reservas pasan a COMPLETADA
+        this.store.cargarReservas();
       },
       error: err => { this.procesando.set(null); this.alerts.error(this.store.error(err)); }
     });

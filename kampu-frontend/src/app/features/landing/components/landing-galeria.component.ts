@@ -2,14 +2,12 @@ import { Component } from '@angular/core';
 import { RevelarDirective } from '../../../shared/revelar.directive';
 import { FOTOS_DESTINOS } from '../landing.models';
 
-// Galería de destinos (fotos de Wikimedia Commons con su crédito)
 @Component({
   selector: 'app-landing-galeria',
   standalone: true,
   imports: [RevelarDirective],
   templateUrl: './landing-galeria.component.html',
   styles: [`
-    /* Celular: 2 columnas; escritorio: 4 columnas x 2 filas que llenan la pantalla (la 1.a columna es el encabezado) */
     .mosaico { display: grid; grid-template-columns: repeat(2, 1fr); grid-auto-rows: 190px; gap: 3px; }
     .mosaico > :first-child { grid-column: 1 / -1; }
     @media (min-width: 1024px) {

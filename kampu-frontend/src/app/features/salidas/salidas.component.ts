@@ -25,10 +25,8 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 export class SalidasComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
-  // GESTIONAR_CATALOGO: solo Admin y Ventas crean/editan salidas (el resto solo las consulta)
   editable = inject(AuthService).puede('GESTIONAR_CATALOGO');
 
-  // Mismas transiciones que valida la BD (TRG_SALIDAS_VALIDAR). Cancelar va aparte (anula y reembolsa sus reservas).
   private transiciones: { [estado: string]: EstadoSalida[] } = {
     PROGRAMADA: ['PROGRAMADA', 'GARANTIZADA'],
     GARANTIZADA: ['GARANTIZADA', 'COMPLETADA']
@@ -58,13 +56,11 @@ export class SalidasComponent {
 
   private fechaOriginal = '';
 
-  // Fecha fin = inicio + días del paquete - 1 (la guarda el backend; aquí solo se muestra)
   get fechaFin(): string {
     const p = this.store.getPaquete(this.form.paqueteId);
     return p && this.form.fechaInicio ? addDays(this.form.fechaInicio, p.dias - 1) : '';
   }
 
-  // Para confirmar, el transporte asignado debe alcanzar en todos los tramos
   get faltanteActual(): string | null {
     return this.editId ? this.store.getSalida(this.editId)?.faltanteTransporte ?? null : null;
   }
@@ -72,7 +68,6 @@ export class SalidasComponent {
   filas = computed(() => {
     const f = this.filtro();
     const abierta = (e: string) => e === 'PROGRAMADA' || e === 'GARANTIZADA';
-    // Primero lo que viene (la más cercana arriba); después lo cerrado, de lo más reciente a lo más antiguo
     return this.store.salidas()
       .filter(s => !f || s.estado === f)
       .sort((a, b) => abierta(a.estado) !== abierta(b.estado) ? (abierta(a.estado) ? -1 : 1)
@@ -89,7 +84,6 @@ export class SalidasComponent {
       }));
   });
 
-  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();
@@ -149,8 +143,6 @@ export class SalidasComponent {
     });
   }
 
-  // v10: una salida no se borra; se cancela (PKG_RESERVAS.cancelar_salida anula y reembolsa sus reservas
-  // y cancela sus traslados). Si tiene dinero cobrado se pide la forma de reembolso.
   async eliminar(id: number) {
     const s = this.store.getSalida(id);
     if (!s) return;

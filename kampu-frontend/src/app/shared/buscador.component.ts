@@ -1,7 +1,6 @@
 import { Component, Input, model } from '@angular/core';
 import { IconComponent } from './icon.component';
 
-/** Campo de búsqueda común (lupa + texto). Uso: <app-buscador [(valor)]="texto" placeholder="Nombre o documento" /> */
 @Component({
   selector: 'app-buscador',
   standalone: true,

@@ -5,10 +5,6 @@ import {
   CalculoCotizacion, Cotizacion, CotizacionCreada, DatosCotizacion, EstadoCotizacion, ServicioAdicional, SolicitudReserva, HabitacionCotizable } from '../models';
 import { API } from '../utils/api';
 
-/**
- * (v11) Cotizaciones. El visitante opera la suya con código + clave (la clave va siempre en el cuerpo,
- * nunca en la URL). Los montos los calcula el servidor: aquí solo se envía lo que el visitante elige.
- */
 @Injectable({ providedIn: 'root' })
 export class CotizacionService {
   private http = inject(HttpClient);
@@ -26,8 +22,6 @@ export class CotizacionService {
     return this.http.post<CotizacionCreada>(this.url, d);
   }
 
-  // clave vacía: el cliente con sesión abre las suyas
-  // Habitaciones de hotel de proveedores de hospedaje (sección 5 del cotizador)
   habitaciones(): Observable<HabitacionCotizable[]> {
     return this.http.get<HabitacionCotizable[]>(`${this.url}/habitaciones`);
   }
@@ -52,12 +46,10 @@ export class CotizacionService {
     return this.http.post(`${this.url}/${encodeURIComponent(codigo)}/pdf`, { clave: clave }, { responseType: 'blob' });
   }
 
-  // Cliente con cuenta
   mias(): Observable<Cotizacion[]> {
     return this.http.get<Cotizacion[]>(`${this.url}/mias`);
   }
 
-  // Personal (VER_/GESTIONAR_COTIZACIONES)
   listar(estado: EstadoCotizacion | '' = ''): Observable<Cotizacion[]> {
     return this.http.get<Cotizacion[]>(this.url, { params: estado ? { estado: estado } : {} });
   }
@@ -79,7 +71,6 @@ export class CotizacionService {
   }
 }
 
-// Guarda un archivo descargado (PDF) con su nombre
 export function guardarArchivo(blob: Blob, nombre: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

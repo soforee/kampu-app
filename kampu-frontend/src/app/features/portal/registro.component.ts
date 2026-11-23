@@ -14,9 +14,6 @@ import { PortalHeaderComponent } from './portal-header.component';
 
 export const PASSWORD_MIN = 8;
 
-// "Registrarse" (reemplaza a "Probar cuenta demo").
-// POST /auth/registro -> SP_REGISTRAR_CLIENTE_EXTERNO. Si todo sale bien el cliente
-// queda autenticado y pasa directo a "Mis paquetes".
 @Component({
   selector: 'app-registro',
   standalone: true,
@@ -26,7 +23,6 @@ export const PASSWORD_MIN = 8;
 export class RegistroComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
-  // ?reservar=<paqueteId>: viene de una cotización; al crear la cuenta se abre la reserva de ese paquete
   private pendiente = leerReservaPendiente(inject(ActivatedRoute).snapshot.queryParamMap);
 
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
@@ -52,7 +48,6 @@ export class RegistroComponent {
     if (this.auth.autenticado()) this.router.navigateByUrl(this.auth.inicio());
   }
 
-  // Indicador simple de fortaleza (solo orientativo)
   fuerza(): number {
     const p = this.form.password;
     let n = 0;
@@ -75,7 +70,6 @@ export class RegistroComponent {
     };
     this.auth.registrar(datos).subscribe({
       next: sesion => {
-        // Autenticación automática tras el registro
         this.auth.guardarSesion(sesion);
         this.router.navigate(['/mi-cuenta'], { queryParams: { bienvenido: 1, ...(this.pendiente ?? {}) } });
       },

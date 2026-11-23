@@ -6,7 +6,6 @@
 </app-page-header>
 
 <div class="mb-6 grid gap-6 xl:grid-cols-3">
-  <!-- Columna principal: indicadores y gráfico -->
   <div class="min-w-0 space-y-6 xl:col-span-2">
     <div class="grid grid-cols-2 gap-4 lg:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4" data-testid="indicadores">
       <app-tarjeta-dato etiqueta="Por empezar" icono="calendar" [valor]="kpis().porEmpezar" detalle="Salidas abiertas" />
@@ -45,7 +44,6 @@
     </section>
   </div>
 
-  <!-- Columna lateral: acciones rápidas y avance -->
   <aside class="min-w-0 space-y-6">
     @if (acciones().length) {
       <section class="card overflow-hidden" data-testid="acciones">
@@ -80,7 +78,6 @@
 
 @if (store.cargado()) {
   <div class="mb-6 grid items-start gap-6 lg:grid-cols-2">
-    <!-- Requiere atención -->
     <section class="card overflow-hidden" data-testid="alertas">
       <div class="card-header">
         <h2 class="card-title">Requiere atención
@@ -113,7 +110,6 @@
       }
     </section>
 
-    <!-- Hoy -->
     <section class="card overflow-hidden" data-testid="hoy">
       <div class="card-header">
         <h2 class="card-title">Hoy</h2>

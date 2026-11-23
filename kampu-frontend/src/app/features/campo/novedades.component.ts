@@ -11,7 +11,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-// Guía y conductor: reportar una novedad en ruta (llega a Admin y Ventas en la campana) y ver la respuesta
 @Component({
   selector: 'app-mis-novedades',
   standalone: true,
@@ -79,7 +78,6 @@ export class MisNovedadesComponent {
 
   constructor() {
     this.cargar();
-    // Traslados de hoy en adelante para ligar la novedad
     this.http.get<MisAsignaciones>(`${API}/mis-asignaciones`).subscribe({
       next: d => {
         const desde = new Date(); desde.setHours(0, 0, 0, 0);

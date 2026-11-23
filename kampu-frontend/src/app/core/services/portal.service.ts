@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { PasajeroDraft, Pago, PortalDetalle, PortalPaquete, PortalPasajero } from '../models';
 import { API } from '../utils/api';
 
-// Portal del cliente (v10): VW_PAQUETES_CLIENTE y PKG_GESTION_PAQUETES_CLIENTE (vía backend, conexión KAMPU_WEB)
 @Injectable({ providedIn: 'root' })
 export class PortalService {
   private http = inject(HttpClient);
@@ -17,9 +16,6 @@ export class PortalService {
     return this.http.get<PortalDetalle>(`${API}/portal/paquetes/${reservaId}`);
   }
 
-  // El cliente elige paquete + fecha + cantidad (canal WEB; respeta la anticipación mínima del paquete)
-  // El punto de recojo lo define la agencia: la reserva queda con el recojo por definir.
-  // habitacionId: habitación de hotel, obligatoria si el paquete tiene noches.
   reservar(paqueteId: number, fecha: string, cantidad: number, habitacionId: number | null): Observable<PortalPaquete> {
     return this.http.post<PortalPaquete>(`${API}/portal/reservas`,
       { paqueteId: paqueteId, fecha: fecha, cantidad: cantidad, habitacionId: habitacionId });
@@ -41,7 +37,6 @@ export class PortalService {
     return this.http.delete<void>(`${API}/portal/pasajeros/${pasajeroId}`);
   }
 
-  // ---------- Invitado sin cuenta: la reserva de su cotización, con el código + clave ----------
   private cot(codigo: string) { return `${API}/cotizaciones/${encodeURIComponent(codigo)}/reserva`; }
 
   detalleInvitado(codigo: string, clave: string): Observable<PortalDetalle> {
@@ -67,7 +62,6 @@ export class PortalService {
     return this.http.post<{ resultado: 'ANULADA' | 'SOLICITUD_REGISTRADA' }>(`${this.cot(codigo)}/anulacion`, { clave, motivo });
   }
 
-  // Sin pagos aprobados se anula al instante; con pagos queda una solicitud para la agencia
   solicitarAnulacion(reservaId: number, motivo: string): Observable<{ resultado: 'ANULADA' | 'SOLICITUD_REGISTRADA' }> {
     return this.http.post<{ resultado: 'ANULADA' | 'SOLICITUD_REGISTRADA' }>(`${API}/portal/paquetes/${reservaId}/anulacion`, { motivo: motivo });
   }

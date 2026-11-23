@@ -1,10 +1,5 @@
 import { AfterViewInit, Directive, ElementRef, Input, OnDestroy, inject } from '@angular/core';
 
-/**
- * Aparición suave al entrar en pantalla (scroll reveal).
- * Uso: <div appRevelar> o <div appRevelar [retraso]="120">. Los estilos están en styles.css (.revelar).
- * Si el navegador no tiene IntersectionObserver o el usuario prefiere menos movimiento, el contenido se ve de inmediato.
- */
 @Directive({ selector: '[appRevelar]', standalone: true })
 export class RevelarDirective implements AfterViewInit, OnDestroy {
   @Input() retraso = 0;

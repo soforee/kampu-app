@@ -29,16 +29,13 @@ export class ReservaNuevaComponent implements OnInit {
   private route = inject(ActivatedRoute);
 
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
-  // El cliente invitado puede ser una empresa (RUC); los pasajeros no
   tiposCliente: TipoDocumentoCliente[] = ['DNI', 'CE', 'PASAPORTE', 'RUC'];
   canales = CANALES_VENTA;
   hoyTexto = hoy();
   etiqueta = etiqueta;
-  // 'registrado': cliente existente (buscador) · 'invitado': cliente nuevo (se crea al guardar la reserva)
   modo: 'registrado' | 'invitado' = 'registrado';
   cliente: Cliente | null = null;
   contacto: ContactoReserva = { nombre: '', tipoDocumento: 'DNI' as TipoDocumentoCliente, numeroDocumento: '', email: '', telefono: '' };
-  // v10 (PKG_RESERVAS.reservar): paquete + fecha + cantidad. La BD busca la salida de ese día o la crea.
   paqueteId: number | null = null;
   fecha = '';
   cantidad = 1;
@@ -48,7 +45,6 @@ export class ReservaNuevaComponent implements OnInit {
   calendario = signal<CalendarioDia[]>([]);
   puntos = signal<PuntoRecojo[]>([]);
   observaciones = '';
-  // Opcionales: se pueden registrar ahora o después (hasta la cantidad reservada)
   pasajeros: PasajeroDraft[] = [];
   v = new FormValidacion(() => {
     const e: Errores = {
@@ -96,9 +92,7 @@ export class ReservaNuevaComponent implements OnInit {
 
   get paquetesActivos() { return this.store.paquetes().filter(p => p.estado === 'ACTIVO'); }
   get paquete() { return this.store.getPaquete(this.paqueteId); }
-  // Día elegido en el calendario del paquete (opera, cupos y si ya hay salida)
   get dia(): CalendarioDia | undefined { return this.calendario().find(d => d.fecha === this.fecha); }
-  // Salida que ya existe ese día (si no, la BD la crea al guardar)
   get salidaId(): number | null { return this.dia?.salidaId ?? null; }
   get salida() { return this.store.getSalida(this.salidaId); }
   get fechaFin(): string { return this.paquete && this.fecha ? addDays(this.fecha, this.paquete.dias - 1) : ''; }
@@ -106,7 +100,6 @@ export class ReservaNuevaComponent implements OnInit {
     return this.calendario().filter(d => d.opera && d.cuposDisponibles > 0 && d.estadoSalida !== 'COMPLETADA').slice(0, 8);
   }
 
-  // El mismo DNI/CE/pasaporte no puede ir dos veces en la misma salida
   private yaViaja(tipo: string, doc: string): boolean {
     if (!this.salidaId || !doc) return false;
     const reservas = new Set(this.store.reservas()
@@ -118,7 +111,6 @@ export class ReservaNuevaComponent implements OnInit {
   get total() { return Math.max(this.bruto - (this.descuento || 0), 0); }
   get excede() { return this.pasajeros.length > (this.cantidad || 0); }
 
-  // Al elegir paquete: calendario de 60 días (PKG_RESERVAS.calendario) y puntos de recojo
   cambioPaquete() {
     this.calendario.set([]);
     this.puntos.set([]);
@@ -157,14 +149,12 @@ export class ReservaNuevaComponent implements OnInit {
     this.v.reiniciar();
   }
 
-  // Al elegir un cliente en el buscador se autocompleta el primer pasajero (si está vacío)
   elegirCliente(c: Cliente | null) {
     this.cliente = c;
     this.v.tocar('cliente');
     if (c && this.primeroVacio()) this.agregarCliente();
   }
 
-  // Desde el buscador: "no está registrado" → pasa a invitado con lo que escribió como nombre
   pasarAInvitado(texto: string) {
     this.modo = 'invitado';
     const t = texto.trim();
@@ -183,7 +173,6 @@ export class ReservaNuevaComponent implements OnInit {
     if (this.modo === 'registrado') {
       const c = this.cliente;
       if (!c) return;
-      // Un cliente con RUC es una empresa: no viaja como pasajero
       if (c.tipoDocumento === 'RUC') { this.alerts.toast('El cliente es una empresa (RUC): agrega a los pasajeros uno por uno', 'info'); return; }
       if (this.pasajeros.length >= this.cantidad) { this.alerts.toast('Ya registraste a todos los pasajeros de la reserva', 'info'); return; }
       dato = { nombreCompleto: c.nombreCompleto, tipoDocumento: c.tipoDocumento, numeroDocumento: c.numeroDocumento,
@@ -199,7 +188,6 @@ export class ReservaNuevaComponent implements OnInit {
     else this.pasajeros.push(dato);
   }
 
-  // ---------- Asistente: 1 Cliente · 2 Salida · 3 Pasajeros · 4 Revisar ----------
   pasos = ['Cliente', 'Paquete y fecha', 'Pasajeros', 'Revisar'];
   paso = signal(1);
   private camposPaso(n: number): string[] {
@@ -217,7 +205,6 @@ export class ReservaNuevaComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   anterior() { this.paso.set(Math.max(this.paso() - 1, 1)); }
-  // Se puede volver a cualquier paso; avanzar solo si los anteriores están completos
   irA(n: number) {
     for (let i = 1; i < n; i++) {
       if (!this.pasoValido(i)) { this.paso.set(i); this.alerts.toast('Completa este paso primero', 'error'); return; }

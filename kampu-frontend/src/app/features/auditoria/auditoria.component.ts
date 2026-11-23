@@ -11,12 +11,6 @@ import { etiqueta } from '../../core/utils/etiquetas';
 import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 
-/**
- * Sección "Auditoría" (solo ADMIN, permiso VER_AUDITORIA).
- * Bitácora completa: altas, modificaciones campo por campo, bajas, registros web,
- * inicios/cierres de sesión e ingresos fallidos. Filtros combinables, paginación en el
- * servidor, historial de un registro y exportación a CSV.
- */
 import { PageHeaderComponent } from '../../shared/page-header.component';
 import { PaginacionComponent } from '../../shared/paginacion.component';
 @Component({
@@ -96,7 +90,6 @@ export class AuditoriaComponent {
     this.buscar();
   }
 
-  // Historial completo de un registro (p. ej. todo lo que le pasó a la reserva 7)
   historial(a: RegistroAuditoria) {
     if (a.entidadId === null) return;
     this.filtro = { ...this.vacio(), entidad: a.entidad, entidadId: a.entidadId };
@@ -124,7 +117,6 @@ export class AuditoriaComponent {
     });
   }
 
-  // Texto del cambio en una línea
   resumen(a: RegistroAuditoria): string {
     if (a.campo && (a.valorAnterior !== null || a.valorNuevo !== null)) {
       return `${this.campo(a.campo)}: ${a.valorAnterior ?? '(vacío)'} → ${a.valorNuevo ?? '(vacío)'}`;

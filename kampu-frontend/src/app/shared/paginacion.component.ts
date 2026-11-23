@@ -1,10 +1,6 @@
 import { Component, computed, input, model } from '@angular/core';
 import { IconComponent } from './icon.component';
 
-/**
- * Paginación común de las tablas: "1–10 de 37" y botones Anterior / Siguiente.
- * pagina empieza en 0. Uso: <app-paginacion [(pagina)]="pagina" [total]="filas().length" [tamanio]="10" />
- */
 @Component({
   selector: 'app-paginacion',
   standalone: true,
@@ -28,7 +24,6 @@ export class PaginacionComponent {
   total = input(0);
   tamanio = input(10);
   paginas = computed(() => Math.max(1, Math.ceil(this.total() / this.tamanio())));
-  // Página que se muestra (si el total bajó, la última que existe)
   actual = computed(() => Math.min(this.pagina(), this.paginas() - 1));
   desde = computed(() => this.total() ? this.actual() * this.tamanio() + 1 : 0);
   hasta = computed(() => Math.min(this.total(), (this.actual() + 1) * this.tamanio()));

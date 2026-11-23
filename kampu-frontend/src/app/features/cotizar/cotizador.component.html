@@ -1,4 +1,3 @@
-<!-- Cotizador (visitante o cliente): mismo lenguaje que la página principal — portada con foto, pasos numerados y resumen fijo -->
 <div class="cotizador min-h-screen">
 
   @if (cargando()) {
@@ -20,7 +19,6 @@
     </div>
   } @else { @if (paquete(); as p) {
 
-    <!-- Portada: foto del destino a sangre, nombre del tour y datos clave -->
     <section class="portada">
       @if (imagen(); as src) { <img [src]="src" [alt]="p.nombre" class="portada-foto" (error)="sinImagen()"> }
       <div class="portada-velo"></div>
@@ -46,7 +44,6 @@
           <span class="dato-portada"><app-icon name="clock" size="w-4 h-4" /> {{ p.dias }} {{ p.dias === 1 ? 'día' : 'días' }}@if (p.noches) { · {{ p.noches }} {{ p.noches === 1 ? 'noche' : 'noches' }} }</span>
           @if (p.horaInicio) { <span class="dato-portada"><app-icon name="flag" size="w-4 h-4" /> Inicia {{ p.horaInicio }} h</span> }
           <span class="dato-portada dato-precio">Desde S/ {{ p.precioBase | number:'1.0-0' }} <small>por persona</small></span>
-          <!-- Visitante o cliente registrado: se distingue a simple vista -->
           @if (auth.esCliente()) {
             <span class="dato-portada dato-modo" data-testid="modo-cliente"><app-icon name="user" size="w-4 h-4" /> Con tu cuenta · {{ auth.usuario()?.nombre }}</span>
           } @else {
@@ -63,7 +60,6 @@
       <div class="grid items-start gap-6 lg:grid-cols-[1fr_380px]">
 
         <div class="space-y-6">
-          <!-- El tour: descripción, qué incluye e itinerario -->
           <section class="bloque">
             <h2 class="paso-titulo"><span class="paso-num">El tour</span></h2>
             @if (p.descripcion) { <p class="mt-3 text-[15px] leading-relaxed text-zinc-700">{{ p.descripcion }}</p> }
@@ -92,7 +88,6 @@
             }
           </section>
 
-          <!-- 01 Fecha: calendario del mes con los cupos de cada día -->
           <section class="bloque">
             <h2 class="paso-titulo"><span class="paso-num">01</span> ¿Cuándo viajas?</h2>
             @if (!fechas().length) {
@@ -131,7 +126,6 @@
             }
           </section>
 
-          <!-- 02 Pasajeros -->
           <section class="bloque">
             <h2 class="paso-titulo"><span class="paso-num">02</span> ¿Quiénes viajan?</h2>
             <div class="mt-5 grid gap-3 sm:grid-cols-2">
@@ -150,7 +144,6 @@
             <p class="hint mt-4">El punto y la hora de recojo te los confirma la agencia al atender tu reserva.</p>
           </section>
 
-          <!-- 03 Adicionales: tarjetas que se marcan -->
           @if (servicios().length) {
             <section class="bloque">
               <h2 class="paso-titulo"><span class="paso-num">03</span> Personaliza tu viaje <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
@@ -181,14 +174,12 @@
             </section>
           }
 
-          <!-- Comentarios -->
           <section class="bloque">
             <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '04' : '03' }}</span> ¿Algo que debamos saber? <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
             <textarea id="cot-obs" class="field mt-4 min-h-[88px]" maxlength="500" [(ngModel)]="observaciones" (ngModelChange)="recalcular()" aria-label="Comentarios para la agencia"
                       placeholder="Ej. viajamos con niños de 6 y 9 años, llegamos un día antes…"></textarea>
           </section>
 
-          <!-- 05 Habitación de hotel: obligatoria si el paquete tiene noches (suma al total) -->
           @if ((paquete()?.noches ?? 0) > 0) {
             <section class="bloque" data-testid="cotizar-habitaciones">
               <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '05' : '04' }}</span> ¿Dónde te hospedas?</h2>
@@ -212,7 +203,6 @@
           }
         </div>
 
-        <!-- Resumen calculado por el servidor (fijo al costado en escritorio) -->
         <aside class="resumen lg:sticky lg:top-6" aria-live="polite" data-testid="resumen">
           <div class="resumen-cabecera">
             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-leaf-300">Tu cotización</p>
@@ -260,7 +250,6 @@
       </div>
     </main>
 
-    <!-- Celular: total y "Guardar" siempre a la vista -->
     <div class="barra-movil lg:hidden" aria-hidden="false">
       <div class="min-w-0">
         <p class="text-[11px] uppercase tracking-wider text-zinc-500">Total</p>

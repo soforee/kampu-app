@@ -9,9 +9,6 @@ import { etiqueta } from '../core/utils/etiquetas';
 export class BadgeComponent {
   @Input({ required: true }) estado = '';
 
-  // Punto de color según el estado, con la paleta del logotipo:
-  //   correcto -> oliva del logo (#4B5B1D) · en curso -> oliva medio · intermedio -> oliva claro
-  //   aviso -> lima de la hoja (#C4BD45) · error -> terracota · el resto (completado, inactivo...) -> neutro
   private tonos: { [estado: string]: string } = {
     CONFIRMADA: 'correcto', GARANTIZADA: 'correcto', APROBADO: 'correcto', PAGADO: 'correcto', ACTIVO: 'correcto', DISPONIBLE: 'correcto', OPERATIVO: 'correcto',
     FINALIZADO: 'correcto', ATENDIDA: 'correcto', PAGADO_COMPLETO: 'correcto', CREAR: 'correcto', RESERVADA: 'correcto',
@@ -25,7 +22,6 @@ export class BadgeComponent {
     aviso: 'bg-leaf-400', error: 'bg-rose-500'
   };
 
-  // Textos legibles de los estados del portal
   private textos: { [estado: string]: string } = {
     POR_EMPEZAR: 'Por empezar', EN_CURSO: 'En curso', TERMINADO: 'Terminado',
     PAGADO_COMPLETO: 'Pagado completo', FALTA_PAGAR: 'Falta pagar', PENDIENTE_PAGO: 'Pendiente de pago',

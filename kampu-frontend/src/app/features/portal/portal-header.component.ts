@@ -3,8 +3,6 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { LogoComponent } from '../../shared/logo.component';
 
-// Cabecera común del módulo de clientes (registro, lista y detalle).
-// Requisito v4: "Volver al inicio" visible en todas las pantallas del cliente.
 @Component({
   selector: 'app-portal-header',
   standalone: true,

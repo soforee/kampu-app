@@ -11,7 +11,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PortalHeaderComponent } from '../portal/portal-header.component';
 
-// (v11) "Seguir mi cotización": código + clave, las que recuerda este navegador y, con cuenta, las del cliente
 @Component({
   selector: 'app-seguimiento',
   standalone: true,
@@ -96,7 +95,6 @@ export class SeguimientoComponent {
     if (!codigo || !this.clave.trim()) { this.error.set('Ingresa el código y la clave.'); return; }
     this.abriendo.set(true);
     this.error.set('');
-    // Se valida aquí y se pasa la clave a la página de la cotización por el estado de la navegación (no por la URL)
     this.api.abrir(codigo, this.clave).subscribe({
       next: c => { this.abriendo.set(false); this.router.navigate(['/cotizacion', c.codigo], { state: { clave: this.clave.trim().toUpperCase() } }); },
       error: e => { this.abriendo.set(false); this.error.set(mensajeError(e)); }

@@ -1,10 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { IconComponent } from './icon.component';
 
-/**
- * Tarjeta informativa (indicador): ícono, etiqueta, valor grande y un detalle.
- * tendencia: variación en % frente al periodo anterior (null = no se muestra).
- */
 @Component({
   selector: 'app-tarjeta-dato',
   standalone: true,
