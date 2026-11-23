@@ -98,6 +98,7 @@ export class RecursosComponent {
   // Al entrar se piden de nuevo: el personal propio se crea desde Usuarios (otra pantalla)
   constructor() {
     this.store.cargarPersonal();
+    this.store.cargarCargos();
     this.store.cargarVehiculos();
     this.store.cargarProveedores();
     if (this.seccion === 'proveedores') this.store.cargarHabitaciones();
