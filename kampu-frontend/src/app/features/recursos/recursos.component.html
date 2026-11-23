@@ -339,6 +339,32 @@
           }
           @case ('lugares') {
             <div class="form-section-title">Datos del lugar</div>
+            <div class="relative">
+              <label class="label" for="buscar-lugar">Buscar en el mapa <span class="opt">Opcional</span></label>
+              <div class="relative">
+                <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"><app-icon name="search" size="w-4 h-4" /></span>
+                <input id="buscar-lugar" class="field !pl-9" maxlength="100" autocomplete="off" [(ngModel)]="busqueda" (ngModelChange)="buscar($event)"
+                       placeholder="Escribe el nombre: hotel, aeropuerto, terminal, atractivo…" role="combobox" [attr.aria-expanded]="sugerencias().length > 0" aria-controls="sugerencias-lugar">
+              </div>
+              @if (sugerencias().length) {
+                <ul id="sugerencias-lugar" role="listbox" class="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-xl border border-zinc-200 bg-white py-1 shadow-lg">
+                  @for (s of sugerencias(); track $index) {
+                    <li role="option" aria-selected="false">
+                      <button type="button" class="flex w-full items-start gap-3 px-3 py-2 text-left hover:bg-zinc-50" (click)="usarSugerencia(s)">
+                        <span class="mt-0.5 text-zinc-400"><app-icon [name]="iconoLugar(s.tipoLugar)" size="w-4 h-4" /></span>
+                        <span class="min-w-0">
+                          <span class="block text-sm font-medium text-zinc-900">{{ s.nombre }}</span>
+                          <span class="block text-xs text-zinc-500">{{ etiqueta(s.tipoLugar) }} · {{ s.ciudad || s.region }}{{ s.direccion ? ' · ' + s.direccion : '' }}</span>
+                        </span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              }
+              @if (buscando()) { <p class="hint">Buscando…</p> }
+              @else if (sinResultados()) { <p class="hint">No se encontró en el mapa (o no hay conexión). Llena los datos a mano.</p> }
+              @else { <p class="hint">Elige un resultado y los datos se llenan solos (OpenStreetMap). Revísalos antes de guardar.</p> }
+            </div>
             <div><label class="label req">Nombre</label><input class="field" maxlength="150" [(ngModel)]="lugar.nombre" placeholder="Aeropuerto, hotel, atractivo…" (blur)="v.tocar('lNombre')" [class.field-invalid]="v.error('lNombre')">@if (v.error('lNombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><label class="label req">Tipo</label><select class="field" [(ngModel)]="lugar.tipoLugar">@for (t of tiposLugar; track t) { <option [value]="t">{{ etiqueta(t) }}</option> }</select></div>

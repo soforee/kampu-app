@@ -76,6 +76,32 @@ clave `tour1234`. Otros valores se pueden cambiar con variables de entorno:
 se ejecutó el script. Revisa que la `url` del `application.yaml` apunte a la base donde ejecutaste el script.
 Para comprobar dónde estás: `SELECT USER, SYS_CONTEXT('USERENV','CON_NAME') FROM dual;`.
 
+### Mapas (OpenStreetMap): buscador de lugares y rutas OSRM
+
+No hay que instalar nada ni crear claves: el backend usa los servidores públicos y gratuitos de OpenStreetMap,
+configurados en `application.yaml`:
+
+```yaml
+kampu:
+  mapas:
+    buscador-url: https://photon.komoot.io        # Photon: autocompleta el formulario de Lugares
+    osrm-url: https://router.project-osrm.org     # OSRM: duración y distancia por carretera
+```
+
+- Solo se necesita **internet** en la PC donde corre el backend.
+- **Buscador** (Proveedores → Lugares → Nuevo lugar → "Buscar en el mapa"): al elegir un resultado se llenan nombre,
+  tipo, ciudad, latitud, longitud y dirección. Se pueden corregir a mano antes de guardar.
+- **OSRM** (Tráfico → nuevo traslado): con las coordenadas del origen y el destino calcula el tiempo por carretera
+  (más 5 o 10 minutos de embarque). El aviso dice "Ruta por carretera (OpenStreetMap)".
+- **Sin internet**, o si el servidor no responde: el buscador no muestra resultados (se llena a mano) y la duración
+  se estima en línea recta × 1.3. El sistema sigue funcionando.
+- Para comprobar que llegan: abre en el navegador
+  `https://photon.komoot.io/api/?q=tarapoto&limit=1` y
+  `https://router.project-osrm.org/route/v1/driving/-76.3732,-6.5087;-76.3600,-6.4900?overview=false`.
+  Deben devolver un JSON (el de OSRM con `"code":"Ok"`).
+- Los servidores públicos son para uso moderado. Si la agencia crece, se puede instalar un OSRM propio
+  (Docker, con el mapa de Perú) y cambiar solo `osrm-url`.
+
 ---
 
 ## 3. Frontend (`kampu-frontend`)
