@@ -33,6 +33,7 @@ export const routes: Routes = [
       { path: 'mis-asignaciones', loadComponent: () => import('./features/asignaciones/mis-asignaciones.component').then(m => m.MisAsignacionesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       // Panel de campo: historial y vehículo (conductor); novedades y disponibilidad (guía y conductor)
       { path: 'historial-viajes', loadComponent: () => import('./features/campo/historial.component').then(m => m.HistorialViajesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      { path: 'historial-tours', loadComponent: () => import('./features/campo/historial-tours.component').then(m => m.HistorialToursComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'mi-vehiculo', loadComponent: () => import('./features/campo/mi-vehiculo.component').then(m => m.MiVehiculoComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'mis-novedades', loadComponent: () => import('./features/campo/novedades.component').then(m => m.MisNovedadesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'disponibilidad', loadComponent: () => import('./features/campo/disponibilidad.component').then(m => m.DisponibilidadComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Disponibilidad } from '../../core/models';
 import { AlertService } from '../../core/services/alert.service';
 import { CampoService } from '../../core/services/campo.service';
+import { AuthService } from '../../core/services/auth.service';
 import { mensajeError } from '../../core/utils/api';
 import { addDays, hoy } from '../../core/utils/date.util';
 import { IconComponent } from '../../shared/icon.component';
@@ -19,6 +20,21 @@ interface Dia { fecha: string; delMes: boolean; trabajo: string[]; bloqueado: bo
   imports: [DatePipe, FormsModule, IconComponent, PageHeaderComponent],
   template: `
   <app-page-header titulo="Disponibilidad y turnos" subtitulo="Tus turnos programados, tus días libres y los horarios en que no estás disponible." />
+
+  @if (esGuia) {
+    <section class="card mb-4 p-4">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 class="font-semibold text-zinc-900">Mis certificaciones</h2>
+        @if (aviso(); as a) { <span class="rounded-full px-2.5 py-0.5 text-xs font-medium" [class]="a.clase">{{ a.texto }}</span> }
+      </div>
+      <div class="mt-3 grid gap-3 sm:grid-cols-4">
+        <div><label class="label" for="c-carne">Carné DIRCETUR / MINCETUR</label><input id="c-carne" class="field uppercase" maxlength="30" [(ngModel)]="cert.carneGuia"></div>
+        <div><label class="label" for="c-venc">Vence el</label><input id="c-venc" type="date" class="field" [(ngModel)]="cert.vencCarne"></div>
+        <div><label class="label" for="c-idiomas">Idiomas acreditados</label><input id="c-idiomas" class="field" maxlength="200" [(ngModel)]="cert.idiomas" placeholder="Español, inglés, quechua"></div>
+        <div class="flex items-end"><button type="button" class="btn-dark w-full" [disabled]="guardandoCert()" (click)="guardarCert()">{{ guardandoCert() ? 'Guardando…' : 'Guardar' }}</button></div>
+      </div>
+    </section>
+  }
 
   <div class="grid gap-4 lg:grid-cols-3">
     <section class="card p-4 lg:col-span-2">
@@ -85,6 +101,18 @@ interface Dia { fecha: string; delMes: boolean; trabajo: string[]; bloqueado: bo
 export class DisponibilidadComponent {
   private campo = inject(CampoService);
   private alerts = inject(AlertService);
+  esGuia = inject(AuthService).rol() === 'GUIA';
+  cert = { carneGuia: '', vencCarne: '', idiomas: '' };
+  guardandoCert = signal(false);
+  private vencGuardado = signal<string | null>(null);
+  // Vigencia del carné: vencido o por vencer en 30 días
+  aviso = computed(() => {
+    const v = this.vencGuardado();
+    if (!v) return null;
+    if (v < hoy()) return { texto: 'Carné vencido', clase: 'bg-rose-100 text-rose-700' };
+    if (v <= addDays(hoy(), 30)) return { texto: 'Carné por vencer', clase: 'bg-amber-100 text-amber-800' };
+    return { texto: 'Carné vigente', clase: 'bg-brand-50 text-brand-800' };
+  });
   hoy = hoy();
   ahora = new Date().toISOString().slice(0, 19);
   mes = signal(hoy().slice(0, 7));
@@ -137,7 +165,25 @@ export class DisponibilidadComponent {
     return b.inicio < addDays(f, 1) + 'T00:00' && b.fin > f + 'T00:00';
   }
 
-  constructor() { this.cargar(); }
+  constructor() {
+    this.cargar();
+    if (this.esGuia) this.campo.certificaciones().subscribe({ next: c => this.mostrarCert(c), error: () => undefined });
+  }
+
+  private mostrarCert(c: { carneGuia: string | null; vencCarne: string | null; idiomas: string | null }) {
+    this.cert = { carneGuia: c.carneGuia ?? '', vencCarne: c.vencCarne ?? '', idiomas: c.idiomas ?? '' };
+    this.vencGuardado.set(c.vencCarne);
+  }
+
+  guardarCert() {
+    const carne = this.cert.carneGuia.trim();
+    if (!!carne !== !!this.cert.vencCarne) { this.alerts.toast('Indica el carné y su vencimiento juntos', 'error'); return; }
+    this.guardandoCert.set(true);
+    this.campo.guardarCertificaciones({ carneGuia: carne, vencCarne: this.cert.vencCarne || null, idiomas: this.cert.idiomas.trim() }).subscribe({
+      next: c => { this.guardandoCert.set(false); this.mostrarCert(c); this.alerts.toast('Certificaciones guardadas'); },
+      error: e => { this.guardandoCert.set(false); this.alerts.error(mensajeError(e)); }
+    });
+  }
 
   private cargar() {
     const { desde, hasta } = this.rango();

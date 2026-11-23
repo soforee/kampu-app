@@ -80,7 +80,12 @@
                   @if (x.numLicencia) {
                     <div class="text-zinc-700">{{ x.numLicencia }} · {{ x.catLicencia }}</div>
                     <div class="text-xs" [class]="(x.vencLicencia ?? '') < hoy ? 'font-medium text-rose-600' : (x.vencLicencia ?? '') <= pronto ? 'text-amber-700' : 'text-zinc-500'">Vence {{ x.vencLicencia | date:'dd/MM/yyyy' }}</div>
-                  } @else { <span class="text-zinc-300">—</span> }
+                  } @else if (!x.carneGuia) { <span class="text-zinc-300">—</span> }
+                  @if (x.carneGuia) {
+                    <div class="text-zinc-700">Carné {{ x.carneGuia }}</div>
+                    <div class="text-xs" [class]="(x.vencCarne ?? '') < hoy ? 'font-medium text-rose-600' : (x.vencCarne ?? '') <= pronto ? 'text-amber-700' : 'text-zinc-500'">Vence {{ x.vencCarne | date:'dd/MM/yyyy' }}</div>
+                  }
+                  @if (x.idiomas) { <div class="text-xs text-zinc-500">{{ x.idiomas }}</div> }
                 </td>
                 <td data-label="Estado" class="td"><app-badge [estado]="x.estado" /></td>
                 @if (puedeEditar()) {
@@ -266,6 +271,14 @@
               <div><label class="label">Teléfono <span class="opt">Opcional</span></label><input class="field" maxlength="20" type="tel" inputmode="tel" [(ngModel)]="persona.telefono" placeholder="+51 9xx xxx xxx" (blur)="v.tocar('rTelefono')" [class.field-invalid]="v.error('rTelefono')" (beforeinput)="filtrar($event, 'telefono')" (paste)="pegar($event, 'telefono')">@if (v.error('rTelefono'); as e) { <p class="field-error">{{ e }}</p> }</div>
               <div><label class="label req">Estado</label><select class="field" [(ngModel)]="persona.estado">@for (s of estadosPersonal; track s) { <option [value]="s">{{ etiqueta(s) }}</option> }</select></div>
             </div>
+            @if (esGuia) {
+              <div class="form-section-title pt-2">Certificaciones del guía <span class="opt">Opcional</span></div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div><label class="label">Carné DIRCETUR / MINCETUR</label><input class="field uppercase" maxlength="30" [(ngModel)]="persona.carneGuia" (blur)="v.tocar('rCarne')" [class.field-invalid]="v.error('rCarne')">@if (v.error('rCarne'); as e) { <p class="field-error">{{ e }}</p> }</div>
+                <div><label class="label">Vence el carné</label><input type="date" class="field" [(ngModel)]="persona.vencCarne" (blur)="v.tocar('rCarne')"></div>
+              </div>
+              <div><label class="label">Idiomas</label><input class="field" maxlength="200" [(ngModel)]="persona.idiomas" placeholder="Español, inglés, quechua" (blur)="v.tocar('rIdiomas')" [class.field-invalid]="v.error('rIdiomas')">@if (v.error('rIdiomas'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            }
             @if (requiereLicencia) {
               <div class="form-section-title pt-2">Licencia de conducir</div>
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">

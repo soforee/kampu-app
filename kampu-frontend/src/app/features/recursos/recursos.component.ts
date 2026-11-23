@@ -188,6 +188,10 @@ export class RecursosComponent {
             : (!lic ? 'Quien conduce necesita número de licencia.'
               : (/^[A-Za-z0-9]{6,20}$/.test(lic) ? null : 'La licencia solo admite letras y números (6 a 20 caracteres).')),
           rCategoria: conduce && !p.catLicencia ? 'Elige la categoría de la licencia.' : null,
+          rCarne: !this.esGuia || (!p.carneGuia.trim() && !p.vencCarne) ? null
+            : !/^[A-Za-z0-9-]{3,30}$/.test(p.carneGuia.trim()) ? 'El carné solo admite letras, números y guion (3 a 30).'
+            : !p.vencCarne ? 'Indica el vencimiento del carné.' : null,
+          rIdiomas: this.esGuia ? V.texto(p.idiomas, 'Los idiomas', 200) : null,
           rVencimiento: conduce ? (V.fecha(p.vencLicencia, 'La fecha de vencimiento')
             ?? (p.vencLicencia < hoy() ? 'La licencia está vencida.' : null)) : null
         };
@@ -266,7 +270,7 @@ export class RecursosComponent {
   private proveedorFiltro(): number | null { return this.propio ? null : this.filtroProveedor(); }
   private personaVacia(): PersonalForm {
     return { proveedorId: this.proveedorFiltro(), numeroDocumento: '', nombreCompleto: '', cargo: 'GUIA', telefono: '',
-      numLicencia: '', catLicencia: '', vencLicencia: '', estado: 'DISPONIBLE' };
+      numLicencia: '', catLicencia: '', vencLicencia: '', estado: 'DISPONIBLE', carneGuia: '', vencCarne: '', idiomas: '' };
   }
   private vehiculoVacio(): VehiculoForm {
     return { proveedorId: this.proveedorFiltro(), placa: '', tipoVehiculo: 'VAN', marcaModelo: '',
@@ -294,6 +298,8 @@ export class RecursosComponent {
     this.vistaFoto.set(null);
     this.habitacion.imagen = '';
   }
+  // Guía (función GUIADO): carné e idiomas
+  get esGuia(): boolean { return this.store.getCargo(this.persona.cargo)?.funcion === 'GUIADO'; }
   // Licencia: la exige el cargo (CARGOS.requiere_licencia)
   get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
 
@@ -323,7 +329,8 @@ export class RecursosComponent {
     const p = this.store.getPersonal(id)!;
     this.editId = id;
     this.persona = { proveedorId: p.proveedorId, numeroDocumento: p.numeroDocumento, nombreCompleto: p.nombreCompleto, cargo: p.cargo, telefono: p.telefono,
-      numLicencia: p.numLicencia ?? '', catLicencia: p.catLicencia ?? '', vencLicencia: p.vencLicencia ?? '', estado: p.estado };
+      numLicencia: p.numLicencia ?? '', catLicencia: p.catLicencia ?? '', vencLicencia: p.vencLicencia ?? '', estado: p.estado,
+      carneGuia: p.carneGuia ?? '', vencCarne: p.vencCarne ?? '', idiomas: p.idiomas ?? '' };
     this.abrir();
   }
   editarVehiculo(id: number) {
@@ -371,7 +378,9 @@ export class RecursosComponent {
         peticion = this.store.guardarPersonal({ ...p, nombreCompleto: t(p.nombreCompleto), telefono: t(p.telefono),
           numeroDocumento: t(p.numeroDocumento).toUpperCase(),
           numLicencia: conduce || lic ? lic : '', catLicencia: conduce || lic ? p.catLicencia : '',
-          vencLicencia: conduce || lic ? p.vencLicencia : '' }, this.editId);
+          vencLicencia: conduce || lic ? p.vencLicencia : '',
+          carneGuia: this.esGuia ? t(p.carneGuia).toUpperCase() : '', vencCarne: this.esGuia && t(p.carneGuia) ? p.vencCarne : '',
+          idiomas: this.esGuia ? t(p.idiomas) : '' }, this.editId);
         break;
       }
       case 'vehiculos': {

@@ -227,5 +227,11 @@ public class PersonalServiceImpl implements IPersonalService {
         p.setCatLicencia(licencia == null ? null : categoria);
         p.setVencLicencia(licencia == null ? null : dto.vencLicencia());
         p.setEstado(dto.estado());
+        // Carné de guía: número y vencimiento van juntos
+        String carne = dto.carneGuia() == null || dto.carneGuia().isBlank() ? null : dto.carneGuia().trim().toUpperCase();
+        if ((carne == null) != (dto.vencCarne() == null)) throw new BusinessException("Indica el carné de guía y su vencimiento juntos.");
+        p.setCarneGuia(carne);
+        p.setVencCarne(dto.vencCarne());
+        p.setIdiomas(dto.idiomas() == null || dto.idiomas().isBlank() ? null : dto.idiomas().trim());
     }
 }

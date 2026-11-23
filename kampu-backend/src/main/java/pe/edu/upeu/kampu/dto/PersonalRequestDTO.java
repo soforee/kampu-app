@@ -31,6 +31,14 @@ public record PersonalRequestDTO(
         LocalDate vencLicencia,
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "DISPONIBLE|OCUPADO|INACTIVO", message = "El estado debe ser DISPONIBLE, OCUPADO o INACTIVO.")
-        String estado
+        String estado,
+        // Guía (opcionales): carné DIRCETUR / MINCETUR con su vencimiento, e idiomas
+        @Size(max = 30, message = "El carné admite máximo 30 caracteres.")
+        @Pattern(regexp = "^$|^[A-Za-z0-9-]{3,30}$", message = "El carné solo admite letras, números y guion.")
+        String carneGuia,
+        LocalDate vencCarne,
+        @Size(max = 200, message = "Los idiomas admiten máximo 200 caracteres.")
+        @Pattern(regexp = Reglas.TEXTO, message = "Los idiomas contienen caracteres no permitidos.")
+        String idiomas
 ) {
 }
