@@ -90,6 +90,9 @@ export class OperacionesComponent {
     const salida = Number(inject(ActivatedRoute).snapshot.queryParamMap.get('salida'));
     if (salida) this.filtroSalida.set(salida);
     this.store.cargar();
+    // Las reservas cambian los pasajeros de los traslados (lo ajusta la BD): se piden de nuevo al entrar
+    this.store.cargarOperaciones();
+    this.store.cargarSalidas();
   }
 
   // ---------- Tablero ----------
