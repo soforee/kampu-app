@@ -62,6 +62,12 @@
                 <dd class="font-medium text-zinc-900">{{ p.puntoRecojo || 'Por definir por la agencia' }}@if (p.horaRecojo) { · {{ p.horaRecojo | date:'dd/MM HH:mm' }} }</dd>
                 @if (p.direccionRecojo) { <dd class="text-xs text-zinc-500">{{ p.direccionRecojo }}</dd> }
               </div>
+              @if (p.habitacion) {
+                <div class="col-span-2 sm:col-span-3"><dt class="text-xs text-zinc-500">Hospedaje</dt>
+                  <dd class="font-medium text-zinc-900">{{ p.habitacion }} · {{ p.hotel }} · {{ p.noches }} noche(s)</dd>
+                  <dd class="text-xs text-zinc-500">S/ {{ p.montoHospedaje | number:'1.2-2' }} (incluido en el total)</dd>
+                </div>
+              }
             </dl>
 
             @if (detalle()!.itinerario.length) {

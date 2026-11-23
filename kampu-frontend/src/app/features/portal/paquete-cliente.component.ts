@@ -184,7 +184,14 @@ export class PaqueteClienteComponent {
     (this.invitado ? this.portal.solicitarAnulacionInvitado(this.codigo, this.clave, motivo)
       : this.portal.solicitarAnulacion(this.id, motivo)).subscribe({
       next: r => {
-        this.alerts.toast(r.resultado === 'ANULADA' ? 'Reserva anulada' : 'Solicitud enviada a la agencia');
+        if (r.resultado === 'ANULADA') {
+          // Anulada: deja de figurar en "Mis paquetes" (la agencia la conserva en su historial)
+          this.alerts.toast('Reserva anulada');
+          if (this.invitado) this.router.navigate(['/cotizacion', this.codigo]);
+          else this.router.navigate(['/mi-cuenta']);
+          return;
+        }
+        this.alerts.toast('Solicitud enviada a la agencia');
         this.cargar();
       },
       error: err => this.alerts.error(mensajeError(err))

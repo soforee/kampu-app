@@ -394,6 +394,10 @@ export interface PortalPaquete {
   puntoRecojo: string | null;
   direccionRecojo: string | null;
   horaRecojo: string | null;
+  // Habitación de hotel elegida (paquetes con noches); su costo ya está en montoTotal
+  habitacion: string | null;
+  hotel: string | null;
+  montoHospedaje: number;
 }
 
 export interface PortalPasajero {

@@ -611,6 +611,8 @@ CREATE TABLE RESERVAS (
     usuario_anula_id    NUMBER(10),
     boleta_enviada_en   TIMESTAMP,
     lugar_recojo_id     NUMBER(10),                                    -- (+v10) donde se recoge al cliente
+    habitacion_id       NUMBER(10),                                    -- habitacion de hotel (paquetes con noches)
+    monto_hospedaje     NUMBER(10,2)  DEFAULT ON NULL 0,               -- costo de la habitacion (va dentro de monto_adicionales)
     creado_por          VARCHAR2(100),
     fecha_creacion      TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
     modificado_por      VARCHAR2(100),
@@ -622,8 +624,10 @@ CREATE TABLE RESERVAS (
     CONSTRAINT fk_res_usu_registra FOREIGN KEY (usuario_registra_id) REFERENCES USUARIOS_SISTEMA (usuario_id),
     CONSTRAINT fk_res_usuario      FOREIGN KEY (usuario_anula_id)    REFERENCES USUARIOS_SISTEMA (usuario_id),
     CONSTRAINT fk_res_recojo       FOREIGN KEY (lugar_recojo_id)     REFERENCES LUGARES (lugar_id),
+    CONSTRAINT fk_res_habitacion   FOREIGN KEY (habitacion_id)       REFERENCES HABITACIONES (habitacion_id),
     CONSTRAINT chk_res_cantidad CHECK (cantidad_pasajeros > 0),
     CONSTRAINT chk_res_adicionales CHECK (monto_adicionales >= 0),
+    CONSTRAINT chk_res_hospedaje   CHECK (monto_hospedaje >= 0 AND monto_hospedaje <= monto_adicionales),
     CONSTRAINT chk_res_precio   CHECK (precio_unitario > 0
                                        AND descuento BETWEEN 0 AND cantidad_pasajeros * precio_unitario),
     CONSTRAINT chk_res_canal    CHECK (canal IN ('WEB', 'PRESENCIAL', 'TELEFONO', 'WHATSAPP')),
@@ -1351,7 +1355,9 @@ CREATE OR REPLACE PACKAGE PKG_RESERVAS AS
                         p_lugar_recojo_id NUMBER DEFAULT NULL,    -- NULL = por definir por la agencia
                         -- (v11) Solo PKG_COTIZACIONES.confirmar: la reserva nace de una cotizacion
                         -- SOLICITADA; se exige GESTIONAR_COTIZACIONES y que los datos coincidan.
-                        p_cotizacion_id NUMBER DEFAULT NULL);
+                        p_cotizacion_id NUMBER DEFAULT NULL,
+                        -- Habitacion de hotel: obligatoria para el cliente si el paquete tiene noches
+                        p_habitacion_id NUMBER DEFAULT NULL);
 
     PROCEDURE recalcular (p_reserva_id NUMBER);
     -- TRUE mientras recalcular() escribe: el trigger de RESERVAS solo acepta montos desde aqui
@@ -1461,6 +1467,42 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
         RETURN v_id;
     END obtener_salida;
 
+    -- Habitacion de hotel al reservar: precio por noche x noches del paquete (x pasajeros si es por persona).
+    -- Paquete con noches: la habitacion es obligatoria. Paquete de un dia: no lleva hotel (0).
+    FUNCTION costo_hospedaje (p_habitacion_id NUMBER, p_paquete_id NUMBER, p_cantidad NUMBER) RETURN NUMBER IS
+        v_noches    PAQUETES_TOUR.noches%TYPE;
+        v_nombre    HABITACIONES.nombre%TYPE;
+        v_precio    HABITACIONES.precio_noche%TYPE;
+        v_modalidad HABITACIONES.modalidad_precio%TYPE;
+        v_estado    HABITACIONES.estado%TYPE;
+        v_prov      PROVEEDORES.estado%TYPE;
+        v_ofrece    PROVEEDORES.ofrece_hospedaje%TYPE;
+    BEGIN
+        SELECT NVL(noches, 0) INTO v_noches FROM PAQUETES_TOUR WHERE paquete_id = p_paquete_id;
+        IF v_noches < 1 THEN
+            RETURN 0;
+        END IF;
+        IF p_habitacion_id IS NULL THEN
+            RAISE_APPLICATION_ERROR(-20418, 'Elige la habitacion de hotel para tus ' || v_noches || ' noche(s)');
+        END IF;
+        BEGIN
+            SELECT h.nombre, h.precio_noche, h.modalidad_precio, h.estado, pr.estado, pr.ofrece_hospedaje
+              INTO v_nombre, v_precio, v_modalidad, v_estado, v_prov, v_ofrece
+              FROM HABITACIONES h JOIN PROVEEDORES pr ON pr.proveedor_id = h.proveedor_id
+             WHERE h.habitacion_id = p_habitacion_id;
+        EXCEPTION
+            WHEN NO_DATA_FOUND THEN
+                RAISE_APPLICATION_ERROR(-20418, 'La habitacion elegida no existe');
+        END;
+        IF v_estado <> 'ACTIVO' OR v_prov <> 'ACTIVO' OR v_ofrece <> 1 THEN
+            RAISE_APPLICATION_ERROR(-20418, 'La habitacion "' || v_nombre || '" ya no esta disponible');
+        END IF;
+        RETURN v_precio * v_noches * CASE WHEN v_modalidad = 'POR_PERSONA' THEN p_cantidad ELSE 1 END;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20411, 'El paquete ' || p_paquete_id || ' no existe');
+    END costo_hospedaje;
+
     PROCEDURE reservar (p_cliente_id    NUMBER,
                         p_paquete_id    NUMBER,
                         p_fecha         DATE,
@@ -1470,9 +1512,12 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
                         p_descuento     NUMBER   DEFAULT 0,
                         p_observaciones VARCHAR2 DEFAULT NULL,
                         p_lugar_recojo_id NUMBER DEFAULT NULL,
-                        p_cotizacion_id NUMBER DEFAULT NULL) IS
+                        p_cotizacion_id NUMBER DEFAULT NULL,
+                        p_habitacion_id NUMBER DEFAULT NULL) IS
         v_rol    VARCHAR2(20)          := PKG_SEGURIDAD_ROLES.rol_actual;
         v_adicionales RESERVAS.monto_adicionales%TYPE := 0;
+        v_habitacion  RESERVAS.habitacion_id%TYPE     := p_habitacion_id;
+        v_hospedaje   RESERVAS.monto_hospedaje%TYPE   := 0;
         v_precio      RESERVAS.precio_unitario%TYPE;      -- (v11) precio cotizado; NULL = el vigente
         v_canal  RESERVAS.canal%TYPE   := UPPER(NVL(p_canal, 'PRESENCIAL'));
         v_fecha  DATE                  := TRUNC(p_fecha);
@@ -1501,7 +1546,9 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
             -- ser los de la cotizacion; los adicionales se toman de ella (precio congelado).
             PKG_SEGURIDAD_ROLES.exigir('GESTIONAR_COTIZACIONES');
             BEGIN
-                SELECT monto_adicionales, precio_unitario INTO v_adicionales, v_precio
+                -- monto_adicionales de la cotizacion ya incluye el hospedaje
+                SELECT monto_adicionales, precio_unitario, habitacion_id, NVL(monto_hospedaje, 0)
+                  INTO v_adicionales, v_precio, v_habitacion, v_hospedaje
                   FROM COTIZACIONES
                  WHERE cotizacion_id = p_cotizacion_id
                    AND estado = 'SOLICITADA'
@@ -1547,14 +1594,22 @@ CREATE OR REPLACE PACKAGE BODY PKG_RESERVAS AS
                 || v_horas || ' horas de anticipacion');
         END IF;
 
+        -- Habitacion de hotel (fuera de una cotizacion): el cliente la elige si el paquete tiene noches;
+        -- Ventas puede indicarla. Costo = precio por noche x noches (x pasajeros si es por persona).
+        IF p_cotizacion_id IS NULL AND (v_rol = 'CLIENTE' OR p_habitacion_id IS NOT NULL) THEN
+            v_hospedaje   := costo_hospedaje(p_habitacion_id, p_paquete_id, p_cantidad);
+            v_habitacion  := CASE WHEN v_hospedaje > 0 THEN p_habitacion_id END;
+            v_adicionales := v_adicionales + v_hospedaje;
+        END IF;
+
         -- Misma fecha => misma salida; fecha nueva => salida nueva
         v_salida := obtener_salida(p_paquete_id, v_fecha);
 
         -- El trigger toma los cupos, congela el precio y garantiza la salida si corresponde
         INSERT INTO RESERVAS (cliente_id, salida_id, cantidad_pasajeros, descuento, canal, observaciones,
-                              lugar_recojo_id, monto_adicionales, precio_unitario)
+                              lugar_recojo_id, monto_adicionales, precio_unitario, habitacion_id, monto_hospedaje)
         VALUES (p_cliente_id, v_salida, p_cantidad, NVL(p_descuento, 0), v_canal, p_observaciones,
-                p_lugar_recojo_id, v_adicionales, v_precio)
+                p_lugar_recojo_id, v_adicionales, v_precio, v_habitacion, v_hospedaje)
         RETURNING reserva_id INTO p_reserva_id;
     EXCEPTION
         WHEN OTHERS THEN
@@ -1774,7 +1829,8 @@ CREATE OR REPLACE PACKAGE PKG_GESTION_PAQUETES_CLIENTE AS
     PROCEDURE calendario (p_paquete_id NUMBER, p_desde DATE, p_dias NUMBER, p_resultado OUT SYS_REFCURSOR);
     -- El cliente elige paquete + fecha + cantidad (canal WEB)
     PROCEDURE reservar (p_cliente_id NUMBER, p_paquete_id NUMBER, p_fecha DATE, p_cantidad NUMBER,
-                        p_reserva_id OUT NUMBER, p_lugar_recojo_id NUMBER DEFAULT NULL);
+                        p_reserva_id OUT NUMBER, p_lugar_recojo_id NUMBER DEFAULT NULL,
+                        p_habitacion_id NUMBER DEFAULT NULL);
     -- (v10) Puntos de recojo disponibles y a que hora pasa la movilidad por cada uno
     PROCEDURE puntos_recojo (p_paquete_id NUMBER, p_resultado OUT SYS_REFCURSOR);
     -- (v10) El cliente cambia su punto de recojo hasta antes del viaje
@@ -1865,13 +1921,14 @@ CREATE OR REPLACE PACKAGE BODY PKG_GESTION_PAQUETES_CLIENTE AS
     END calendario;
 
     PROCEDURE reservar (p_cliente_id NUMBER, p_paquete_id NUMBER, p_fecha DATE, p_cantidad NUMBER,
-                        p_reserva_id OUT NUMBER, p_lugar_recojo_id NUMBER DEFAULT NULL) IS
+                        p_reserva_id OUT NUMBER, p_lugar_recojo_id NUMBER DEFAULT NULL,
+                        p_habitacion_id NUMBER DEFAULT NULL) IS
     BEGIN
         IF NVL(PKG_SEGURIDAD_ROLES.rol_actual, '-') <> 'CLIENTE' THEN
             RAISE_APPLICATION_ERROR(-20087, 'Inicia sesion como cliente para reservar desde el portal');
         END IF;
         PKG_RESERVAS.reservar(p_cliente_id, p_paquete_id, p_fecha, p_cantidad, p_reserva_id, 'WEB',
-                              p_lugar_recojo_id => p_lugar_recojo_id);
+                              p_lugar_recojo_id => p_lugar_recojo_id, p_habitacion_id => p_habitacion_id);
     END reservar;
 
     FUNCTION pertenece (p_cliente_id NUMBER, p_reserva_id NUMBER) RETURN NUMBER IS
@@ -3334,6 +3391,8 @@ BEGIN
         :NEW.codigo_reserva    := :OLD.codigo_reserva;
         :NEW.precio_unitario   := :OLD.precio_unitario;        -- precio congelado
         :NEW.monto_adicionales := :OLD.monto_adicionales;      -- (v11) adicionales congelados
+        :NEW.habitacion_id     := :OLD.habitacion_id;          -- habitacion y su costo, congelados
+        :NEW.monto_hospedaje   := :OLD.monto_hospedaje;
         -- Un UPDATE de fila completa (Hibernate) no puede pisar montos con valores viejos
         IF NOT PKG_RESERVAS.en_recalculo THEN
             :NEW.monto_pagado := :OLD.monto_pagado;
@@ -3852,6 +3911,9 @@ SELECT r.reserva_id,
        NVL(pg.pendiente, 0)                       AS monto_por_validar,
        l.nombre                                   AS punto_recojo,
        l.direccion                                AS direccion_recojo,
+       h.nombre                                   AS habitacion,
+       hp.nombre_comercial                        AS hotel,
+       r.monto_hospedaje,
        -- Sin punto asignado (por definir por la agencia) no hay hora de recojo
        CASE WHEN l.lugar_id IS NOT NULL THEN
        s.fecha_inicio + (TO_NUMBER(SUBSTR(p.hora_inicio, 1, 2)) * 60 + TO_NUMBER(SUBSTR(p.hora_inicio, 4, 2))
@@ -3860,6 +3922,8 @@ SELECT r.reserva_id,
   JOIN SALIDAS_PROGRAMADAS s ON s.salida_id  = r.salida_id
   JOIN PAQUETES_TOUR p       ON p.paquete_id = s.paquete_id
   LEFT JOIN LUGARES l        ON l.lugar_id   = r.lugar_recojo_id
+  LEFT JOIN HABITACIONES h   ON h.habitacion_id = r.habitacion_id
+  LEFT JOIN PROVEEDORES hp   ON hp.proveedor_id = h.proveedor_id
   LEFT JOIN (SELECT reserva_id, SUM(monto_pen) AS pendiente
                FROM PAGOS
               WHERE estado_transaccion = 'PENDIENTE'
@@ -4427,6 +4491,7 @@ COMMIT;
 DECLARE
     c_hash CONSTANT VARCHAR2(60) := '$2a$10$NSTkq.4KGGMW2n/pGRKbheNC7yGh9AozUxoSQvv3ToKBgelPb8IIe';
     v_r1     NUMBER;
+    v_hab    NUMBER;
     v_r2     NUMBER;
     v_r3     NUMBER;
     v_r4     NUMBER;
@@ -4484,9 +4549,10 @@ BEGIN
     -- R1: Maria, desde el portal, elige Tarapoto Clasico para dentro de 10 dias.
     --     No hay salida ese dia: la BD la CREA (origen RESERVA, PROGRAMADA: 2 de 4 minimos).
     PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente('maria.rios@example.com', v_cli);
-    --     (v10) Elige que la recojan en su hotel.
+    --     (v10) Elige que la recojan en su hotel. Paquete con noches: elige la habitacion (obligatoria).
+    SELECT habitacion_id INTO v_hab FROM HABITACIONES WHERE nombre = 'Habitacion doble matrimonial';
     PKG_GESTION_PAQUETES_CLIENTE.reservar(v_cli, f_paquete('Tarapoto Clasico 3D/2N'), TRUNC(SYSDATE) + 10, 2, v_r1,
-                                          f_lugar('Hotel Centro Tarapoto'));
+                                          f_lugar('Hotel Centro Tarapoto'), v_hab);
 
     PKG_SEGURIDAD_ROLES.iniciar_sesion('kventas', 'VENTAS');
     agregar_pasajero(v_r1, 'Maria Fernanda Rios Pinedo', 'DNI', '72458136', 'Peruana', DATE '1994-03-18');
@@ -4755,6 +4821,12 @@ BEGIN
         PKG_GESTION_PAQUETES_CLIENTE.reservar(v_cli, v_laguna, TRUNC(SYSDATE) + 1, 1, v_r);
         resultado('Reserva web sin la anticipacion minima', NULL);
     EXCEPTION WHEN OTHERS THEN resultado('Reserva web sin la anticipacion minima', SQLERRM);
+    END;
+
+    BEGIN
+        PKG_GESTION_PAQUETES_CLIENTE.reservar(v_cli, v_tarapoto, TRUNC(SYSDATE) + 10, 1, v_r);
+        resultado('Reserva web de un paquete con noches sin habitacion', NULL);
+    EXCEPTION WHEN OTHERS THEN resultado('Reserva web de un paquete con noches sin habitacion', SQLERRM);
     END;
 
     BEGIN
