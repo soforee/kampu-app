@@ -356,7 +356,8 @@ CREATE TABLE LUGARES (
                                      OR (latitud BETWEEN -90 AND 90 AND longitud BETWEEN -180 AND 180))
 );
 -- Una sola oficina: es el punto de encuentro por defecto
-CREATE UNIQUE INDEX uq_lug_oficina ON LUGARES (CASE WHEN tipo_lugar = 'OFICINA' THEN 1 END);
+-- DECODE y no CASE: algunos clientes (SQL Developer) rechazan CASE en un indice (ORA-02158)
+CREATE UNIQUE INDEX uq_lug_oficina ON LUGARES (DECODE(tipo_lugar, 'OFICINA', 1));
 CREATE INDEX idx_lug_recojo ON LUGARES (es_punto_recojo, ciudad);
 
 -- 4.5a CARGOS (+v8): catalogo de cargos del personal. Por defecto GUIA y CONDUCTOR;
@@ -584,8 +585,8 @@ CREATE TABLE SALIDAS_PROGRAMADAS (
 );
 -- Una sola salida vigente por paquete y fecha (una CANCELADA no impide abrir otra)
 CREATE UNIQUE INDEX uq_sal_paquete_fecha ON SALIDAS_PROGRAMADAS (
-    CASE WHEN estado <> 'CANCELADA' THEN paquete_id END,
-    CASE WHEN estado <> 'CANCELADA' THEN fecha_inicio END);
+    DECODE(estado, 'CANCELADA', CAST(NULL AS NUMBER), paquete_id),
+    DECODE(estado, 'CANCELADA', CAST(NULL AS DATE), fecha_inicio));
 -- Busqueda "salida de este paquete en esta fecha" (PKG_RESERVAS.obtener_salida)
 CREATE INDEX idx_sal_paquete_fecha ON SALIDAS_PROGRAMADAS (paquete_id, fecha_inicio);
 CREATE INDEX idx_sal_guia_fecha    ON SALIDAS_PROGRAMADAS (guia_id, fecha_inicio);
@@ -753,7 +754,7 @@ CREATE TABLE SOLICITUDES_ANULACION (
                                        OR (estado <> 'PENDIENTE' AND fecha_atencion IS NOT NULL))
 );
 -- Una sola solicitud pendiente por reserva
-CREATE UNIQUE INDEX uq_sol_pendiente ON SOLICITUDES_ANULACION (CASE WHEN estado = 'PENDIENTE' THEN reserva_id END);
+CREATE UNIQUE INDEX uq_sol_pendiente ON SOLICITUDES_ANULACION (DECODE(estado, 'PENDIENTE', reserva_id));
 CREATE INDEX idx_sol_reserva       ON SOLICITUDES_ANULACION (reserva_id);
 CREATE INDEX idx_sol_estado_fecha  ON SOLICITUDES_ANULACION (estado, fecha_solicitud);
 CREATE INDEX idx_sol_usuario       ON SOLICITUDES_ANULACION (atendida_por_id);
