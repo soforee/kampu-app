@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.controller;
 
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,7 +10,6 @@ import pe.edu.upeu.kampu.services.IReservaService;
 
 import java.util.List;
 
-// Solicitudes de anulación del portal (v10): Ventas las aprueba (reembolso) o las rechaza
 @RestController
 @RequestMapping("/api/v1/solicitudes-anulacion")
 public class SolicitudAnulacionController {
@@ -21,13 +19,13 @@ public class SolicitudAnulacionController {
         this.reservaService = reservaService;
     }
 
-    @Permiso("GESTIONAR_RESERVAS")
+    @PreAuthorize("hasAuthority('GESTIONAR_RESERVAS')")
     @GetMapping
     public ResponseEntity<List<SolicitudAnulacionDTO>> listar() {
         return ResponseEntity.ok(reservaService.listarSolicitudes());
     }
 
-    @Permiso("GESTIONAR_RESERVAS")
+    @PreAuthorize("hasAuthority('GESTIONAR_RESERVAS')")
     @PatchMapping("/{id}")
     public ResponseEntity<SolicitudAnulacionDTO> atender(@PathVariable Long id, @Valid @RequestBody AtencionSolicitudRequestDTO dto) {
         return ResponseEntity.ok(reservaService.atenderSolicitud(id, dto));

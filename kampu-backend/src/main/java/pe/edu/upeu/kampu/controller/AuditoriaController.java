@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.controller;
 
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -19,14 +18,8 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Sección "Auditoría" (solo ADMIN: SeguridadInterceptor exige VER_AUDITORIA en /auditoria/**).
- *   GET /auditoria?desde=&hasta=&rol=&accion=&entidad=&entidadId=&usuario=&q=&pagina=0&tamanio=50
- *   GET /auditoria/filtros   -> valores para los combos (entidades y usuarios presentes en la bitácora)
- *   GET /auditoria/exportar  -> CSV con los mismos filtros (máx. 5000 filas)
- */
 @RestController
-@Permiso("VER_AUDITORIA")
+@PreAuthorize("hasAuthority('VER_AUDITORIA')")
 @RequestMapping("/api/v1/auditoria")
 public class AuditoriaController {
     private final AuditoriaConsultaService consulta;
@@ -85,7 +78,6 @@ public class AuditoriaController {
         return o == null ? "" : o.toString();
     }
 
-    // Celda CSV: comillas si hace falta
     private static String c(String v) {
         if (v == null) return "";
         return "\"" + v.replace("\"", "\"\"").replace('\n', ' ') + "\"";

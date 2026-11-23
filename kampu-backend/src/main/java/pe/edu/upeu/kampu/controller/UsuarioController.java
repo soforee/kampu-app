@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.controller;
 
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,9 +14,8 @@ import pe.edu.upeu.kampu.services.IUsuarioService;
 import java.util.List;
 import java.util.Map;
 
-// Usuarios del sistema (personal interno). Solo ADMIN: el servicio responde 403 a cualquier otro rol.
 @RestController
-@Permiso("GESTIONAR_USUARIOS")
+@PreAuthorize("hasAuthority('GESTIONAR_USUARIOS')")
 @RequestMapping("/api/v1/usuarios")
 public class UsuarioController {
     private final IUsuarioService usuarioService;
@@ -31,8 +29,6 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.listarTodo());
     }
 
-    // Alta de un usuario con el rol que elige el administrador (ADMIN, VENTAS, GUIA o CONDUCTOR).
-    // GUIA y CONDUCTOR: crea también su ficha en el personal propio.
     @PostMapping
     public ResponseEntity<UsuarioDTO> crear(@Valid @RequestBody UsuarioRequestDTO dto) {
         return new ResponseEntity<>(usuarioService.crear(dto), HttpStatus.CREATED);
@@ -43,7 +39,6 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.cambiarRol(id, dto));
     }
 
-    // {"activo": false} revoca el acceso (INACTIVO); {"activo": true} lo restablece y desbloquea
     @PatchMapping("/{id}/acceso")
     public ResponseEntity<UsuarioDTO> cambiarAcceso(@PathVariable Long id, @RequestBody Map<String, Boolean> cuerpo) {
         return ResponseEntity.ok(usuarioService.cambiarAcceso(id, Boolean.TRUE.equals(cuerpo.get("activo"))));
