@@ -25,6 +25,7 @@ import java.util.Optional;
 // se activa o desactiva; el de los proveedores se registra y edita completo.
 @Service
 public class PersonalServiceImpl implements IPersonalService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PersonalServiceImpl.class);
     private final PersonalRepository personalRepository;
     private final ProveedorRepository proveedorRepository;
     private final SalidaProgramadaRepository salidaRepository;
@@ -154,8 +155,17 @@ public class PersonalServiceImpl implements IPersonalService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public java.util.List<pe.edu.upeu.kampu.dto.CargoDTO> cargos() {
+        // Si la tabla CARGOS quedó sin GUIA o CONDUCTOR, se crean (sin transacción propia: si el rol
+        // de la sesión no puede insertar, como Ventas, solo se listan los que haya)
+        for (String codigo : new String[]{"GUIA", "CONDUCTOR"}) {
+            if (cargoRepository.existsById(codigo)) continue;
+            try {
+                cargoPorDefecto(codigo);
+            } catch (RuntimeException e) {
+                log.warn("No se pudo crear el cargo {}: {}", codigo, e.getMessage());
+            }
+        }
         return cargoRepository.findAllByOrderByCodigoAsc().stream().map(pe.edu.upeu.kampu.dto.CargoDTO::desde).toList();
     }
 

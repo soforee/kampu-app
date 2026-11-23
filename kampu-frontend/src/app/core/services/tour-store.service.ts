@@ -149,6 +149,7 @@ export class TourStore {
   cargarPaquetes() { this.cargarLista('paquetes', this.paquetes, false); }
   cargarProveedores() { this.cargarLista('proveedores', this.proveedores, false); }
   cargarPersonal() { this.cargarLista('personal', this.personal, false); }
+  cargarCargos() { this.cargarLista('personal/cargos', this.cargos, false); }
   cargarVehiculos() { this.cargarLista('vehiculos', this.vehiculos, false); }
   cargarLugares() { this.cargarLista('lugares', this.lugares, false); }
   cargarHabitaciones() { this.cargarLista('habitaciones', this.habitaciones, false); }
