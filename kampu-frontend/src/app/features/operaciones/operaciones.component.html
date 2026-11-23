@@ -1,8 +1,4 @@
-<app-page-header titulo="Tráfico" subtitulo="Cada traslado de una salida (aeropuerto → hotel, hotel → atractivo…) con su vehículo, conductor y estado.">
-  @if (gestiona) {
-  <button type="button" class="btn-dark" (click)="nueva()"><app-icon name="plus" size="w-4 h-4" /> Nuevo traslado</button>
-  }
-</app-page-header>
+<app-page-header titulo="Tráfico" subtitulo="Cada salida con sus traslados (aeropuerto → hotel, hotel → atractivo…): despliégala para verlos y añade los que falten." />
 
 <div class="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
   <app-tarjeta-dato etiqueta="Por asignar" icono="alert" [valor]="resumen().porAsignar" detalle="Sin vehículo ni conductor" />
@@ -42,51 +38,104 @@
         <th class="th min-w-[180px]">Vehículo y conductor</th><th class="th text-center">Pax</th><th class="th">Estado</th><th class="th col-acciones"></th>
       </tr></thead>
       <tbody>
-        @for (f of visibles(); track f.op.operacionId) {
-          <tr [class.fila-nueva]="store.resaltado() === 'operacion-' + f.op.operacionId" class="border-t border-zinc-100 first:border-t-0" [class.opacity-60]="f.op.estadoActual === 'CANCELADO'">
+        @for (g of visibles(); track g.clave) {
+          <!-- Salida: resumen de sus traslados -->
+          <tr class="border-t border-zinc-100 first:border-t-0" [class.bg-brand-50]="abiertos().has(g.clave)">
             <td data-label="Traslado" class="td">
-              <div class="whitespace-nowrap font-medium text-zinc-900">{{ f.op.codigoOperacion }}</div>
-              <div class="mt-0.5 text-xs text-zinc-500">@if (f.salida) { {{ f.paquete?.nombre }} · {{ f.salida.fechaInicio | date:'dd/MM' }} } @else { Servicio suelto }</div>
+              <button type="button" class="flex items-start gap-2 text-left" (click)="alternarGrupo(g.clave)" [attr.aria-expanded]="abiertos().has(g.clave)" [attr.data-testid]="'grupo-' + g.clave">
+                <span class="mt-0.5 text-zinc-500"><app-icon [name]="abiertos().has(g.clave) ? 'chevron-down' : 'chevron-right'" size="w-4 h-4" /></span>
+                <span>
+                  <span class="block font-medium text-zinc-900">{{ g.salida ? (g.paquete?.nombre ?? 'Salida') : 'Servicios sueltos' }}</span>
+                  <span class="block text-xs text-zinc-500">@if (g.salida) { {{ g.salida.fechaInicio | date:'dd/MM' }}@if (g.salida.fechaFin !== g.salida.fechaInicio) { al {{ g.salida.fechaFin | date:'dd/MM' }} } · } {{ g.todos.length }} traslado(s)</span>
+                </span>
+              </button>
             </td>
             <td data-label="Horario" class="td whitespace-nowrap">
-              <div class="text-zinc-900">{{ f.op.horaProgramadaSalida | date:'dd/MM HH:mm' }}</div>
-              <div class="text-xs text-zinc-500">Llega {{ f.op.horaEstimadaLlegada | date:'HH:mm' }}</div>
-              @if (f.op.horaRealSalida) {
-                <div class="text-xs" [class]="(f.op.minRetrasoSalida ?? 0) > 15 ? 'text-amber-700' : 'text-zinc-500'">
-                  Salió {{ f.op.horaRealSalida | date:'HH:mm' }}@if (f.op.minRetrasoSalida) { ({{ f.op.minRetrasoSalida > 0 ? '+' : '' }}{{ f.op.minRetrasoSalida }} min) }
-                </div>
-              }
+              @if (g.todos[0]; as o) {
+                <div class="text-zinc-900">{{ o.horaProgramadaSalida | date:'dd/MM HH:mm' }}</div>
+                <div class="text-xs text-zinc-500">Llega {{ o.horaEstimadaLlegada | date:'HH:mm' }}</div>
+              } @else { <span class="text-xs text-zinc-400">—</span> }
             </td>
             <td data-label="Tramo" class="td">
-              <div class="text-zinc-900">{{ f.op.origen }}</div>
-              <div class="text-xs text-zinc-500">→ {{ f.op.destino }}</div>
+              @if (g.proxima; as o) {
+                <div class="text-zinc-900">{{ o.origen }}</div>
+                <div class="text-xs text-zinc-500">→ {{ o.destino }}</div>
+                <div class="text-[11px] text-zinc-400">{{ o.codigoOperacion }} · {{ o.horaProgramadaSalida | date:'dd/MM HH:mm' }}</div>
+              } @else { <span class="text-xs font-medium text-amber-700">Sin traslados programados</span> }
             </td>
             <td data-label="Recursos" class="td">
-              @if (f.op.placa) {
-                <div class="text-zinc-900">{{ f.op.placa }} · {{ f.op.conductor }}</div>
-                <div class="mt-0.5 text-xs text-zinc-500">{{ f.op.proveedorPropio ? 'Flota propia · ' : '' }}{{ f.op.proveedor }}</div>
-              } @else {
+              @if (g.primera?.placa) {
+                <div class="text-zinc-900">{{ g.primera!.placa }} · {{ g.primera!.conductor }}</div>
+                <div class="mt-0.5 text-xs text-zinc-500">{{ g.primera!.proveedorPropio ? 'Flota propia · ' : '' }}{{ g.primera!.proveedor }}</div>
+              } @else if (g.todos.length) {
                 <span class="text-xs font-medium text-amber-700">Sin asignar</span>
               }
             </td>
-            <td data-label="Pax" class="td text-center tabular-nums text-zinc-700">{{ f.op.paxProgramados }}</td>
+            <td data-label="Pax" class="td text-center tabular-nums text-zinc-700">{{ g.pax }}</td>
             <td data-label="Estado" class="td">
-              <app-badge [estado]="f.op.estadoActual" />
-              @if (f.op.observaciones) { <div class="text-xs text-zinc-500 mt-1 max-w-[180px] truncate" [title]="f.op.observaciones">{{ f.op.observaciones }}</div> }
+              @if (g.proxima; as o) { <app-badge [estado]="o.estadoActual" /> }
             </td>
             <td data-label="" class="td col-acciones text-right whitespace-nowrap">
               <div class="actions">
-                @if (gestiona && f.op.estadoActual === 'PROGRAMADO') {
-                  <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(f.op)"><app-icon name="truck" size="w-3.5 h-3.5" /> Asignar</button>
+                @if (puedeAnadir(g)) {
+                  <button type="button" class="btn-light btn-sm" (click)="nuevaPara(g)" [attr.data-testid]="'anadir-' + g.clave"><app-icon name="plus" size="w-3.5 h-3.5" /> Añadir traslado</button>
                 }
-                @if (gestiona && !esFinal(f.op)) {
-                  <button type="button" class="icon-btn" data-tip="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(f.op)"><app-icon name="refresh" size="w-4 h-4" /></button>
-                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(f.op)"><app-icon name="edit" size="w-4 h-4" /></button>
+                @if (g.todos.length) {
+                  <button type="button" class="icon-btn" [attr.data-tip]="abiertos().has(g.clave) ? 'Ocultar traslados' : 'Ver traslados'" [attr.aria-label]="abiertos().has(g.clave) ? 'Ocultar traslados' : 'Ver traslados'" (click)="alternarGrupo(g.clave)">
+                    <app-icon [name]="abiertos().has(g.clave) ? 'chevron-down' : 'chevron-right'" size="w-4 h-4" /></button>
                 }
-                <button type="button" class="icon-btn" data-tip="Historial de estados" aria-label="Historial" (click)="verHistorial(f.op)"><app-icon name="clock" size="w-4 h-4" /></button>
               </div>
             </td>
           </tr>
+          @if (abiertos().has(g.clave)) {
+            @for (o of g.visibles; track o.operacionId) {
+            <tr [class.fila-nueva]="store.resaltado() === 'operacion-' + o.operacionId" class="border-t border-zinc-100 bg-zinc-50/60" [class.opacity-60]="o.estadoActual === 'CANCELADO'">
+              <td data-label="Traslado" class="td pl-10">
+                <div class="whitespace-nowrap font-medium text-zinc-900">{{ o.codigoOperacion }}</div>
+              </td>
+              <td data-label="Horario" class="td whitespace-nowrap">
+                <div class="text-zinc-900">{{ o.horaProgramadaSalida | date:'dd/MM HH:mm' }}</div>
+                <div class="text-xs text-zinc-500">Llega {{ o.horaEstimadaLlegada | date:'HH:mm' }}</div>
+                @if (o.horaRealSalida) {
+                  <div class="text-xs" [class]="(o.minRetrasoSalida ?? 0) > 15 ? 'text-amber-700' : 'text-zinc-500'">
+                    Salió {{ o.horaRealSalida | date:'HH:mm' }}@if (o.minRetrasoSalida) { ({{ o.minRetrasoSalida > 0 ? '+' : '' }}{{ o.minRetrasoSalida }} min) }
+                  </div>
+                }
+              </td>
+              <td data-label="Tramo" class="td">
+                <div class="text-zinc-900">{{ o.origen }}</div>
+                <div class="text-xs text-zinc-500">→ {{ o.destino }}</div>
+              </td>
+              <td data-label="Recursos" class="td">
+                @if (o.placa) {
+                  <div class="text-zinc-900">{{ o.placa }} · {{ o.conductor }}</div>
+                  <div class="mt-0.5 text-xs text-zinc-500">{{ o.proveedorPropio ? 'Flota propia · ' : '' }}{{ o.proveedor }}</div>
+                } @else {
+                  <span class="text-xs font-medium text-amber-700">Sin asignar</span>
+                }
+              </td>
+              <td data-label="Pax" class="td text-center tabular-nums text-zinc-700">{{ o.paxProgramados }}</td>
+              <td data-label="Estado" class="td">
+                <app-badge [estado]="o.estadoActual" />
+                @if (o.observaciones) { <div class="text-xs text-zinc-500 mt-1 max-w-[180px] truncate" [title]="o.observaciones">{{ o.observaciones }}</div> }
+              </td>
+              <td data-label="" class="td col-acciones text-right whitespace-nowrap">
+                <div class="actions">
+                  @if (gestiona && o.estadoActual === 'PROGRAMADO') {
+                    <button type="button" class="btn-light btn-sm" (click)="abrirAsignar(o)"><app-icon name="truck" size="w-3.5 h-3.5" /> Asignar</button>
+                  }
+                  @if (gestiona && !esFinal(o)) {
+                    <button type="button" class="icon-btn" data-tip="Cambiar estado" aria-label="Cambiar estado" (click)="abrirEstado(o)"><app-icon name="refresh" size="w-4 h-4" /></button>
+                    <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editar(o)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  }
+                  <button type="button" class="icon-btn" data-tip="Historial de estados" aria-label="Historial" (click)="verHistorial(o)"><app-icon name="clock" size="w-4 h-4" /></button>
+                </div>
+              </td>
+            </tr>
+            } @empty {
+              <tr class="border-t border-zinc-100 bg-zinc-50/60"><td colspan="7" class="td pl-10 text-sm text-zinc-500">Aún no hay traslados para esta salida. Usa «Añadir traslado».</td></tr>
+            }
+          }
         } @empty {
           <tr><td colspan="7"><div class="empty">{{ store.cargado() ? 'No hay traslados para mostrar.' : 'Cargando…' }}</div></td></tr>
         }
