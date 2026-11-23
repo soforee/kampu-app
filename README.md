@@ -138,7 +138,15 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
   - **Proveedores**: proveedores externos con su personal, sus vehículos y sus habitaciones de hotel (precio por noche,
     por persona o por grupo, y foto), y los lugares (puntos de recojo, hoteles…);
   - usuarios y auditoría.
-- **Guía y conductor:** solo ven *Mis asignaciones*. La base de datos filtra lo que corresponde a cada uno.
+- **Guía y conductor:** ven solo lo suyo (la base de datos filtra lo que corresponde a cada uno):
+  - *Mis asignaciones*. El conductor avanza cada traslado (en camino al recojo → pasajeros a bordo → finalizado),
+    abre la ruta en Google Maps o Waze, llama o escribe por WhatsApp al titular, al guía o a la agencia, marca qué
+    pasajeros abordaron y muestra un cartel de recepción a pantalla completa;
+  - *Historial de viajes* y *Mi vehículo* (conductor): traslados finalizados con filtros y horas trabajadas;
+    mantenimiento, SOAT y revisión técnica de la unidad, y kilometraje y combustible del día;
+  - *Reportar novedad* y *Disponibilidad* (guía y conductor): imprevistos en ruta que la agencia responde en
+    *Novedades en ruta*, y bloqueos de horario que impiden asignarles trabajo;
+  - la campana avisa cuando les asignan, reasignan o cancelan un traslado, cambia su horario o un punto de recojo.
 - **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.
   La matriz de permisos vive en Oracle (`PKG_SEGURIDAD_ROLES`): sin sesión se responde 401, y sin permiso, 403.
 

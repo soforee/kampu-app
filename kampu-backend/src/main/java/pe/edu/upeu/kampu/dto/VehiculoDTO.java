@@ -12,10 +12,13 @@ public record VehiculoDTO(
         String marcaModelo,
         Integer capacidadPax,
         LocalDate proxMantenimiento,
-        String estado
+        String estado,
+        LocalDate vencSoat,
+        LocalDate vencRevision
 ) {
     public static VehiculoDTO desde(Vehiculo v) {
         return new VehiculoDTO(v.getVehiculoId(), v.getProveedorId(), v.getPlaca(), v.getTipoVehiculo(),
-                v.getMarcaModelo() == null ? "" : v.getMarcaModelo(), v.getCapacidadPax(), v.getProxMantenimiento(), v.getEstado());
+                v.getMarcaModelo() == null ? "" : v.getMarcaModelo(), v.getCapacidadPax(), v.getProxMantenimiento(), v.getEstado(),
+                v.getVencSoat(), v.getVencRevision());
     }
 }

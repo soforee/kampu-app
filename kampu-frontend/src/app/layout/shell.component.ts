@@ -6,6 +6,7 @@ import { AlertasService } from '../core/services/alertas.service';
 import { AuthService } from '../core/services/auth.service';
 import { TourStore } from '../core/services/tour-store.service';
 import { AlertService } from '../core/services/alert.service';
+import { NotificacionesService } from '../core/services/notificaciones.service';
 import { IconComponent } from '../shared/icon.component';
 import { LogoComponent } from '../shared/logo.component';
 import { etiqueta } from '../core/utils/etiquetas';
@@ -32,14 +33,24 @@ export class ShellComponent {
   desplegado = signal<string | null>(null);
   consulta = signal('');
   alertas = this.avisos.lista;
+  // Avisos de la BD (asignaciones, cambios de recojo, novedades): se consultan cada minuto
+  private campana = inject(NotificacionesService);
+  notificaciones = this.campana.lista;
+  sinLeer = this.campana.sinLeer;
+  totalAvisos = computed(() => this.alertas().length + this.sinLeer());
 
   // Sección actual (título de la barra superior), según la ruta
   private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)), { initialValue: this.router.url });
 
   // Menú según los permisos de la sesión (mismos que exigen app.routes.ts y el backend)
-  private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso }[] = [
+  // rol: solo para ese rol (p. ej. el historial y el vehículo son del conductor)
+  private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso; rol?: string }[] = [
     { ruta: '/dashboard', texto: 'Panel', icono: 'chart', permiso: 'VER_RESUMEN' },
     { ruta: '/mis-asignaciones', texto: 'Mis asignaciones', icono: 'flag', permiso: 'VER_ASIGNACIONES_PROPIAS' },
+    { ruta: '/historial-viajes', texto: 'Historial de viajes', icono: 'clock', permiso: 'VER_ASIGNACIONES_PROPIAS', rol: 'CONDUCTOR' },
+    { ruta: '/mi-vehiculo', texto: 'Mi vehículo', icono: 'truck', permiso: 'VER_ASIGNACIONES_PROPIAS', rol: 'CONDUCTOR' },
+    { ruta: '/mis-novedades', texto: 'Reportar novedad', icono: 'alert', permiso: 'VER_ASIGNACIONES_PROPIAS' },
+    { ruta: '/disponibilidad', texto: 'Disponibilidad', icono: 'calendar', permiso: 'VER_ASIGNACIONES_PROPIAS' },
     { ruta: '/cotizaciones', texto: 'Cotizaciones', icono: 'inbox', permiso: 'VER_COTIZACIONES' },
     { ruta: '/reservas', texto: 'Reservas', icono: 'ticket', permiso: 'VER_RESERVAS' },
     { ruta: '/salidas', texto: 'Salidas', icono: 'calendar', permiso: 'VER_RESUMEN' },
@@ -48,13 +59,14 @@ export class ShellComponent {
     { ruta: '/pagos', texto: 'Pagos', icono: 'card', permiso: 'VER_MONTOS' },
     { ruta: '/clientes', texto: 'Clientes', icono: 'users', permiso: 'VER_CLIENTES' },
     { ruta: '/operaciones', texto: 'Tráfico', icono: 'truck', permiso: 'VER_OPERACIONES' },
+    { ruta: '/novedades', texto: 'Novedades en ruta', icono: 'alert', permiso: 'VER_OPERACIONES' },
     { ruta: '/personal', texto: 'Personal', icono: 'users', permiso: 'VER_LOGISTICA' },
     { ruta: '/vehiculos', texto: 'Vehículos', icono: 'truck', permiso: 'VER_LOGISTICA' },
     { ruta: '/proveedores', texto: 'Proveedores', icono: 'map-pin', permiso: 'VER_LOGISTICA' },
     { ruta: '/usuarios', texto: 'Usuarios', icono: 'id', permiso: 'GESTIONAR_USUARIOS' },
     { ruta: '/auditoria', texto: 'Auditoría', icono: 'file-text', permiso: 'VER_AUDITORIA' }
   ];
-  menu = computed(() => this.todo.filter(m => !m.permiso || this.auth.puede(m.permiso)));
+  menu = computed(() => this.todo.filter(m => (!m.permiso || this.auth.puede(m.permiso)) && (!m.rol || m.rol === this.auth.rol())));
   seccion = computed(() => this.todo.find(m => this.url().startsWith(m.ruta)) ?? this.todo[0]);
 
   // Búsqueda global sobre los datos ya cargados (solo lo que el rol puede ver)
@@ -91,6 +103,26 @@ export class ShellComponent {
 
   alternar(panel: string) {
     this.desplegado.set(this.desplegado() === panel ? null : panel);
+    // Al abrir la campana, los avisos nuevos quedan como leídos (se siguen viendo resaltados esta vez)
+    if (panel === 'avisos' && this.desplegado() === 'avisos') this.campana.marcarLeidas();
+  }
+
+  iconoAviso(tipo: string) {
+    return ({ ASIGNACION: 'truck', REASIGNACION: 'x', HORARIO: 'clock', CANCELACION: 'x-circle', RECOJO: 'map-pin',
+      INCIDENCIA: 'alert', INCIDENCIA_ATENDIDA: 'check-circle' } as { [t: string]: string })[tipo] ?? 'bell';
+  }
+  hace(fecha: string) {
+    const min = Math.round((Date.now() - new Date(fecha).getTime()) / 60000);
+    if (min < 1) return 'ahora';
+    if (min < 60) return `hace ${min} min`;
+    if (min < 1440) return `hace ${Math.round(min / 60)} h`;
+    return new Date(fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+  }
+
+  abrirAviso(n: { operacionId: number | null; incidenciaId: number | null; tipo: string }) {
+    const campo = this.auth.esCampo();
+    const ruta = n.incidenciaId ? [campo ? '/mis-novedades' : '/novedades'] : [campo ? '/mis-asignaciones' : '/operaciones'];
+    this.irA(ruta);
   }
 
   // Cierra los desplegables al hacer clic fuera de la barra superior
@@ -109,6 +141,7 @@ export class ShellComponent {
       return;
     }
     this.cargarDatos();
+    this.campana.iniciar();
   }
 
   private cargarDatos() {
@@ -138,6 +171,7 @@ export class ShellComponent {
   async salir() {
     if (await this.alerts.confirm('Se cerrará tu sesión actual.', 'Cerrar sesión', 'Cerrar sesión')) {
       this.auth.logout();
+      this.campana.detener();
       this.store.limpiar();
       this.router.navigate(['/login']);
     }

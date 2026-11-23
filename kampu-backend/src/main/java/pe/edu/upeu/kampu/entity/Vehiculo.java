@@ -32,11 +32,23 @@ public class Vehiculo {
     @Column(name = "prox_mantenimiento")
     private LocalDate proxMantenimiento;
 
+    // SOAT y revisión técnica: si vencen antes del traslado, la BD no deja asignarlo
+    @Column(name = "venc_soat")
+    private LocalDate vencSoat;
+
+    @Column(name = "venc_revision")
+    private LocalDate vencRevision;
+
     @Column(name = "estado")
     private String estado;
 
     public Vehiculo() {
     }
+
+    public LocalDate getVencSoat() { return vencSoat; }
+    public void setVencSoat(LocalDate vencSoat) { this.vencSoat = vencSoat; }
+    public LocalDate getVencRevision() { return vencRevision; }
+    public void setVencRevision(LocalDate vencRevision) { this.vencRevision = vencRevision; }
 
     public Long getVehiculoId() {
         return vehiculoId;

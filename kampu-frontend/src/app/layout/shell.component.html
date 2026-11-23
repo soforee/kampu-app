@@ -97,11 +97,24 @@
       <div class="relative">
         <button type="button" class="icon-btn-box relative !h-10 !w-10" aria-label="Avisos" [attr.aria-expanded]="desplegado() === 'avisos'" (click)="alternar('avisos')">
           <app-icon name="bell" size="w-[18px] h-[18px]" />
-          @if (alertas().length) { <span class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-leaf-400 px-1 text-[11px] font-semibold text-brand-900 ring-2 ring-white">{{ alertas().length }}</span> }
+          @if (totalAvisos()) { <span class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-leaf-400 px-1 text-[11px] font-semibold text-brand-900 ring-2 ring-white">{{ totalAvisos() }}</span> }
         </button>
         @if (desplegado() === 'avisos') {
           <div class="absolute right-0 top-12 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-lifted animate-pop-in">
-            <div class="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900">Requiere atención</div>
+            @if (notificaciones().length) {
+              <div class="border-b border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900">Avisos</div>
+              <ul class="max-h-72 divide-y divide-zinc-100 overflow-y-auto" data-testid="notificaciones">
+                @for (n of notificaciones(); track n.notificacionId) {
+                  <li><button type="button" class="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50" [class.bg-leaf-50]="!n.leida" (click)="abrirAviso(n)">
+                    <span class="ico-tile h-8 w-8 rounded-lg !text-leaf-700"><app-icon [name]="iconoAviso(n.tipo)" size="w-4 h-4" /></span>
+                    <span class="min-w-0"><span class="block text-sm text-zinc-900" [class.font-semibold]="!n.leida">{{ n.titulo }}</span>
+                      @if (n.detalle) { <span class="block text-xs text-zinc-500">{{ n.detalle }}</span> }
+                      <span class="block text-[11px] text-zinc-400">{{ hace(n.fecha) }}</span></span>
+                  </button></li>
+                }
+              </ul>
+            }
+            <div class="border-b border-t border-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-900" [class.border-t-0]="!notificaciones().length">Requiere atención</div>
             <ul class="max-h-80 divide-y divide-zinc-100 overflow-y-auto">
               @for (a of alertas(); track a.titulo + a.detalle) {
                 <li><button type="button" class="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-zinc-50" (click)="irA(a.ruta)">

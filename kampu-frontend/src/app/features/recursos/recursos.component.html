@@ -120,7 +120,10 @@
                 </td>
                 <td data-label="Asientos" class="td text-center tabular-nums text-zinc-700">{{ x.capacidadPax }}</td>
                 @if (!propio) { <td data-label="Proveedor" class="td text-zinc-700">{{ store.nombreProveedor(x.proveedorId) }}</td> }
-                <td data-label="Mantenimiento" class="td whitespace-nowrap" [class]="x.proxMantenimiento && x.proxMantenimiento <= pronto ? 'text-amber-700' : 'text-zinc-700'">{{ x.proxMantenimiento ? (x.proxMantenimiento | date:'dd/MM/yyyy') : '—' }}</td>
+                <td data-label="Mantenimiento" class="td whitespace-nowrap" [class]="x.proxMantenimiento && x.proxMantenimiento <= pronto ? 'text-amber-700' : 'text-zinc-700'">{{ x.proxMantenimiento ? (x.proxMantenimiento | date:'dd/MM/yyyy') : '—' }}
+                  @if (x.vencSoat) { <div class="text-xs" [class]="x.vencSoat < hoy ? 'font-medium text-rose-600' : x.vencSoat <= pronto ? 'text-amber-700' : 'text-zinc-500'">SOAT {{ x.vencSoat | date:'dd/MM/yyyy' }}</div> }
+                  @if (x.vencRevision) { <div class="text-xs" [class]="x.vencRevision < hoy ? 'font-medium text-rose-600' : x.vencRevision <= pronto ? 'text-amber-700' : 'text-zinc-500'">Revisión {{ x.vencRevision | date:'dd/MM/yyyy' }}</div> }
+                </td>
                 <td data-label="Estado" class="td"><app-badge [estado]="x.estado" /></td>
                 @if (puedeEditar()) {
               <td data-label="" class="td col-acciones whitespace-nowrap text-right">
@@ -297,6 +300,11 @@
               <div><label class="label">Próx. mantenimiento <span class="opt">Opcional</span></label><input type="date" class="field" [(ngModel)]="vehiculo.proxMantenimiento" (blur)="v.tocar('vMantenimiento')" [class.field-invalid]="v.error('vMantenimiento')">@if (v.error('vMantenimiento'); as e) { <p class="field-error">{{ e }}</p> }</div>
               <div><label class="label req">Estado</label><select class="field" [(ngModel)]="vehiculo.estado">@for (s of estadosVehiculo; track s) { <option [value]="s">{{ etiqueta(s) }}</option> }</select></div>
             </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div><label class="label">Vence el SOAT <span class="opt">Opcional</span></label><input type="date" class="field" [(ngModel)]="vehiculo.vencSoat" (blur)="v.tocar('vSoat')" [class.field-invalid]="v.error('vSoat')">@if (v.error('vSoat'); as e) { <p class="field-error">{{ e }}</p> }</div>
+              <div><label class="label">Vence la revisión técnica <span class="opt">Opcional</span></label><input type="date" class="field" [(ngModel)]="vehiculo.vencRevision" (blur)="v.tocar('vRevision')" [class.field-invalid]="v.error('vRevision')">@if (v.error('vRevision'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            </div>
+            <p class="hint">Con el SOAT o la revisión vencidos, el vehículo no se puede asignar a un traslado. El conductor los ve en «Mi vehículo».</p>
           }
           @case ('habitaciones') {
             <div class="form-section-title">Datos de la habitación</div>
