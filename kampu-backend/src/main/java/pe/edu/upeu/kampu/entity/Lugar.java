@@ -38,28 +38,6 @@ public class Lugar {
     @Column(name = "minutos_antes_recojo")
     private Integer minutosAntesRecojo;
 
-    // Hotel de un proveedor de hospedaje (sale en la cotización con su precio por noche)
-    @Column(name = "proveedor_id")
-    private Long proveedorId;
-
-    @Column(name = "precio_noche")
-    private BigDecimal precioNoche;
-
-    @Column(name = "modalidad_precio")
-    private String modalidadPrecio;
-
-    @Column(name = "imagen")
-    private String imagen;
-
-    public Long getProveedorId() { return proveedorId; }
-    public void setProveedorId(Long proveedorId) { this.proveedorId = proveedorId; }
-    public BigDecimal getPrecioNoche() { return precioNoche; }
-    public void setPrecioNoche(BigDecimal precioNoche) { this.precioNoche = precioNoche; }
-    public String getModalidadPrecio() { return modalidadPrecio; }
-    public void setModalidadPrecio(String modalidadPrecio) { this.modalidadPrecio = modalidadPrecio; }
-    public String getImagen() { return imagen; }
-    public void setImagen(String imagen) { this.imagen = imagen; }
-
     public Lugar() {
     }
 

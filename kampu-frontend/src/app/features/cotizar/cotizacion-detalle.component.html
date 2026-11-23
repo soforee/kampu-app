@@ -108,8 +108,8 @@
               @for (l of c.servicios; track l.servicioId) {
                 <tr class="border-b border-zinc-100"><td class="py-2 text-zinc-700">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }} <span class="text-xs text-zinc-400">({{ l.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }})</span></td><td class="py-2 text-right tabular-nums">S/ {{ l.subtotal | number:'1.2-2' }}</td></tr>
               }
-              @if (c.hotel; as h) {
-                <tr class="border-b border-zinc-100"><td class="py-2 text-zinc-700">Hotel {{ h.nombre }} · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }} <span class="text-xs text-zinc-400">({{ h.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }})</span></td><td class="py-2 text-right tabular-nums">S/ {{ h.subtotal | number:'1.2-2' }}</td></tr>
+              @if (c.habitacion; as h) {
+                <tr class="border-b border-zinc-100"><td class="py-2 text-zinc-700">{{ h.nombre }} ({{ h.hotel }}) · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }} <span class="text-xs text-zinc-400">({{ h.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }})</span></td><td class="py-2 text-right tabular-nums">S/ {{ h.subtotal | number:'1.2-2' }}</td></tr>
               }
               <tr><td class="pt-3 font-semibold text-zinc-900">Total</td><td class="whitespace-nowrap pt-3 text-right text-xl font-semibold text-zinc-900" data-testid="detalle-total">S/ {{ c.total | number:'1.2-2' }}</td></tr>
             </tbody>

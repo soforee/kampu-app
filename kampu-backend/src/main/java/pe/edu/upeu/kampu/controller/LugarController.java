@@ -8,9 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.kampu.dto.LugarDTO;
 import pe.edu.upeu.kampu.dto.LugarRequestDTO;
-import pe.edu.upeu.kampu.dto.ImagenDTO;
-import org.springframework.http.MediaType;
-import org.springframework.web.multipart.MultipartFile;
 import pe.edu.upeu.kampu.services.ILugarService;
 
 import java.util.List;
@@ -55,10 +52,4 @@ public class LugarController {
         return ResponseEntity.noContent().build();
     }
 
-    // Foto de un hotel (sale en la cotización)
-    @Permiso("GESTIONAR_LOGISTICA")
-    @PostMapping(value = "/imagen", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ImagenDTO> subirImagen(@RequestPart("file") MultipartFile file) {
-        return new ResponseEntity<>(new ImagenDTO(lugarService.subirImagen(file)), HttpStatus.CREATED);
-    }
 }

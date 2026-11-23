@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal, WritableSignal } from '@angular/c
 import { Observable } from 'rxjs';
 import {
   ActividadItinerario, CalendarioDia, Cargo, Cliente, ClienteForm, FormaReembolso, MetodoPago, PuntoRecojo, SolicitudAnulacion, ContactoReserva, EstadoOperacion, EstadoOperacionInfo, EstadoTransaccion, EstimacionDuracion,
-  HistorialOperacion, Lugar, LugarForm, Manifiesto, Moneda, Operacion, OperacionForm, PaqueteForm, PaqueteTour, Pago, PasajeroDraft,
+  Habitacion, HabitacionForm, HistorialOperacion, Lugar, LugarForm, Manifiesto, Moneda, Operacion, OperacionForm, PaqueteForm, PaqueteTour, Pago, PasajeroDraft,
   PasajeroReserva, Permiso, Personal, PersonalForm, Proveedor, ProveedorForm, RecursoCandidato, Reserva, ResumenPaquete, Rol,
   SalidaForm, SalidaProgramada, Sesion, Vehiculo, VehiculoForm
 } from '../models';
@@ -20,6 +20,7 @@ const LISTAS: { [lista: string]: Permiso | null } = {
   personal: 'VER_LOGISTICA',
   vehiculos: 'VER_LOGISTICA',
   lugares: 'VER_LOGISTICA',
+  habitaciones: 'VER_LOGISTICA',
   operaciones: 'VER_OPERACIONES',
   'operaciones/estados': 'VER_OPERACIONES',
   'resumen-paquetes': 'VER_RESUMEN',
@@ -42,6 +43,7 @@ export class TourStore {
   personal = signal<Personal[]>([]);
   vehiculos = signal<Vehiculo[]>([]);
   lugares = signal<Lugar[]>([]);
+  habitaciones = signal<Habitacion[]>([]);
   // Tráfico
   operaciones = signal<Operacion[]>([]);
   estadosOperacion = signal<EstadoOperacionInfo[]>([]);
@@ -98,7 +100,7 @@ export class TourStore {
     const tareas: [string, WritableSignal<any[]>][] = [
       ['paquetes', this.paquetes], ['salidas', this.salidas],
       ['proveedores', this.proveedores], ['personal', this.personal], ['vehiculos', this.vehiculos],
-      ['lugares', this.lugares], ['operaciones', this.operaciones], ['operaciones/estados', this.estadosOperacion],
+      ['lugares', this.lugares], ['habitaciones', this.habitaciones], ['operaciones', this.operaciones], ['operaciones/estados', this.estadosOperacion],
       ['resumen-paquetes', this.resumen], ['clientes', this.clientes], ['reservas', this.reservas],
       ['pasajeros', this.pasajeros], ['pagos', this.pagos],
       ['personal/cargos', this.cargos], ['solicitudes-anulacion', this.solicitudes]
@@ -130,7 +132,7 @@ export class TourStore {
   limpiar() {
     this.cargado.set(false);
     this.cargando = false;
-    for (const s of [this.paquetes, this.proveedores, this.personal, this.vehiculos, this.lugares,
+    for (const s of [this.paquetes, this.proveedores, this.personal, this.vehiculos, this.lugares, this.habitaciones,
       this.operaciones, this.estadosOperacion, this.clientes, this.salidas, this.reservas, this.pasajeros, this.pagos,
       this.resumen, this.cargos, this.solicitudes] as WritableSignal<unknown[]>[]) {
       s.set([]);
@@ -149,6 +151,7 @@ export class TourStore {
   cargarPersonal() { this.cargarLista('personal', this.personal, false); }
   cargarVehiculos() { this.cargarLista('vehiculos', this.vehiculos, false); }
   cargarLugares() { this.cargarLista('lugares', this.lugares, false); }
+  cargarHabitaciones() { this.cargarLista('habitaciones', this.habitaciones, false); }
   cargarOperaciones() { this.cargarLista('operaciones', this.operaciones, false); }
   cargarResumen() { this.cargarLista('resumen-paquetes', this.resumen, false); }
   cargarClientes() { this.cargarLista('clientes', this.clientes, false); }
@@ -209,6 +212,8 @@ export class TourStore {
   eliminarVehiculo(id: number) { return this.http.delete<void>(`${API}/vehiculos/${id}`); }
   guardarLugar(d: LugarForm, id: number | null) { return this.guardarEn<Lugar>('lugares', d, id); }
   eliminarLugar(id: number) { return this.http.delete<void>(`${API}/lugares/${id}`); }
+  guardarHabitacion(d: HabitacionForm, id: number | null) { return this.guardarEn<Habitacion>('habitaciones', d, id); }
+  eliminarHabitacion(id: number) { return this.http.delete<void>(`${API}/habitaciones/${id}`); }
 
   // ---------- Tráfico ----------
   guardarOperacion(d: OperacionForm, id: number | null) { return this.guardarEn<Operacion>('operaciones', d, id); }

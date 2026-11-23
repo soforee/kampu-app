@@ -95,8 +95,8 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
 
 - **Página principal:** secciones a pantalla completa, buscador y catálogo de destinos con la próxima fecha reservable.
   Cada tour tiene dos botones: "Reservar" (con cuenta) y "Cotizar".
-- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, servicios adicionales y hotel (opcional, de los
-  proveedores de hospedaje). El punto de recojo lo define la agencia. El precio lo calcula
+- **Cotizar sin cuenta** (`/cotizar/:id`): fecha, pasajeros, servicios adicionales y la habitación de hotel
+  (obligatoria si el paquete tiene noches; sale de *Proveedores → Habitaciones de hotel*). El punto de recojo lo define la agencia. El precio lo calcula
   el servidor. Al guardar se obtiene un código y una clave para volver a verla, descargar el PDF o solicitar la reserva;
   el estado se sigue en `/seguimiento`. Cuando la agencia confirma la solicitud, con el mismo código y clave el
   visitante gestiona su reserva sin crear cuenta (`/cotizacion/:codigo/reserva`): pasajeros, pagos, punto de recojo y
@@ -109,7 +109,8 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
   - tráfico (traslados);
   - **Personal**: guías y conductores propios. Se registran en *Usuarios* al crear su cuenta; aquí solo se activan o desactivan;
   - **Vehículos**: flota propia;
-  - **Proveedores**: proveedores externos con su personal y sus vehículos, y los lugares (puntos de recojo, hoteles…);
+  - **Proveedores**: proveedores externos con su personal, sus vehículos y sus habitaciones de hotel (precio por noche,
+    por persona o por grupo, y foto), y los lugares (puntos de recojo, hoteles…);
   - usuarios y auditoría.
 - **Guía y conductor:** solo ven *Mis asignaciones*. La base de datos filtra lo que corresponde a cada uno.
 - **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.

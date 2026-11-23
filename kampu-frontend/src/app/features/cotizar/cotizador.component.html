@@ -188,26 +188,24 @@
                       placeholder="Ej. viajamos con niños de 6 y 9 años, llegamos un día antes…"></textarea>
           </section>
 
-          <!-- 05 Hotel: hoteles de nuestros proveedores (opcional, suma al total) -->
-          @if (hoteles().length && (paquete()?.noches ?? 0) > 0) {
-            <section class="bloque" data-testid="cotizar-hoteles">
-              <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '05' : '04' }}</span> ¿Dónde te hospedas? <span class="text-sm font-normal text-zinc-400">opcional</span></h2>
-              <p class="mt-1 text-sm text-zinc-500">Hoteles de nuestros proveedores para tus {{ paquete()!.noches }} noche(s). El precio se suma a tu cotización.</p>
+          <!-- 05 Habitación de hotel: obligatoria si el paquete tiene noches (suma al total) -->
+          @if ((paquete()?.noches ?? 0) > 0) {
+            <section class="bloque" data-testid="cotizar-habitaciones">
+              <h2 class="paso-titulo"><span class="paso-num">{{ servicios().length ? '05' : '04' }}</span> ¿Dónde te hospedas?</h2>
+              <p class="mt-1 text-sm text-zinc-500">Elige la habitación de hotel para tus {{ paquete()!.noches }} noche(s). El precio se suma a tu cotización.</p>
               <div class="mt-5 grid gap-3 sm:grid-cols-2">
-                <button type="button" class="extra text-left" [class.extra-elegido]="hotelId === null" (click)="hotelId !== null && elegirHotel(null)">
-                  <span class="block text-sm font-semibold text-zinc-900">Sin hotel</span>
-                  <span class="mt-0.5 block text-xs text-zinc-500">Me hospedo por mi cuenta.</span>
-                </button>
-                @for (h of hoteles(); track h.lugarId) {
-                  <button type="button" class="extra overflow-hidden !p-0 text-left" [class.extra-elegido]="hotelId === h.lugarId" (click)="elegirHotel(h.lugarId)" [attr.data-testid]="'hotel-' + h.lugarId">
-                    @if (fotoHotel(h); as src) { <img [src]="src" alt="" class="h-32 w-full object-cover" (error)="$any($event.target).hidden = true"> }
+                @for (h of habitaciones(); track h.habitacionId) {
+                  <button type="button" class="extra overflow-hidden !p-0 text-left" [class.extra-elegido]="habitacionId === h.habitacionId" [attr.aria-pressed]="habitacionId === h.habitacionId" (click)="elegirHabitacion(h.habitacionId)" [attr.data-testid]="'habitacion-' + h.habitacionId">
+                    @if (fotoHabitacion(h); as src) { <img [src]="src" alt="" class="h-32 w-full object-cover" (error)="$any($event.target).hidden = true"> }
                     <span class="block p-4">
                       <span class="block text-sm font-semibold text-zinc-900">{{ h.nombre }}</span>
-                      <span class="mt-0.5 block text-xs text-zinc-500">{{ h.ciudad }}@if (h.direccion) { · {{ h.direccion }} }</span>
+                      <span class="mt-0.5 block text-xs text-zinc-500">{{ h.hotel }}@if (h.descripcion) { · {{ h.descripcion }} }</span>
                       <span class="mt-2 inline-flex items-baseline gap-1 text-sm font-semibold text-brand-700">S/ {{ h.precioNoche | number:'1.2-2' }} <small class="text-xs font-normal text-zinc-500">por noche · {{ h.modalidad === 'POR_GRUPO' ? 'por grupo' : 'por persona' }}</small></span>
-                      <span class="mt-1 block text-xs text-zinc-600">Total estadía: S/ {{ costoHotel(h) | number:'1.2-2' }}</span>
+                      <span class="mt-1 block text-xs text-zinc-600">Total estadía: S/ {{ costoHabitacion(h) | number:'1.2-2' }}</span>
                     </span>
                   </button>
+                } @empty {
+                  <p class="col-span-full text-sm text-amber-700">Por ahora no hay habitaciones disponibles. Escríbenos y te ayudamos con tu hospedaje.</p>
                 }
               </div>
             </section>
@@ -233,8 +231,8 @@
                 @for (l of c.servicios; track l.servicioId) {
                   <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ l.nombre }} · {{ l.cantidad }} × S/ {{ l.precioUnitario | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ l.subtotal | number:'1.2-2' }}</dd></div>
                 }
-                @if (c.hotel; as h) {
-                  <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ h.nombre }} · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ h.subtotal | number:'1.2-2' }}</dd></div>
+                @if (c.habitacion; as h) {
+                  <div class="flex justify-between gap-3"><dt class="text-zinc-600">{{ h.nombre }} ({{ h.hotel }}) · {{ h.noches }} noche(s){{ h.modalidad === 'POR_PERSONA' ? ' × ' + c.cantidad : '' }} × S/ {{ h.precioNoche | number:'1.2-2' }}</dt><dd class="tabular-nums text-zinc-900">S/ {{ h.subtotal | number:'1.2-2' }}</dd></div>
                 }
                 <div class="flex items-end justify-between gap-3 border-t border-zinc-100 pt-4">
                   <dt class="font-semibold text-zinc-900">Total</dt>
