@@ -10,12 +10,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Reglas de kampu_bd.sql sobre personal y flota:
- *  - proveedor_id NULL = recurso propio de Kampu Tours (PROVEEDORES solo guarda terceros).
- *  - Lo que hace una persona lo define la "funcion" de su cargo (CARGOS): GUIADO = guía,
- *    TRANSPORTE = conductor (requiere licencia), APOYO = otro personal.
- */
 @Component
 public class Recursos {
     public static final String NOMBRE_PROPIO = "Kampu Tours (propio)";

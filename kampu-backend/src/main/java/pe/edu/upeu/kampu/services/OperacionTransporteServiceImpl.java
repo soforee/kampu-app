@@ -19,17 +19,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Tráfico de transporte (v4: reglas en el backend).
- *  - Transiciones de estado: EstadoOperacion.
- *  - Recursos: vehículo y conductor del MISMO proveedor (o ambos propios: proveedor_id NULL), proveedor ACTIVO,
- *    vehículo OPERATIVO con capacidad y sin mantenimiento antes de la llegada, conductor
- *    DISPONIBLE con licencia vigente, sin cruces de horario (30 min de margen) y con
- *    máximo 10 h de conducción por día.
- *  - Embarque: el tramo debe tener asientos para todos los pasajeros de la salida.
- *  - kampu_bd.sql (TRG_OPERACIONES_VALIDAR) genera el código KMP-###, vuelve a validar recursos,
- *    transiciones y cruces, exige el manifiesto completo para embarcar y escribe HISTORIAL_OPERACIONES.
- */
 @Service
 public class OperacionTransporteServiceImpl implements IOperacionTransporteService {
     private static final int MARGEN_MIN = 30;
@@ -67,8 +56,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         this.recursos = recursos;
         this.em = em;
     }
-
-    // ---------- Consultas ----------
 
     @Override
     @Transactional(readOnly = true)
@@ -112,7 +99,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return duracion.estimar(origenId, destinoId, null);
     }
 
-    /** Todos los vehículos y conductores, con el motivo por el que no son elegibles (null = elegible) */
     @Override
     @Transactional(readOnly = true)
     public List<RecursoCandidatoDTO> candidatos(Long id) {
@@ -133,26 +119,22 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
                     BigDecimal.valueOf(horasDelDia(c.getPersonalId(), o)).setScale(1, RoundingMode.HALF_UP),
                     motivoConductor(c, p, o)));
         }
-        // Elegibles primero; dentro de ellos, la flota propia primero
         lista.sort(Comparator.comparing((RecursoCandidatoDTO r) -> r.motivo() != null)
                 .thenComparing(r -> !r.proveedorPropio())
                 .thenComparing(RecursoCandidatoDTO::proveedor));
         return lista;
     }
 
-    // ---------- Escritura ----------
-
     @Override
     @Transactional
     public OperacionDTO crear(OperacionRequestDTO dto) {
         OperacionTransporte o = new OperacionTransporte();
         copiar(dto, o);
-        // El código KMP-### lo genera TRG_OPERACIONES_VALIDAR
         EstadoOperacion estado = o.getVehiculoId() != null ? EstadoOperacion.ASIGNADO : EstadoOperacion.PROGRAMADO;
         o.setEstado(estado.name());
         if (o.getVehiculoId() != null) validarRecursos(o);
         OperacionTransporte guardada = operacionRepository.saveAndFlush(o);
-        em.refresh(guardada);   // código generado por la BD
+        em.refresh(guardada);
         return dto(guardada, contexto());
     }
 
@@ -186,7 +168,7 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         if (!actual.puedePasarA(nuevo)) {
             throw new BusinessException("Transición no permitida: " + actual.name() + " -> " + nuevo.name());
         }
-        if (nuevo == EstadoOperacion.PROGRAMADO) {   // desasignar: libera vehículo y conductor
+        if (nuevo == EstadoOperacion.PROGRAMADO) {
             o.setVehiculoId(null);
             o.setConductorId(null);
         }
@@ -194,7 +176,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
             throw new BusinessException("El estado " + nuevo.name() + " requiere vehículo y conductor asignados.");
         }
         o.setEstado(nuevo.name());
-        // TRG_OPERACIONES_VALIDAR guarda la observación del cambio en HISTORIAL_OPERACIONES
         if (dto.observacion() != null && !dto.observacion().isBlank()) o.setObservaciones(dto.observacion().trim());
         operacionRepository.saveAndFlush(o);
         if (nuevo == EstadoOperacion.EMBARQUE && o.getSalidaId() != null) {
@@ -205,7 +186,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return dto(o, contexto());
     }
 
-    /** Mejor par vehículo + conductor del mismo proveedor: flota propia primero, menos asientos vacíos, menos horas */
     @Override
     @Transactional
     public OperacionDTO asignarAutomatico(Long id) {
@@ -214,7 +194,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
             throw new BusinessException(o.getCodigoOperacion() + " está en estado " + o.getEstado() + "; solo se asignan operaciones PROGRAMADO.");
         }
         Map<Long, Proveedor> proveedores = proveedores();
-        // 1) Pares elegibles del mismo proveedor, del mejor al peor
         record Par(Long vehiculoId, Long conductorId, double puntaje) { }
         List<Par> pares = new ArrayList<>();
         List<Personal> conductores = personalRepository.findAllByOrderByPersonalIdAsc().stream()
@@ -231,7 +210,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
             }
         }
         pares.sort(Comparator.comparingDouble(Par::puntaje));
-        // 2) Se bloquea el par y se vuelve a validar: otra asignación simultánea pudo tomarlo mientras tanto
         Par elegido = null;
         for (Par par : pares) {
             if (recursosLibres(o, par.vehiculoId(), par.conductorId()) == null) { elegido = par; break; }
@@ -262,8 +240,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return dto(o, contexto());
     }
 
-    // ---------- Reglas ----------
-
     private void copiar(OperacionRequestDTO d, OperacionTransporte o) {
         if (d.salidaId() != null && !salidaRepository.existsById(d.salidaId())) throw new BusinessException("La salida seleccionada no existe.");
         if (!lugarRepository.existsById(d.origenId())) throw new BusinessException("El origen seleccionado no existe.");
@@ -275,7 +251,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         LocalDateTime salida = d.horaProgramadaSalida().withSecond(0).withNano(0);
         LocalDateTime llegada = d.horaEstimadaLlegada();
         if (llegada == null) {
-            // v4: la duración la calcula el backend con datos reales y se guarda en la operación
             Integer minutos = duracion.minutos(d.origenId(), d.destinoId(), null);
             if (minutos == null) {
                 throw new BusinessException("No se puede calcular la llegada: registra las coordenadas del origen y del destino o indica la hora de llegada.");
@@ -300,13 +275,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         if (motivo != null) throw new BusinessException(motivo);
     }
 
-    /**
-     * Bloquea el vehículo y el conductor (siempre en ese orden: sin interbloqueos) y recién entonces revisa
-     * cruces, capacidad, licencia y horas. Así dos asignaciones simultáneas del mismo recurso se esperan y la
-     * segunda ve la primera. null si el par puede atender la operación; si no, el motivo.
-     */
-    // Se llama dentro de la transacción que guardó el cambio: los motivos se calculan con los datos ya
-    // modificados y, si alguno falla, la excepción revierte la edición.
     @Override
     @Transactional
     public void verificarAsignacionesPendientes(Long vehiculoId, Long conductorId, Long proveedorId) {
@@ -340,7 +308,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return motivo == null ? null : etiqueta(o) + " - conductor: " + motivo;
     }
 
-    // null si el vehículo puede atender la operación
     private String motivoVehiculo(Vehiculo v, Proveedor p, OperacionTransporte o) {
         if (p != null && !"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
         if (!"OPERATIVO".equals(v.getEstado())) return "vehículo en " + v.getEstado();
@@ -355,7 +322,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return cruces.isEmpty() ? null : "cruce de horario con " + cruces.get(0).getCodigoOperacion();
     }
 
-    // null si la persona puede conducir la operación
     private String motivoConductor(Personal c, Proveedor p, OperacionTransporte o) {
         if (!recursos.esConductor(c)) return "no es conductor (cargo " + c.getCargo() + ")";
         if (p != null && !"ACTIVO".equals(p.getEstado())) return "proveedor " + p.getEstado();
@@ -373,15 +339,12 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
         return cruces.isEmpty() ? null : "cruce de horario con " + cruces.get(0).getCodigoOperacion();
     }
 
-    // Los traslados de la MISMA salida y el mismo día pueden compartir vehículo y conductor (no son un cruce);
-    // el límite de horas de conducción en el día sí los cuenta a todos.
     private static List<OperacionTransporte> otraSalidaODia(OperacionTransporte o, List<OperacionTransporte> cruces) {
         if (o.getSalidaId() == null) return cruces;
         return cruces.stream().filter(x -> !(o.getSalidaId().equals(x.getSalidaId())
                 && o.getHoraSalida().toLocalDate().equals(x.getHoraSalida().toLocalDate()))).toList();
     }
 
-    // Horas ya programadas del conductor en el día de la operación (sin contarla)
     private double horasDelDia(Long conductorId, OperacionTransporte o) {
         LocalDateTime inicio = o.getHoraSalida().toLocalDate().atStartOfDay();
         return operacionRepository.delConductorEnElDia(conductorId, idOMenosUno(o), inicio, inicio.plusDays(1)).stream()
@@ -408,8 +371,6 @@ public class OperacionTransporteServiceImpl implements IOperacionTransporteServi
     private Map<Long, Proveedor> proveedores() {
         return proveedorRepository.findAll().stream().collect(Collectors.toMap(Proveedor::getProveedorId, Function.identity()));
     }
-
-    // ---------- Armado del DTO (tablero FIDS) ----------
 
     private record Contexto(Map<Long, Lugar> lugares, Map<Long, Vehiculo> vehiculos, Map<Long, Personal> personal,
                             Map<Long, Proveedor> proveedores, Map<Long, List<HistorialOperacion>> historial) {

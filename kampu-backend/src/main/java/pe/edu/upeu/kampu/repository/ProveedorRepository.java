@@ -15,8 +15,6 @@ public interface ProveedorRepository extends JpaRepository<Proveedor, Long> {
 
     Optional<Proveedor> findByRuc(String ruc);
 
-
-    // Teléfono repetido comparando solo dígitos (mismo criterio que el índice único). idExcluir = -1 al crear.
     @Query(value = "SELECT COUNT(*) FROM PROVEEDORES WHERE TRANSLATE(telefono, '0+-() ', '0') = :digitos AND proveedor_id <> :idExcluir", nativeQuery = true)
     long contarTelefono(@Param("digitos") String digitos, @Param("idExcluir") Long idExcluir);
 }

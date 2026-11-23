@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// VEHICULOS (v10): proveedor_id NULL = flota propia
 @Entity
 @DynamicUpdate
 @Table(name = "VEHICULOS")
@@ -32,7 +31,6 @@ public class Vehiculo {
     @Column(name = "prox_mantenimiento")
     private LocalDate proxMantenimiento;
 
-    // SOAT y revisión técnica: si vencen antes del traslado, la BD no deja asignarlo
     @Column(name = "venc_soat")
     private LocalDate vencSoat;
 

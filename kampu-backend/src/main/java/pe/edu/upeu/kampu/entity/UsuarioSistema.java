@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// USUARIOS_SISTEMA (v10): personal interno; password_hash es BCrypt (chk_usu_hash)
 @Entity
 @DynamicUpdate
 @Table(name = "USUARIOS_SISTEMA")
@@ -38,7 +37,6 @@ public class UsuarioSistema {
     @Column(name = "ultimo_acceso")
     private LocalDateTime ultimoAcceso;
 
-    // (v11) Solo GUIA / CONDUCTOR: su ficha de PERSONAL (chk_usu_personal)
     @Column(name = "personal_id")
     private Long personalId;
 

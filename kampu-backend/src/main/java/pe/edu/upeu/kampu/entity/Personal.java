@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// PERSONAL (v10): cargo (FK a CARGOS); proveedor_id NULL = personal propio de Kampu.
-// TRG_PERSONAL_VALIDAR exige licencia vigente si el cargo la requiere y que el proveedor brinde ese soporte.
 @Entity
 @DynamicUpdate
 @Table(name = "PERSONAL")
@@ -39,7 +37,6 @@ public class Personal {
     @Column(name = "venc_licencia")
     private LocalDate vencLicencia;
 
-    // Guía: carné oficial (DIRCETUR / MINCETUR), vencimiento e idiomas acreditados
     @Column(name = "carne_guia")
     private String carneGuia;
 

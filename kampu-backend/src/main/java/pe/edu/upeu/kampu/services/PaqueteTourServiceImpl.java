@@ -48,7 +48,7 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         PaqueteTour p = new PaqueteTour();
         copiar(dto, p);
         PaqueteTour guardado = paqueteRepository.saveAndFlush(p);
-        em.refresh(guardado);   // valores por defecto de la BD (cupo, mínimo, días, hora)
+        em.refresh(guardado);
         return PaqueteTourDTO.desde(guardado);
     }
 
@@ -69,7 +69,6 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_bd.sql no otorga DELETE sobre PAQUETES_TOUR: se retira de la venta (INACTIVO)
         PaqueteTour p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El paquete ya está INACTIVO.");
         p.setEstado("INACTIVO");
@@ -104,7 +103,6 @@ public class PaqueteTourServiceImpl implements IPaqueteTourService {
         p.setNoches(dto.noches());
         p.setImagen(dto.imagen() == null || dto.imagen().isBlank() ? null : dto.imagen().trim());
         p.setEstado(dto.estado() == null ? "ACTIVO" : dto.estado());
-        // Sin valor: se conserva el actual (o el DEFAULT ON NULL de la tabla al crear)
         if (dto.cupoPorDefecto() != null) p.setCupoPorDefecto(dto.cupoPorDefecto());
         if (dto.minimoPasajeros() != null) p.setMinimoPasajeros(dto.minimoPasajeros());
         if (dto.diasOperacion() != null) p.setDiasOperacion(dto.diasOperacion());

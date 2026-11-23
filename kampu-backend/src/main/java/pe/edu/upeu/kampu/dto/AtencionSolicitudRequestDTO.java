@@ -4,7 +4,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// PKG_RESERVAS.atender_solicitud: aprobar (anula y reembolsa) o rechazar (con respuesta al cliente)
 public record AtencionSolicitudRequestDTO(
         @NotNull(message = "Indica si apruebas o rechazas la solicitud.")
         Boolean aprobar,

@@ -4,23 +4,19 @@ import pe.edu.upeu.kampu.entity.Personal;
 
 import java.time.LocalDate;
 
-// PERSONAL (v10): proveedorId null = personal propio de Kampu; cargo del catálogo CARGOS
 public record PersonalDTO(
         Long personalId,
         Long proveedorId,
         String numeroDocumento,
         String nombreCompleto,
         String cargo,
-        // GUIADO / TRANSPORTE / APOYO (función del cargo)
         String funcion,
         String telefono,
         String numLicencia,
         String catLicencia,
         LocalDate vencLicencia,
         String estado,
-        // Personal propio: usuario de su cuenta de acceso (null si no tiene)
         String usuario,
-        // Guía: carné oficial, su vencimiento e idiomas
         String carneGuia,
         LocalDate vencCarne,
         String idiomas

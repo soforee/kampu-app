@@ -12,10 +12,8 @@ public interface IPersonalService {
     PersonalDTO actualizar(Long id, PersonalRequestDTO dto);
     void eliminar(Long id);
 
-    // Personal propio: lo crea el módulo Usuarios junto con la cuenta del guía o conductor
     PersonalDTO crearPropio(PersonalRequestDTO dto);
 
-    // Personal propio: solo se activa o desactiva (la cuenta de acceso sigue el mismo estado)
     PersonalDTO cambiarEstado(Long id, boolean activo);
 
     java.util.List<pe.edu.upeu.kampu.dto.CargoDTO> cargos();

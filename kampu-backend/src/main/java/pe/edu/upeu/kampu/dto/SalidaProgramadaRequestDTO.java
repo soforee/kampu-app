@@ -4,8 +4,6 @@ import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
-// Salida creada a mano (origen MANUAL). La fecha fin y los cupos disponibles los calcula la BD
-// (TRG_SALIDAS_VALIDAR). El estado solo se elige al crearla: PROGRAMADA o GARANTIZADA.
 public record SalidaProgramadaRequestDTO(
         @NotNull(message = "Selecciona un paquete.")
         Long paqueteId,

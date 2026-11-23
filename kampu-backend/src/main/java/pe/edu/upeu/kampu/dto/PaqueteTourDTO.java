@@ -4,7 +4,6 @@ import pe.edu.upeu.kampu.entity.PaqueteTour;
 
 import java.math.BigDecimal;
 
-// PAQUETES_TOUR (v10): catálogo y reglas con las que la BD crea una salida al reservar una fecha nueva
 public record PaqueteTourDTO(
         Long paqueteId,
         String nombre,
@@ -15,12 +14,10 @@ public record PaqueteTourDTO(
         String imagen,
         Integer cupoPorDefecto,
         Integer minimoPasajeros,
-        // L M M J V S D (1 = opera ese día)
         String diasOperacion,
         Integer anticipacionMinHoras,
         String horaInicio,
         String estado,
-        // (v11) lo que incluye, uno por línea
         String serviciosIncluidos
 ) {
     public static PaqueteTourDTO desde(PaqueteTour p) {

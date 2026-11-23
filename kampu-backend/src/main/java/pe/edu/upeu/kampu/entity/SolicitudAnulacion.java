@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.Immutable;
 
-// SOLICITUDES_ANULACION (v10): el cliente las crea con PKG_GESTION_PAQUETES_CLIENTE.solicitar_anulacion
-// y Ventas las atiende con PKG_RESERVAS.atender_solicitud (solo lectura en JPA).
 @Entity
 @Immutable
 @Table(name = "SOLICITUDES_ANULACION")

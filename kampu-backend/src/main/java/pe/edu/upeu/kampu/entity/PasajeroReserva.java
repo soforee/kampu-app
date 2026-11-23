@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// PASAJEROS_RESERVA (v10): cuelgan de la reserva; TRG_PASAJEROS_VALIDAR no deja pasar de cantidad_pasajeros
 @Entity
 @DynamicUpdate
 @Table(name = "PASAJEROS_RESERVA")

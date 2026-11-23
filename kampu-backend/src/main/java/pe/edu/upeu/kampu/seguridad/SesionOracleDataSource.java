@@ -9,13 +9,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 
-/**
- * Envuelve el pool de conexiones: cada vez que la aplicación toma una conexión llama a
- * PKG_SEGURIDAD_ROLES.iniciar_sesion(usuario, rol, cliente) con la sesión de la petición.
- * Así las vistas (VW_PAQUETES_CLIENTE, VW_RESUMEN_PAQUETES_POR_ROL) y los triggers
- * (TRG_AUDITORIA_ESTADO_PAQUETE) saben quién opera, aunque la conexión venga del pool.
- * Sin sesión (peticiones públicas, tareas en segundo plano) la deja vacía.
- */
 public class SesionOracleDataSource extends DelegatingDataSource implements Closeable {
     private volatile boolean avisado;
 
@@ -58,7 +51,6 @@ public class SesionOracleDataSource extends DelegatingDataSource implements Clos
             try {
                 cerrable.close();
             } catch (Exception ignorada) {
-                // cierre del pool al apagar la aplicación
             }
         }
     }

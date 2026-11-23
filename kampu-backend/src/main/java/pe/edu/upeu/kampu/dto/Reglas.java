@@ -19,10 +19,8 @@ public final class Reglas {
 
     public static final String EMAIL = "^$|^\\s*[^@\\s]+@[^@\\s]+\\.[A-Za-z]{2,}\\s*$";
 
-    // VEHICULO.placa es VARCHAR2(10)
     public static final String PLACA = "^\\s*([A-Za-z0-9-]{3,10})?\\s*$";
 
-    // PROVEEDORES.ruc: chk_prov_ruc = '^(10|15|17|20)[0-9]{9}$'
     public static final String RUC = "^(10|15|17|20)[0-9]{9}$";
     public static final String MSG_RUC = "El RUC tiene 11 dígitos y empieza con 10, 15, 17 o 20.";
 
@@ -30,8 +28,6 @@ public final class Reglas {
 
     public static final LocalDate FECHA_MINIMA = LocalDate.of(1900, 1, 1);
 
-    // Solo los dígitos del teléfono: así se compara si está repetido
-    // (igual que TRANSLATE(telefono, '0+-() ', '0') de los índices únicos)
     public static String digitos(String telefono) {
         return telefono == null ? "" : telefono.replaceAll("\\D", "");
     }
@@ -62,9 +58,6 @@ public final class Reglas {
         return digitos >= 6 && digitos <= 15;
     }
 
-    // ---------- Teléfono con código de país: "+51 987654321" ----------
-    // Cantidad de dígitos del número nacional (sin el código) según el país.
-    // Debe coincidir con core/utils/paises.ts del frontend.
     public record PaisTelefono(String nombre, int min, int max) {
     }
 
@@ -105,7 +98,6 @@ public final class Reglas {
     public static final String TELEFONO_PAIS = "^\\+\\d{1,3} \\d{7,11}$";
     public static final String MSG_TELEFONO_PAIS = "Elige el código de país y escribe solo los dígitos del número.";
 
-    // Devuelve el mensaje de error, o null si el teléfono es válido para su país.
     public static String errorTelefonoPais(String telefono) {
         if (telefono == null || telefono.isBlank()) return "El teléfono es obligatorio.";
         String t = telefono.trim();

@@ -10,14 +10,6 @@ import pe.edu.upeu.kampu.repository.LugarRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- * Duración de una ruta con las coordenadas de los lugares:
- *  1. OSRM (OpenStreetMap): tiempo y distancia reales por carretera, más un margen de embarque.
- *  2. Si OSRM no responde: distancia en línea recta (haversine) x 1.3 por las curvas, a una
- *     velocidad media que crece con la distancia, más el margen.
- * Si un lugar no tiene coordenadas, la hora de llegada se indica a mano.
- * El resultado se guarda en OPERACIONES_TRANSPORTE.hora_llegada.
- */
 @Service
 public class DuracionRutaService {
     private final LugarRepository lugarRepository;
@@ -28,7 +20,6 @@ public class DuracionRutaService {
         this.mapas = mapas;
     }
 
-    /** Duración en minutos, o null si ningún lugar tiene coordenadas (entonces se debe indicar a mano). */
     @Transactional(readOnly = true)
     public EstimacionDuracionDTO estimar(Long origenId, Long destinoId, String tipoServicio) {
         Lugar origen = lugarRepository.findById(origenId)
@@ -57,7 +48,6 @@ public class DuracionRutaService {
                 "Estimación en línea recta con las coordenadas (no se pudo consultar la ruta por carretera).");
     }
 
-    // Carretera = línea recta x 1.3; velocidad media 18 km/h + 0.3 x km (máx. 80)
     private static final double FACTOR_VIAL = 1.3;
     private static final double VEL_BASE = 18;
     private static final double VEL_POR_KM = 0.3;
@@ -71,17 +61,14 @@ public class DuracionRutaService {
         return 2 * 6371 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
     }
 
-    /** Minutos del trayecto, o null si faltan coordenadas. */
     public Integer minutos(Long origenId, Long destinoId, String tipoServicio) {
         if (origenId == null || destinoId == null || origenId.equals(destinoId)) return null;
         return estimar(origenId, destinoId, tipoServicio).minutos();
     }
 
-    // Minutos de embarque y desembarque
     private int margen(String tipo) {
         return "INTERPROVINCIAL".equals(tipo) ? 10 : 5;
     }
-
 
     private boolean tieneCoordenadas(Lugar l) {
         return l.getLatitud() != null && l.getLongitud() != null;

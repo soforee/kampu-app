@@ -5,7 +5,6 @@ import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 
-// HABITACIONES: habitaciones de hotel de un proveedor de hospedaje (salen en la cotización con su precio por noche)
 @Entity
 @DynamicUpdate
 @Table(name = "HABITACIONES")
@@ -27,7 +26,6 @@ public class Habitacion {
     @Column(name = "precio_noche")
     private BigDecimal precioNoche;
 
-    // POR_PERSONA (precio × noches × personas) o POR_GRUPO (precio × noches)
     @Column(name = "modalidad_precio")
     private String modalidadPrecio;
 

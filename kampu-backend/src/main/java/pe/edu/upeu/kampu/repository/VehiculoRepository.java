@@ -19,7 +19,6 @@ public interface VehiculoRepository extends JpaRepository<Vehiculo, Long> {
 
     boolean existsByProveedorId(Long proveedorId);
 
-    // Bloqueo de la fila (SELECT ... FOR UPDATE): dos asignaciones simultáneas del mismo recurso se esperan
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select v from Vehiculo v where v.vehiculoId = :id")
     Optional<Vehiculo> findByIdParaActualizar(@Param("id") Long id);

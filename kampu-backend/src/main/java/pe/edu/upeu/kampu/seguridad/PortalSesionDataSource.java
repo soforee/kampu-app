@@ -8,12 +8,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
 
-/**
- * Conexión del portal de clientes: la misma de la aplicación (usuario KAMPU_BD).
- * Al tomarla:
- *  - cliente de la petición -> PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente(correo)
- *  - sin cliente (registro, login)      -> PKG_GESTION_PAQUETES_CLIENTE.cerrar_sesion_cliente
- */
 public class PortalSesionDataSource extends DelegatingDataSource {
 
     public PortalSesionDataSource(DataSource destino) {

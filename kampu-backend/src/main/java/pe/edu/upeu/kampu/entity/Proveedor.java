@@ -5,7 +5,6 @@ import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-// PROVEEDORES (v10): solo terceros. Lo propio de Kampu no tiene proveedor (proveedor_id NULL en PERSONAL y VEHICULOS).
 @Entity
 @DynamicUpdate
 @Table(name = "PROVEEDORES")

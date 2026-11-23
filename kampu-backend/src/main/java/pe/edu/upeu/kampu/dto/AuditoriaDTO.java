@@ -4,7 +4,6 @@ import pe.edu.upeu.kampu.entity.Auditoria;
 
 import java.time.LocalDateTime;
 
-// Fila de la bitácora para la sección "Auditoría" (solo ADMIN)
 public record AuditoriaDTO(
         Long auditoriaId,
         String accion,

@@ -16,9 +16,7 @@ public record PagoDTO(
         String codigoTransaccion,
         LocalDateTime fechaPago,
         String estadoTransaccion,
-        // ADMIN / VENTAS / CLIENTE (informado desde el portal)
         String registradoPor,
-        // (v10) quién lo registró y quién lo validó (usuarios internos), y cuándo
         Long usuarioRegistraId,
         Long usuarioValidaId,
         LocalDateTime fechaValidacion,

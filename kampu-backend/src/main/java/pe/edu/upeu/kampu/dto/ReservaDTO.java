@@ -5,7 +5,6 @@ import pe.edu.upeu.kampu.entity.Reserva;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// RESERVAS (v10): una reserva = un paquete en una fecha (salida)
 public record ReservaDTO(
         Long reservaId,
         String codigoReserva,
@@ -13,12 +12,10 @@ public record ReservaDTO(
         Long salidaId,
         Long paqueteId,
         LocalDateTime fechaReserva,
-        // cantidad_pasajeros: cupos tomados
         Integer numeroViajeros,
         Integer pasajerosRegistrados,
         BigDecimal precioUnitario,
         BigDecimal descuento,
-        // (v11) servicios adicionales de la cotización (entran en montoTotal)
         BigDecimal montoAdicionales,
         BigDecimal montoTotal,
         BigDecimal montoPagado,
@@ -31,13 +28,11 @@ public record ReservaDTO(
         String motivoAnulacion,
         LocalDateTime fechaAnulacion,
         Long usuarioAnulaId,
-        // Usuario que anuló (así Ventas lo ve sin necesitar permiso para listar usuarios)
         String usuarioAnula,
         String usuarioRegistra,
         Long lugarRecojoId,
         String puntoRecojo,
         LocalDateTime boletaEnviadaEn,
-        // Solicitud de anulación del portal pendiente de atender
         Long solicitudPendienteId
 ) {
     public static ReservaDTO desde(Reserva r, Long paqueteId, int pasajeros, String usuarioAnula, String usuarioRegistra,

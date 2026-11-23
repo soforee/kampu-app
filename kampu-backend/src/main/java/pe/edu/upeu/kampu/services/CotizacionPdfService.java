@@ -19,10 +19,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * PDF de una cotización (OpenPDF). Lleva el código para hacer el seguimiento, pero NUNCA la clave:
- * si el PDF se reenvía, quien lo reciba no puede abrir ni cambiar la cotización.
- */
 @Service
 public class CotizacionPdfService {
     private static final Locale PE = Locale.forLanguageTag("es-PE");

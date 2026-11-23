@@ -16,7 +16,6 @@ public record LugarRequestDTO(
         @Size(max = 100, message = "La ciudad admite máximo 100 caracteres.")
         @Pattern(regexp = Reglas.TEXTO, message = "La ciudad contiene caracteres no permitidos.")
         String ciudad,
-        // Coordenadas reales (opcionales, van juntas): con ellas se calcula la duración de las rutas
         @DecimalMin(value = "-90", message = "La latitud debe estar entre -90 y 90.")
         @DecimalMax(value = "90", message = "La latitud debe estar entre -90 y 90.")
         @Digits(integer = 3, fraction = 6, message = "La latitud admite hasta 6 decimales.")
@@ -28,7 +27,6 @@ public record LugarRequestDTO(
         @Size(max = 200, message = "La dirección admite máximo 200 caracteres.")
         @Pattern(regexp = Reglas.TEXTO, message = "La dirección contiene caracteres no permitidos.")
         String direccion,
-        // (v10) punto de recojo: la movilidad pasa por aquí minutosAntesRecojo antes de la hora de inicio
         Boolean esPuntoRecojo,
         @Min(value = 0, message = "Los minutos antes del recojo deben estar entre 0 y 240.")
         @Max(value = 240, message = "Los minutos antes del recojo deben estar entre 0 y 240.")

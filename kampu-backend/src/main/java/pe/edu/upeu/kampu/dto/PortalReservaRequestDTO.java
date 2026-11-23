@@ -6,7 +6,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDate;
 
-// El cliente reserva desde el portal (PKG_GESTION_PAQUETES_CLIENTE.reservar, canal WEB)
 public record PortalReservaRequestDTO(
         @NotNull(message = "Selecciona un paquete.")
         Long paqueteId,
@@ -16,7 +15,6 @@ public record PortalReservaRequestDTO(
         @Min(value = 1, message = "La cantidad de pasajeros debe estar entre 1 y 99.")
         @Max(value = 99, message = "La cantidad de pasajeros debe estar entre 1 y 99.")
         Integer cantidad,
-        // Habitación de hotel: obligatoria si el paquete tiene noches (lo valida la BD)
         Long habitacionId
 ) {
 }

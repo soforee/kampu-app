@@ -8,7 +8,6 @@ import javax.sql.DataSource;
 
 @Configuration
 public class SesionOracleConfig {
-    // Envuelve el DataSource que crea Spring Boot con SesionOracleDataSource
     @Bean
     public static BeanPostProcessor sesionOracleDataSourcePostProcessor() {
         return new BeanPostProcessor() {
