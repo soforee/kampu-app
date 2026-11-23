@@ -170,12 +170,26 @@ public class PersonalServiceImpl implements IPersonalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Personal no encontrado con Id: " + id));
     }
 
+    // GUIA y CONDUCTOR son los cargos base (los usa Usuarios al crear la cuenta de campo):
+    // si la tabla CARGOS no los tiene (base sin los datos iniciales), se crean aquí.
+    private Cargo cargoPorDefecto(String codigo) {
+        boolean guia = "GUIA".equals(codigo);
+        if (!guia && !"CONDUCTOR".equals(codigo)) throw new BusinessException("El cargo " + codigo + " no existe.");
+        Cargo c = new Cargo();
+        c.setCodigo(codigo);
+        c.setNombre(guia ? "Guia de turismo" : "Conductor");
+        c.setFuncion(guia ? "GUIADO" : "TRANSPORTE");
+        c.setRequiereLicencia(guia ? 0 : 1);
+        c.setEstado("ACTIVO");
+        return cargoRepository.saveAndFlush(c);
+    }
+
     private void copiar(PersonalRequestDTO dto, Personal p, Long id) {
         // proveedorId null = personal propio. El proveedor debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
         if (dto.proveedorId() != null && !proveedorRepository.existsById(dto.proveedorId())) {
             throw new BusinessException("El proveedor seleccionado no existe.");
         }
-        Cargo cargo = cargoRepository.findById(dto.cargo()).orElseThrow(() -> new BusinessException("El cargo " + dto.cargo() + " no existe."));
+        Cargo cargo = cargoRepository.findById(dto.cargo()).orElseGet(() -> cargoPorDefecto(dto.cargo()));
         String documento = dto.numeroDocumento() == null || dto.numeroDocumento().isBlank() ? null : dto.numeroDocumento().trim().toUpperCase();
         if (!Reglas.telefonoValido(dto.telefono())) throw new BusinessException(Reglas.MSG_TELEFONO);
         if (dto.telefono() != null && !dto.telefono().isBlank()
