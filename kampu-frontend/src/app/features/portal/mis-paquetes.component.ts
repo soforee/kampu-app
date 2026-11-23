@@ -2,13 +2,14 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { CalendarioDia, EstadoEjecucion, PortalPaquete, PuntoRecojo } from '../../core/models';
+import { CalendarioDia, EstadoEjecucion, HabitacionCotizable, PortalPaquete, PuntoRecojo } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { hoy } from '../../core/utils/date.util';
 import { AuthService } from '../../core/services/auth.service';
 import { ImagenService } from '../../core/services/imagen.service';
 import { PortalService } from '../../core/services/portal.service';
+import { CotizacionService } from '../../core/services/cotizacion.service';
 import { mensajeError } from '../../core/utils/api';
 import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { cuentaRegresiva, porcentajePagado } from '../../core/utils/viaje';
@@ -40,12 +41,22 @@ export class MisPaquetesComponent {
   private store = inject(TourStore);
   private alerts = inject(AlertService);
   private router = inject(Router);
+  private cotizaciones = inject(CotizacionService);
 
   // ---------- Reservar desde el portal ----------
   reservando = signal(false);
   enviando = signal(false);
   paquetes$ = computed(() => this.store.paquetes().filter(p => p.estado === 'ACTIVO'));
-  nueva = { paqueteId: null as number | null, fecha: '', cantidad: 1 };
+  nueva = { paqueteId: null as number | null, fecha: '', cantidad: 1, habitacionId: null as number | null };
+  // Habitaciones de hotel (paquetes con noches: elegir una es obligatorio)
+  habitaciones = signal<HabitacionCotizable[]>([]);
+  get conNoches() { return (this.paqueteElegido?.noches ?? 0) > 0; }
+  get habitacionElegida() { return this.habitaciones().find(h => h.habitacionId === this.nueva.habitacionId); }
+  costoHabitacion(h: HabitacionCotizable | undefined): number {
+    if (!h) return 0;
+    return h.precioNoche * (this.paqueteElegido?.noches ?? 0) * (h.modalidad === 'POR_PERSONA' ? (this.nueva.cantidad || 0) : 1);
+  }
+  fotoHabitacion(h: HabitacionCotizable) { return this.imagenes.url(h.imagen); }
   calendario = signal<CalendarioDia[]>([]);
   puntos = signal<PuntoRecojo[]>([]);
   // Fechas que se pueden reservar por la web (operan, tienen cupos y cumplen la anticipación mínima)
@@ -54,7 +65,15 @@ export class MisPaquetesComponent {
 
   abrirReserva(paqueteId: number | null = null, fecha?: string, cantidad?: number) {
     this.store.cargar();
-    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: cantidad ?? 1 };
+    this.nueva = { paqueteId: paqueteId, fecha: '', cantidad: cantidad ?? 1, habitacionId: null };
+    this.cotizaciones.habitaciones().subscribe({
+      next: h => {
+        this.habitaciones.set(h);
+        // Sin la opción «sin hotel»: se parte de la más económica y el cliente puede cambiarla
+        if (this.nueva.habitacionId === null && h.length) this.nueva.habitacionId = h[0].habitacionId;
+      },
+      error: () => undefined
+    });
     this.calendario.set([]);
     this.puntos.set([]);
     this.reservando.set(true);
@@ -82,8 +101,12 @@ export class MisPaquetesComponent {
       this.alerts.toast('Elige paquete, fecha y cantidad de pasajeros', 'error');
       return;
     }
+    if (this.conNoches && !n.habitacionId) {
+      this.alerts.toast('Elige la habitación de hotel para tus noches', 'error');
+      return;
+    }
     this.enviando.set(true);
-    this.portal.reservar(n.paqueteId, n.fecha, n.cantidad).subscribe({
+    this.portal.reservar(n.paqueteId, n.fecha, n.cantidad, this.conNoches ? n.habitacionId : null).subscribe({
       next: r => {
         this.enviando.set(false);
         this.reservando.set(false);

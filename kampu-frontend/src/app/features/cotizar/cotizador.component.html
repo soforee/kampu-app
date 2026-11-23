@@ -50,7 +50,7 @@
           @if (auth.esCliente()) {
             <span class="dato-portada dato-modo" data-testid="modo-cliente"><app-icon name="user" size="w-4 h-4" /> Con tu cuenta · {{ auth.usuario()?.nombre }}</span>
           } @else {
-            <span class="dato-portada dato-modo" data-testid="modo-invitado"><app-icon name="sparkles" size="w-4 h-4" /> Como visitante · sin crear cuenta</span>
+            <span class="dato-portada dato-modo" data-testid="modo-invitado"><app-icon name="user" size="w-4 h-4" /> Como visitante · sin crear cuenta</span>
           }
         </div>
       </div>
