@@ -138,6 +138,11 @@ export interface Lugar {
   minutosAntesRecojo: number;
 }
 
+// Sugerencia del buscador de OpenStreetMap (Lugares): autocompleta el formulario
+export interface LugarSugerido {
+  nombre: string; tipoLugar: TipoLugar; ciudad: string; latitud: number; longitud: number; direccion: string; region: string;
+}
+
 // Habitación de hotel de un proveedor de hospedaje: se elige en la cotización con su precio por noche
 export type ModalidadPrecio = 'POR_PERSONA' | 'POR_GRUPO';
 export interface Habitacion {

@@ -51,3 +51,11 @@ server:
 storage:
   location: "images"
 
+# OpenStreetMap (gratis, sin clave). Requiere internet en la PC donde corre el backend.
+#  - buscador-url: Photon, autocompleta el formulario de Lugares.
+#  - osrm-url: OSRM, duración y distancia por carretera de los traslados.
+# Si no responden, los lugares se llenan a mano y la duración se estima en línea recta.
+kampu:
+  mapas:
+    buscador-url: https://photon.komoot.io
+    osrm-url: https://router.project-osrm.org

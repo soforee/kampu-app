@@ -1,10 +1,10 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Observable } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, Observable, Subject } from 'rxjs';
 import {
-  CategoriaLicencia, EstadoPersonal, EstadoProveedor, EstadoVehiculo, HabitacionForm, Lugar, LugarForm, PersonalForm, ProveedorForm,
+  CategoriaLicencia, EstadoPersonal, EstadoProveedor, EstadoVehiculo, HabitacionForm, Lugar, LugarForm, LugarSugerido, PersonalForm, ProveedorForm,
   RolPersonal, TipoLugar, TipoVehiculo, VehiculoForm
 } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
@@ -101,6 +101,43 @@ export class RecursosComponent {
     this.store.cargarVehiculos();
     this.store.cargarProveedores();
     if (this.seccion === 'proveedores') this.store.cargarHabitaciones();
+    // Buscador de lugares: espera a que se deje de escribir antes de consultar OpenStreetMap
+    const sub = this.textoBusqueda.pipe(debounceTime(450), distinctUntilChanged(), switchMap(q => {
+      if (q.length < 3) { this.buscando.set(false); return of(null); }
+      this.buscando.set(true);
+      return this.store.buscarLugares(q).pipe(catchError(() => of([] as LugarSugerido[])));
+    })).subscribe(r => {
+      this.buscando.set(false);
+      this.sugerencias.set(r ?? []);
+      this.sinResultados.set(r !== null && r.length === 0);
+    });
+    inject(DestroyRef).onDestroy(() => sub.unsubscribe());
+  }
+
+  // ---------- Buscador de lugares (OpenStreetMap) ----------
+  busqueda = '';
+  private textoBusqueda = new Subject<string>();
+  sugerencias = signal<LugarSugerido[]>([]);
+  buscando = signal(false);
+  sinResultados = signal(false);
+  buscar(texto: string) {
+    this.sinResultados.set(false);
+    if (texto.trim().length < 3) this.sugerencias.set([]);
+    this.textoBusqueda.next(texto.trim());
+  }
+  // Llena el formulario con la sugerencia; luego se puede corregir a mano
+  usarSugerencia(s: LugarSugerido) {
+    const tipo = this.lugar.tipoLugar === 'OFICINA' && this.editId ? 'OFICINA' : s.tipoLugar;
+    this.lugar = { ...this.lugar, nombre: s.nombre.slice(0, 150), tipoLugar: tipo, ciudad: (s.ciudad || this.lugar.ciudad).slice(0, 100),
+      latitud: s.latitud, longitud: s.longitud, direccion: (s.direccion || this.lugar.direccion).slice(0, 200) };
+    this.limpiarBusqueda();
+    this.v.tocar('lNombre'); this.v.tocar('lCiudad'); this.v.tocar('lLatitud'); this.v.tocar('lLongitud');
+  }
+  private limpiarBusqueda() {
+    this.busqueda = '';
+    this.sugerencias.set([]);
+    this.sinResultados.set(false);
+    this.textoBusqueda.next('');
   }
 
   proveedor: ProveedorForm = this.proveedorVacio();
@@ -257,7 +294,7 @@ export class RecursosComponent {
   // Licencia: la exige el cargo (CARGOS.requiere_licencia)
   get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
 
-  private abrir() { this.v.reiniciar(); this.abierto.set(true); }
+  private abrir() { this.limpiarBusqueda(); this.v.reiniciar(); this.abierto.set(true); }
 
   nuevo() {
     this.editId = null;

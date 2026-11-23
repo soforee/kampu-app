@@ -11,17 +11,21 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /**
- * Duración estimada de una ruta con las coordenadas de los lugares: distancia en línea recta
- * (fórmula de haversine) x 1.3 por las curvas de la carretera, a una velocidad media que crece
- * con la distancia, más un margen de embarque. Si un lugar no tiene coordenadas, la hora de
- * llegada se indica a mano. El resultado se guarda en OPERACIONES_TRANSPORTE.hora_llegada.
+ * Duración de una ruta con las coordenadas de los lugares:
+ *  1. OSRM (OpenStreetMap): tiempo y distancia reales por carretera, más un margen de embarque.
+ *  2. Si OSRM no responde: distancia en línea recta (haversine) x 1.3 por las curvas, a una
+ *     velocidad media que crece con la distancia, más el margen.
+ * Si un lugar no tiene coordenadas, la hora de llegada se indica a mano.
+ * El resultado se guarda en OPERACIONES_TRANSPORTE.hora_llegada.
  */
 @Service
 public class DuracionRutaService {
     private final LugarRepository lugarRepository;
+    private final MapasOsmService mapas;
 
-    public DuracionRutaService(LugarRepository lugarRepository) {
+    public DuracionRutaService(LugarRepository lugarRepository, MapasOsmService mapas) {
         this.lugarRepository = lugarRepository;
+        this.mapas = mapas;
     }
 
     /** Duración en minutos, o null si ningún lugar tiene coordenadas (entonces se debe indicar a mano). */
@@ -39,12 +43,18 @@ public class DuracionRutaService {
         }
         String tipo = tipoServicio == null ? "TRASLADO" : tipoServicio;
 
+        MapasOsmService.Ruta ruta = mapas.ruta(origen.getLatitud(), origen.getLongitud(), destino.getLatitud(), destino.getLongitud());
+        if (ruta != null) {
+            int minutos = (int) Math.max(5, Math.ceil((ruta.segundos() / 60 + margen(tipo)) / 5) * 5);
+            BigDecimal km = BigDecimal.valueOf(ruta.metros() / 1000).setScale(1, RoundingMode.HALF_UP);
+            return new EstimacionDuracionDTO(minutos, km, "OSRM", "Ruta por carretera (OpenStreetMap).");
+        }
         double recta = haversineKm(origen, destino);
         double velocidad = Math.min(VEL_MAXIMA, VEL_BASE + VEL_POR_KM * recta);
         int minutos = (int) Math.max(5, Math.ceil((recta * FACTOR_VIAL / velocidad * 60 + margen(tipo)) / 5) * 5);
         BigDecimal km = BigDecimal.valueOf(recta * FACTOR_VIAL).setScale(1, RoundingMode.HALF_UP);
         return new EstimacionDuracionDTO(minutos, km, "ESTIMADO",
-                "Estimación con las coordenadas de los lugares.");
+                "Estimación en línea recta con las coordenadas (no se pudo consultar la ruta por carretera).");
     }
 
     // Carretera = línea recta x 1.3; velocidad media 18 km/h + 0.3 x km (máx. 80)
