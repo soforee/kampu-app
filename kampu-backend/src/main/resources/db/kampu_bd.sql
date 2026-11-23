@@ -4379,6 +4379,67 @@ EXCEPTION
 END TRG_RESERVAS_AVISO_RECOJO;
 /
 
+-- 10.11.2 Pasajeros de los traslados al cambiar las reservas de una salida
+--         Una reserva nueva, un cambio de cantidad o de fecha, o una anulacion cambian los pasajeros
+--         de la salida. Los traslados abiertos (PROGRAMADO / ASIGNADO) que llevaban al grupo completo
+--         pasan al nuevo total; los parciales (p. ej. solo los de un hotel) no cambian, salvo que
+--         superen el nuevo total. Si el vehiculo no alcanza o el traslado ya no pasa las validaciones,
+--         queda como estaba (lo muestra VW_ALERTAS_OPERACION) y la reserva NO se bloquea.
+CREATE OR REPLACE TRIGGER TRG_RESERVAS_PAX_TRASLADOS
+FOR INSERT OR UPDATE ON RESERVAS
+COMPOUND TRIGGER
+    TYPE t_delta IS TABLE OF NUMBER INDEX BY PLS_INTEGER;
+    g_delta t_delta;   -- salida_id -> pasajeros que entraron (+) o salieron (-) en esta sentencia
+
+    PROCEDURE sumar (p_salida NUMBER, p_n NUMBER) IS
+    BEGIN
+        IF p_salida IS NULL OR NVL(p_n, 0) = 0 THEN RETURN; END IF;
+        g_delta(p_salida) := CASE WHEN g_delta.EXISTS(p_salida) THEN g_delta(p_salida) ELSE 0 END + p_n;
+    END sumar;
+
+    AFTER EACH ROW IS
+    BEGIN
+        -- Una reserva toma cupos mientras no este ANULADA
+        IF UPDATING AND :OLD.estado_reserva <> 'ANULADA' THEN
+            sumar(:OLD.salida_id, -:OLD.cantidad_pasajeros);
+        END IF;
+        IF NVL(:NEW.estado_reserva, 'PENDIENTE') <> 'ANULADA' THEN
+            sumar(:NEW.salida_id, :NEW.cantidad_pasajeros);
+        END IF;
+    END AFTER EACH ROW;
+
+    AFTER STATEMENT IS
+        v_id    PLS_INTEGER := g_delta.FIRST;
+        v_nuevo NUMBER;
+        v_antes NUMBER;
+    BEGIN
+        WHILE v_id IS NOT NULL LOOP
+            IF g_delta(v_id) <> 0 THEN
+                SELECT cupos_maximos - cupos_disponibles INTO v_nuevo
+                  FROM SALIDAS_PROGRAMADAS WHERE salida_id = v_id;
+                v_antes := v_nuevo - g_delta(v_id);
+                IF v_nuevo > 0 THEN
+                    FOR o IN (SELECT operacion_id, pax_programados FROM OPERACIONES_TRANSPORTE
+                               WHERE salida_id = v_id AND estado IN ('PROGRAMADO', 'ASIGNADO')
+                                 AND (pax_programados = v_antes OR pax_programados > v_nuevo)) LOOP
+                        BEGIN
+                            UPDATE OPERACIONES_TRANSPORTE
+                               SET pax_programados = CASE WHEN o.pax_programados = v_antes THEN v_nuevo
+                                                          ELSE LEAST(o.pax_programados, v_nuevo) END
+                             WHERE operacion_id = o.operacion_id;
+                        EXCEPTION
+                            -- Vehiculo sin capacidad, cruce de horario, documentos vencidos...: queda igual
+                            WHEN OTHERS THEN NULL;
+                        END;
+                    END LOOP;
+                END IF;
+            END IF;
+            v_id := g_delta.NEXT(v_id);
+        END LOOP;
+    END AFTER STATEMENT;
+END TRG_RESERVAS_PAX_TRASLADOS;
+/
+
 -- 10.12 (v11) Cotizaciones: codigo, campos inmutables y ciclo de vida
 --       GENERADA -> SOLICITADA | CANCELADA | VENCIDA
 --       SOLICITADA -> RESERVADA | RECHAZADA | CANCELADA | VENCIDA ; el resto es final.
