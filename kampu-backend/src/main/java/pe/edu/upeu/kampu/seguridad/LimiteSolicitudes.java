@@ -4,31 +4,41 @@ import org.springframework.stereotype.Component;
 import pe.edu.upeu.kampu.exception.DemasiadasSolicitudesException;
 
 import java.time.Duration;
-import java.util.ArrayDeque;
-import java.util.Deque;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Límite simple por IP para los endpoints públicos (cotizar, abrir una cotización con su clave):
- * evita que un robot llene la base de cotizaciones o pruebe claves en masa. Ventana deslizante en memoria
- * (por instancia del backend). El bloqueo por código tras 10 claves erradas lo lleva además la base de datos.
- */
 @Component
 public class LimiteSolicitudes {
-    private final Map<String, Deque<Long>> registros = new ConcurrentHashMap<>();
+    private final Map<String, List<Long>> registros = new HashMap<>();
 
-    public void verificar(String accion, String ip, int maximo, Duration ventana) {
+    public synchronized void verificar(String accion, String ip, int maximo, Duration ventana) {
         long ahora = System.currentTimeMillis();
         long desde = ahora - ventana.toMillis();
-        Deque<Long> marcas = registros.computeIfAbsent(accion + "|" + ip, k -> new ArrayDeque<>());
-        synchronized (marcas) {
-            while (!marcas.isEmpty() && marcas.peekFirst() < desde) marcas.pollFirst();
-            if (marcas.size() >= maximo) {
-                throw new DemasiadasSolicitudesException("Hiciste demasiadas solicitudes seguidas. Espera unos minutos e inténtalo de nuevo.");
-            }
-            marcas.addLast(ahora);
+        String clave = accion + "|" + ip;
+
+        List<Long> marcas = registros.get(clave);
+        if (marcas == null) {
+            marcas = new ArrayList<>();
+            registros.put(clave, marcas);
         }
-        if (registros.size() > 10_000) registros.entrySet().removeIf(e -> e.getValue().isEmpty());
+
+        List<Long> vigentes = new ArrayList<>();
+        for (Long marca : marcas) {
+            if (marca >= desde) {
+                vigentes.add(marca);
+            }
+        }
+        if (vigentes.size() >= maximo) {
+            registros.put(clave, vigentes);
+            throw new DemasiadasSolicitudesException("Hiciste demasiadas solicitudes seguidas. Espera unos minutos e inténtalo de nuevo.");
+        }
+        vigentes.add(ahora);
+        registros.put(clave, vigentes);
+
+        if (registros.size() > 10000) {
+            registros.clear();
+        }
     }
 }
