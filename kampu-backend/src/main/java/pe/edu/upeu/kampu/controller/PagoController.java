@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.controller;
 
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.kampu.dto.PagoDTO;
 import pe.edu.upeu.kampu.dto.PagoRequestDTO;
 import pe.edu.upeu.kampu.dto.ResolucionPagoRequestDTO;
+import pe.edu.upeu.kampu.services.BoletaEnvioAsync;
 import pe.edu.upeu.kampu.services.IPagoService;
 
 import java.util.List;
@@ -17,26 +17,38 @@ import java.util.List;
 @RequestMapping("/api/v1/pagos")
 public class PagoController {
     private final IPagoService pagoService;
+    private final BoletaEnvioAsync boletaEnvio;
 
-    public PagoController(IPagoService pagoService) {
+    public PagoController(IPagoService pagoService, BoletaEnvioAsync boletaEnvio) {
         this.pagoService = pagoService;
+        this.boletaEnvio = boletaEnvio;
     }
 
-    @Permiso("VER_MONTOS")
+    private void enviarBoletaSiAprobado(PagoDTO pago) {
+        if ("APROBADO".equals(pago.estadoTransaccion())) {
+            boletaEnvio.enviarEnSegundoPlano(pago.reservaId(), "pago aprobado");
+        }
+    }
+
+    @PreAuthorize("hasAuthority('VER_MONTOS')")
     @GetMapping
     public ResponseEntity<List<PagoDTO>> listar(@RequestParam(required = false) Long reservaId) {
         return ResponseEntity.ok(pagoService.listar(reservaId));
     }
 
-    @Permiso("REGISTRAR_PAGO")
+    @PreAuthorize("hasAuthority('REGISTRAR_PAGO')")
     @PostMapping
     public ResponseEntity<PagoDTO> registrar(@Valid @RequestBody PagoRequestDTO dto) {
-        return new ResponseEntity<>(pagoService.registrar(dto), HttpStatus.CREATED);
+        PagoDTO pago = pagoService.registrar(dto);
+        enviarBoletaSiAprobado(pago);
+        return new ResponseEntity<>(pago, HttpStatus.CREATED);
     }
 
-    @Permiso("REGISTRAR_PAGO")
+    @PreAuthorize("hasAuthority('REGISTRAR_PAGO')")
     @PatchMapping("/{id}/resolver")
     public ResponseEntity<PagoDTO> resolver(@PathVariable Long id, @Valid @RequestBody ResolucionPagoRequestDTO dto) {
-        return ResponseEntity.ok(pagoService.resolver(id, dto.estado()));
+        PagoDTO pago = pagoService.resolver(id, dto.estado());
+        enviarBoletaSiAprobado(pago);
+        return ResponseEntity.ok(pago);
     }
 }
