@@ -136,11 +136,29 @@ export interface Lugar {
   direccion: string;
   esPuntoRecojo: boolean;
   minutosAntesRecojo: number;
-  // Hotel de un proveedor de hospedaje: sale en la cotización con su precio por noche
-  proveedorId: number | null;
-  precioNoche: number | null;
-  modalidadPrecio: 'POR_PERSONA' | 'POR_GRUPO' | null;
+}
+
+// Habitación de hotel de un proveedor de hospedaje: se elige en la cotización con su precio por noche
+export type ModalidadPrecio = 'POR_PERSONA' | 'POR_GRUPO';
+export interface Habitacion {
+  habitacionId: number;
+  proveedorId: number;
+  proveedor: string;
+  nombre: string;
+  descripcion: string;
+  precioNoche: number;
+  modalidadPrecio: ModalidadPrecio;
   imagen: string;
+  estado: 'ACTIVO' | 'INACTIVO';
+}
+export interface HabitacionForm {
+  proveedorId: number | null;
+  nombre: string;
+  descripcion: string;
+  precioNoche: number | null;
+  modalidadPrecio: ModalidadPrecio;
+  imagen: string;
+  estado: 'ACTIVO' | 'INACTIVO';
 }
 
 export interface Vehiculo {
@@ -514,10 +532,6 @@ export interface LugarForm {
   direccion: string;
   esPuntoRecojo: boolean;
   minutosAntesRecojo: number | null;
-  proveedorId: number | null;
-  precioNoche: number | null;
-  modalidadPrecio: 'POR_PERSONA' | 'POR_GRUPO' | '';
-  imagen: string;
 }
 
 export interface VehiculoForm {
@@ -667,15 +681,15 @@ export interface CambioRolForm {
 }
 
 // ---------- Cotizaciones (v11): visitante sin cuenta, cliente y personal ----------
-// Hotel elegido: precio por noche x noches del paquete (x pasajeros si es por persona)
-export interface HotelElegido {
-  lugarId: number; nombre: string; ciudad: string; imagen: string | null;
-  modalidad: 'POR_PERSONA' | 'POR_GRUPO'; precioNoche: number; noches: number; subtotal: number;
+// Habitación elegida: precio por noche x noches del paquete (x pasajeros si es por persona)
+export interface HabitacionElegida {
+  habitacionId: number; nombre: string; hotel: string; imagen: string | null;
+  modalidad: ModalidadPrecio; precioNoche: number; noches: number; subtotal: number;
 }
-// Hotel que se puede elegir en la sección 5 del cotizador
-export interface HotelCotizable {
-  lugarId: number; nombre: string; ciudad: string; direccion: string | null; proveedor: string;
-  imagen: string | null; modalidad: 'POR_PERSONA' | 'POR_GRUPO'; precioNoche: number;
+// Habitación de hotel que se elige en la sección 5 del cotizador
+export interface HabitacionCotizable {
+  habitacionId: number; nombre: string; descripcion: string | null; hotel: string;
+  imagen: string | null; modalidad: ModalidadPrecio; precioNoche: number;
 }
 export type EstadoCotizacion = 'GENERADA' | 'SOLICITADA' | 'RESERVADA' | 'RECHAZADA' | 'CANCELADA' | 'VENCIDA';
 
@@ -697,7 +711,7 @@ export interface DatosCotizacion {
   fecha: string;
   adultos: number;
   ninos: number;
-  hotelId: number | null;            // hotel opcional (el punto de recojo lo define la agencia)
+  habitacionId: number | null;       // habitación de hotel: obligatoria si el paquete tiene noches
   servicios: ServicioElegido[];
   observaciones: string;
 }
@@ -718,7 +732,7 @@ export interface CalculoCotizacion {
   precioUnitario: number; montoPaquete: number; montoAdicionales: number; total: number;
   cuposDisponibles: number; estadoSalida: 'SIN_SALIDA' | 'PROGRAMADA' | 'GARANTIZADA'; faltanParaGarantizar: number;
   reservableWeb: boolean; anticipacionMinHoras: number;
-  montoHospedaje: number; hotel: HotelElegido | null;
+  montoHospedaje: number; habitacion: HabitacionElegida | null;
   servicios: LineaCotizacion[];
 }
 
@@ -734,7 +748,7 @@ export interface Cotizacion {
   paqueteId: number; paquete: string; dias: number; noches: number; imagen: string | null;
   fechaViaje: string; fechaFin: string; horaInicio: string;
   adultos: number; ninos: number; cantidad: number;
-  hotel: HotelElegido | null;
+  habitacion: HabitacionElegida | null;
   precioUnitario: number; montoPaquete: number; montoAdicionales: number; montoHospedaje: number; total: number;
   servicios: LineaCotizacion[];
   venceEn: string | null; observaciones: string | null;

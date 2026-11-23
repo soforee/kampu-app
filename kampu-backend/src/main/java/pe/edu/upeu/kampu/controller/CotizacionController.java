@@ -48,11 +48,11 @@ public class CotizacionController {
     }
 
     // ------------------------------------------------------------ visitante
-    // Hoteles que se pueden sumar a la cotización (sección 5)
+    // Habitaciones de hotel que se eligen en la cotización (sección 5)
     @Publico
-    @GetMapping("/hoteles")
-    public List<HotelCotizable> hoteles() {
-        return servicio.hoteles();
+    @GetMapping("/habitaciones")
+    public List<HabitacionCotizable> habitaciones() {
+        return servicio.habitaciones();
     }
 
     @Publico

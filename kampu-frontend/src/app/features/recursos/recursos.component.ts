@@ -1,10 +1,10 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
 import {
-  CategoriaLicencia, EstadoPersonal, EstadoProveedor, EstadoVehiculo, Lugar, LugarForm, PersonalForm, ProveedorForm,
+  CategoriaLicencia, EstadoPersonal, EstadoProveedor, EstadoVehiculo, HabitacionForm, Lugar, LugarForm, PersonalForm, ProveedorForm,
   RolPersonal, TipoLugar, TipoVehiculo, VehiculoForm
 } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
@@ -20,11 +20,11 @@ import { ModalComponent } from '../../shared/modal.component';
 import { ImagenService } from '../../core/services/imagen.service';
 import { of, switchMap } from 'rxjs';
 
-type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'lugares';
+type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'habitaciones' | 'lugares';
 // Sección del menú (data.seccion de la ruta):
 //  - personal: personal PROPIO (nace en Usuarios con su cuenta); aquí solo se activa o desactiva.
 //  - vehiculos: flota PROPIA (sin proveedor).
-//  - proveedores: terceros, con su personal, su flota y los lugares.
+//  - proveedores: terceros, con su personal, su flota, las habitaciones de hotel y los lugares.
 type Seccion = 'personal' | 'vehiculos' | 'proveedores';
 
 /**
@@ -34,7 +34,7 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-recursos',
   standalone: true,
-  imports: [PageHeaderComponent, FormsModule, DatePipe, IconComponent, BadgeComponent, ModalComponent],
+  imports: [PageHeaderComponent, FormsModule, DatePipe, DecimalPipe, IconComponent, BadgeComponent, ModalComponent],
   templateUrl: './recursos.component.html'
 })
 export class RecursosComponent {
@@ -42,8 +42,8 @@ export class RecursosComponent {
   private alerts = inject(AlertService);
   private auth = inject(AuthService);
   imagenes = inject(ImagenService);
-  // Foto del hotel elegida en el formulario (se sube al guardar)
-  fotoHotel: File | null = null;
+  // Foto de la habitación elegida en el formulario (se sube al guardar)
+  foto: File | null = null;
   vistaFoto = signal<string | null>(null);
 
   private ruta = inject(ActivatedRoute);
@@ -53,10 +53,11 @@ export class RecursosComponent {
   encabezado = {
     personal: { titulo: 'Personal', subtitulo: 'Guías y conductores propios de la agencia. Se registran en Usuarios al crear su cuenta.' },
     vehiculos: { titulo: 'Vehículos', subtitulo: 'Flota propia de la agencia.' },
-    proveedores: { titulo: 'Proveedores', subtitulo: 'Proveedores externos con sus guías, conductores y vehículos, y los lugares de la operación.' }
+    proveedores: { titulo: 'Proveedores', subtitulo: 'Proveedores externos con sus guías, conductores, vehículos y habitaciones de hotel, y los lugares de la operación.' }
   }[this.seccion];
 
-  tabs: { id: Tab; texto: string; icono: string; singular: string }[] = this.seccion === 'personal'
+  // nueva: el botón dice «Nueva …» (femenino)
+  tabs: { id: Tab; texto: string; icono: string; singular: string; nueva?: boolean }[] = this.seccion === 'personal'
     ? [{ id: 'personal', texto: 'Personal', icono: 'id', singular: 'guía o conductor' }]
     : this.seccion === 'vehiculos'
       ? [{ id: 'vehiculos', texto: 'Vehículos', icono: 'truck', singular: 'vehículo' }]
@@ -64,6 +65,7 @@ export class RecursosComponent {
         { id: 'proveedores', texto: 'Proveedores', icono: 'flag', singular: 'proveedor' },
         { id: 'personal', texto: 'Personal de proveedores', icono: 'id', singular: 'guía o conductor del proveedor' },
         { id: 'vehiculos', texto: 'Vehículos de proveedores', icono: 'truck', singular: 'vehículo del proveedor' },
+        { id: 'habitaciones', texto: 'Habitaciones de hotel', icono: 'bed', singular: 'habitación de hotel', nueva: true },
         { id: 'lugares', texto: 'Lugares', icono: 'map-pin', singular: 'lugar' }
       ];
   categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
@@ -83,7 +85,7 @@ export class RecursosComponent {
   private tabInicial(): Tab {
     if (this.seccion !== 'proveedores') return this.seccion;
     const t = this.ruta.snapshot.queryParamMap.get('tab');
-    return t === 'personal' || t === 'vehiculos' || t === 'lugares' ? t : 'proveedores';
+    return t === 'personal' || t === 'vehiculos' || t === 'habitaciones' || t === 'lugares' ? t : 'proveedores';
   }
   // null = todos los proveedores · n = un proveedor
   filtroProveedor = signal<number | null>(null);
@@ -98,12 +100,14 @@ export class RecursosComponent {
     this.store.cargarPersonal();
     this.store.cargarVehiculos();
     this.store.cargarProveedores();
+    if (this.seccion === 'proveedores') this.store.cargarHabitaciones();
   }
 
   proveedor: ProveedorForm = this.proveedorVacio();
   persona: PersonalForm = this.personaVacia();
   vehiculo: VehiculoForm = this.vehiculoVacio();
   lugar: LugarForm = this.lugarVacio();
+  habitacion: HabitacionForm = this.habitacionVacia();
 
   // GESTIONAR_LOGISTICA (PKG_SEGURIDAD_ROLES): solo Admin; Ventas solo consulta (VER_LOGISTICA)
   puedeEditar = computed(() => this.auth.puede('GESTIONAR_LOGISTICA'));
@@ -158,6 +162,17 @@ export class RecursosComponent {
         vCapacidad: V.entero(this.vehiculo.capacidadPax, 'La capacidad', 1, 80),
         vMantenimiento: V.fecha(this.vehiculo.proxMantenimiento, 'La fecha del próximo mantenimiento', false)
       };
+      case 'habitaciones': {
+        const h = this.habitacion;
+        return {
+          hProveedor: !h.proveedorId ? 'Elige el proveedor de hospedaje.'
+            : !this.store.getProveedor(h.proveedorId)?.ofreceHospedaje ? 'Ese proveedor no brinda hospedaje.' : null,
+          hNombre: V.texto(h.nombre, 'El nombre', 150, true),
+          hDescripcion: V.texto(h.descripcion, 'La descripción', 300),
+          hPrecio: h.precioNoche === null || (h.precioNoche as unknown) === '' ? 'Ingresa el precio por noche.'
+            : h.precioNoche <= 0 ? 'El precio por noche debe ser mayor a 0.' : null
+        };
+      }
       case 'lugares': {
         const l = this.lugar;
         const vacioLat = l.latitud === null || (l.latitud as unknown) === '';
@@ -166,10 +181,6 @@ export class RecursosComponent {
           lNombre: V.texto(l.nombre, 'El nombre', 150, true),
           lCiudad: V.texto(l.ciudad, 'La ciudad', 100, true),
           lDireccion: V.texto(l.direccion, 'La dirección', 200),
-          lTarifa: !this.tarifaHotel ? null
-            : !l.proveedorId ? 'Elige el proveedor de hospedaje.'
-            : !l.precioNoche || l.precioNoche <= 0 ? 'Ingresa el precio por noche (mayor a 0).'
-            : !l.modalidadPrecio ? 'Elige si el precio es por persona o por grupo.' : null,
           lMinutos: l.esPuntoRecojo || l.tipoLugar === 'OFICINA' ? V.entero(l.minutosAntesRecojo, 'Los minutos', 0, 240) : null,
           lLatitud: vacioLat ? (vacioLon ? null : 'Indica también la latitud.') : (l.latitud! < -90 || l.latitud! > 90 ? 'La latitud va de -90 a 90.' : null),
           lLongitud: vacioLon ? (vacioLat ? null : 'Indica también la longitud.') : (l.longitud! < -180 || l.longitud! > 180 ? 'La longitud va de -180 a 180.' : null)
@@ -198,6 +209,10 @@ export class RecursosComponent {
     }
     return grupos;
   });
+  habitacionesFiltradas = computed(() => {
+    const p = this.filtroProveedor();
+    return this.store.habitaciones().filter(h => p === null || h.proveedorId === p);
+  });
   proveedoresActivos = computed(() => this.store.proveedores().filter(p => p.estado !== 'INACTIVO'));
 
   get actual() { return this.tabs.find(t => t.id === this.tab())!; }
@@ -218,13 +233,12 @@ export class RecursosComponent {
       capacidadPax: 12, proxMantenimiento: addDays(hoy(), 180), estado: 'OPERATIVO' };
   }
   private lugarVacio(): LugarForm {
-    return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0,
-      proveedorId: null, precioNoche: null, modalidadPrecio: '', imagen: '' };
+    return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0 };
   }
-  // Hotel con tarifa (sale en la cotización): basta con empezar a llenar proveedor, precio o modalidad
-  get tarifaHotel(): boolean {
-    const l = this.lugar;
-    return l.tipoLugar === 'HOTEL' && (!!l.proveedorId || !!l.precioNoche || !!l.modalidadPrecio);
+  private habitacionVacia(): HabitacionForm {
+    const p = this.store.getProveedor(this.filtroProveedor());
+    return { proveedorId: p?.ofreceHospedaje ? p.proveedorId : null, nombre: '', descripcion: '', precioNoche: null,
+      modalidadPrecio: 'POR_PERSONA', imagen: '', estado: 'ACTIVO' };
   }
   proveedoresHospedaje = computed(() => this.store.proveedores().filter(p => p.ofreceHospedaje && p.estado === 'ACTIVO'));
   elegirFoto(evento: Event) {
@@ -232,13 +246,13 @@ export class RecursosComponent {
     if (!file) return;
     const error = this.imagenes.validar(file);
     if (error) { this.alerts.toast(error, 'error'); return; }
-    this.fotoHotel = file;
+    this.foto = file;
     this.vistaFoto.set(URL.createObjectURL(file));
   }
   quitarFoto() {
-    this.fotoHotel = null;
+    this.foto = null;
     this.vistaFoto.set(null);
-    this.lugar.imagen = '';
+    this.habitacion.imagen = '';
   }
   // Licencia: la exige el cargo (CARGOS.requiere_licencia)
   get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
@@ -251,7 +265,8 @@ export class RecursosComponent {
     this.persona = this.personaVacia();
     this.vehiculo = this.vehiculoVacio();
     this.lugar = this.lugarVacio();
-    this.fotoHotel = null;
+    this.habitacion = this.habitacionVacia();
+    this.foto = null;
     this.vistaFoto.set(null);
     this.abrir();
   }
@@ -282,10 +297,16 @@ export class RecursosComponent {
     const l = this.store.getLugar(id)!;
     this.editId = id;
     this.lugar = { nombre: l.nombre, tipoLugar: l.tipoLugar, ciudad: l.ciudad, latitud: l.latitud, longitud: l.longitud,
-      direccion: l.direccion, esPuntoRecojo: l.esPuntoRecojo, minutosAntesRecojo: l.minutosAntesRecojo,
-      proveedorId: l.proveedorId, precioNoche: l.precioNoche, modalidadPrecio: l.modalidadPrecio ?? '', imagen: l.imagen ?? '' };
-    this.fotoHotel = null;
-    this.vistaFoto.set(this.imagenes.url(l.imagen));
+      direccion: l.direccion, esPuntoRecojo: l.esPuntoRecojo, minutosAntesRecojo: l.minutosAntesRecojo };
+    this.abrir();
+  }
+  editarHabitacion(id: number) {
+    const h = this.store.habitaciones().find(x => x.habitacionId === id)!;
+    this.editId = id;
+    this.habitacion = { proveedorId: h.proveedorId, nombre: h.nombre, descripcion: h.descripcion, precioNoche: h.precioNoche,
+      modalidadPrecio: h.modalidadPrecio, imagen: h.imagen ?? '', estado: h.estado };
+    this.foto = null;
+    this.vistaFoto.set(h.imagen ? this.imagenes.url(h.imagen) : null);
     this.abrir();
   }
 
@@ -319,19 +340,20 @@ export class RecursosComponent {
           proxMantenimiento: x.proxMantenimiento || '' }, this.editId);
         break;
       }
+      case 'habitaciones': {
+        const h = this.habitacion;
+        const id = this.editId;
+        // La foto se sube primero; luego se guarda la habitación con su ruta
+        const subida = this.foto ? this.imagenes.subirHabitacion(this.foto) : of({ imagen: h.imagen });
+        peticion = subida.pipe(switchMap(r => this.store.guardarHabitacion({ ...h, nombre: t(h.nombre),
+          descripcion: t(h.descripcion), precioNoche: num(h.precioNoche), imagen: r.imagen }, id)));
+        break;
+      }
       default: {
         const l = this.lugar;
         const recojo = l.esPuntoRecojo || l.tipoLugar === 'OFICINA';
-        const hotel = l.tipoLugar === 'HOTEL';
-        const tarifa = this.tarifaHotel;
-        const id = this.editId;
-        // La foto se sube primero; luego se guarda el lugar con su ruta
-        const subida = hotel && this.fotoHotel ? this.imagenes.subirHotel(this.fotoHotel) : of({ imagen: hotel ? l.imagen : '' });
-        peticion = subida.pipe(switchMap(r => this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad),
-          latitud: num(l.latitud), longitud: num(l.longitud), direccion: t(l.direccion), esPuntoRecojo: recojo,
-          minutosAntesRecojo: recojo ? num(l.minutosAntesRecojo) ?? 0 : 0,
-          proveedorId: tarifa ? l.proveedorId : null, precioNoche: tarifa ? num(l.precioNoche) : null,
-          modalidadPrecio: tarifa ? l.modalidadPrecio : '', imagen: r.imagen }, id)));
+        peticion = this.store.guardarLugar({ ...l, nombre: t(l.nombre), ciudad: t(l.ciudad), latitud: num(l.latitud), longitud: num(l.longitud),
+          direccion: t(l.direccion), esPuntoRecojo: recojo, minutosAntesRecojo: recojo ? num(l.minutosAntesRecojo) ?? 0 : 0 }, this.editId);
       }
     }
     this.store.ocupado.set(true);
@@ -352,6 +374,7 @@ export class RecursosComponent {
   // La flota y el personal cambian los totales de cada proveedor
   private recargar() {
     if (this.tab() === 'lugares') { this.store.cargarLugares(); return; }
+    if (this.tab() === 'habitaciones') { this.store.cargarHabitaciones(); return; }
     if (this.tab() === 'personal') { this.store.cargarPersonal(); this.store.cargarVehiculos(); }
     if (this.tab() === 'vehiculos') this.store.cargarVehiculos();
     this.store.cargarProveedores();
@@ -366,6 +389,7 @@ export class RecursosComponent {
       proveedores: () => this.store.eliminarProveedor(id),
       personal: () => this.store.eliminarPersonal(id),
       vehiculos: () => this.store.eliminarVehiculo(id),
+      habitaciones: () => this.store.eliminarHabitacion(id),
       lugares: () => this.store.eliminarLugar(id)
     };
     peticiones[tab]().subscribe({
