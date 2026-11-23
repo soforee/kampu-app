@@ -147,6 +147,10 @@ Producción: `npm run build` (queda en `dist/frontend_kampu`).
   - *Reportar novedad* y *Disponibilidad* (guía y conductor): imprevistos en ruta que la agencia responde en
     *Novedades en ruta*, y bloqueos de horario que impiden asignarles trabajo;
   - la campana avisa cuando les asignan, reasignan o cancelan un traslado, cambia su horario o un punto de recojo.
+  - el guía, en cada salida: marca *Iniciar tour / En atractivo / Finalizar tour* (al finalizar se avisa a la agencia
+    y una salida garantizada se cierra), ve el transporte con su conductor, marca la asistencia por día
+    (presente, no-show o rezago), escribe por WhatsApp al titular y descarga el manifiesto en PDF;
+  - *Historial de tours* (guía) y sus certificaciones (carné DIRCETUR / MINCETUR e idiomas) en *Disponibilidad*.
 - **Seguridad:** el login entrega una sesión firmada (`Authorization: Bearer`) y cada endpoint exige su permiso.
   La matriz de permisos vive en Oracle (`PKG_SEGURIDAD_ROLES`): sin sesión se responde 401, y sin permiso, 403.
 

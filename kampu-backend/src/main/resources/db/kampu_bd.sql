@@ -209,7 +209,7 @@ BEGIN
     -- DETALLE_RESERVA ya no existe en v7: se incluye para limpiar instalaciones v6
     FOR r IN (SELECT COLUMN_VALUE AS nombre FROM TABLE(SYS.ODCIVARCHAR2LIST(
                   -- Personal de campo: avisos, novedades, bloqueos, jornadas y abordaje
-                  'NOTIFICACIONES', 'INCIDENCIAS', 'BLOQUEOS_PERSONAL', 'JORNADAS_VEHICULO', 'ABORDAJES',
+                  'NOTIFICACIONES', 'INCIDENCIAS', 'BLOQUEOS_PERSONAL', 'JORNADAS_VEHICULO', 'ABORDAJES', 'ASISTENCIAS',
                   'COTIZACION_SERVICIOS', 'COTIZACIONES', 'HABITACIONES', 'SERVICIOS_ADICIONALES',
                   'SOLICITUDES_ANULACION', 'AUDITORIA', 'HISTORIAL_OPERACIONES', 'OPERACIONES_TRANSPORTE', 'PAGOS',
                   'PASAJEROS_RESERVA', 'DETALLE_RESERVA', 'RESERVAS', 'SALIDAS_PROGRAMADAS',
@@ -392,6 +392,10 @@ CREATE TABLE PERSONAL (
     num_licencia     VARCHAR2(20),
     cat_licencia     VARCHAR2(10),
     venc_licencia    DATE,
+    -- Guia: carne oficial (DIRCETUR / MINCETUR), su vencimiento e idiomas acreditados
+    carne_guia       VARCHAR2(30),
+    venc_carne       DATE,
+    idiomas          VARCHAR2(200),
     estado           VARCHAR2(20)  DEFAULT ON NULL 'DISPONIBLE',
     CONSTRAINT pk_personal PRIMARY KEY (personal_id),
     CONSTRAINT fk_pers_prov      FOREIGN KEY (proveedor_id) REFERENCES PROVEEDORES (proveedor_id),
@@ -560,6 +564,11 @@ CREATE TABLE SALIDAS_PROGRAMADAS (
     cupos_disponibles  NUMBER(3)    NOT NULL,
     estado             VARCHAR2(20) DEFAULT ON NULL 'PROGRAMADA',
     origen             VARCHAR2(10) DEFAULT ON NULL 'MANUAL',          -- (+v7) MANUAL | RESERVA
+    -- Lo marca el guia durante el viaje (PKG_CAMPO.estado_salida): EN_CURSO, EN_ATRACTIVO, FINALIZADA
+    estado_campo       VARCHAR2(20),
+    inicio_real        TIMESTAMP,
+    fin_real           TIMESTAMP,
+    observacion_cierre VARCHAR2(500),
     creado_por         VARCHAR2(100),
     fecha_creacion     TIMESTAMP    DEFAULT ON NULL SYSTIMESTAMP,
     modificado_por     VARCHAR2(100),
@@ -569,6 +578,7 @@ CREATE TABLE SALIDAS_PROGRAMADAS (
     CONSTRAINT fk_sal_guia    FOREIGN KEY (guia_id)    REFERENCES PERSONAL (personal_id) ON DELETE SET NULL,
     CONSTRAINT chk_sal_est    CHECK (estado IN ('PROGRAMADA', 'GARANTIZADA', 'COMPLETADA', 'CANCELADA')),
     CONSTRAINT chk_sal_origen CHECK (origen IN ('MANUAL', 'RESERVA')),
+    CONSTRAINT chk_sal_campo  CHECK (estado_campo IS NULL OR estado_campo IN ('EN_CURSO', 'EN_ATRACTIVO', 'FINALIZADA')),
     CONSTRAINT chk_sal_fechas CHECK (fecha_fin >= fecha_inicio),
     CONSTRAINT chk_sal_cupos  CHECK (cupos_maximos > 0 AND cupos_disponibles BETWEEN 0 AND cupos_maximos)
 );
@@ -915,6 +925,22 @@ CREATE TABLE ABORDAJES (
     CONSTRAINT fk_abo_pas FOREIGN KEY (pasajero_id)  REFERENCES PASAJEROS_RESERVA (pasajero_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_abo_pasajero ON ABORDAJES (pasajero_id);
+
+-- Asistencia de cada pasajero por dia de la salida (la marca el guia en el manifiesto)
+CREATE TABLE ASISTENCIAS (
+    salida_id   NUMBER(10)    NOT NULL,
+    pasajero_id NUMBER(10)    NOT NULL,
+    dia         NUMBER(2)     NOT NULL,
+    estado      VARCHAR2(10)  NOT NULL,
+    fecha       TIMESTAMP     DEFAULT ON NULL SYSTIMESTAMP,
+    usuario     VARCHAR2(100),
+    CONSTRAINT pk_asistencias PRIMARY KEY (salida_id, pasajero_id, dia),
+    CONSTRAINT fk_asi_sal FOREIGN KEY (salida_id)   REFERENCES SALIDAS_PROGRAMADAS (salida_id),
+    CONSTRAINT fk_asi_pas FOREIGN KEY (pasajero_id) REFERENCES PASAJEROS_RESERVA (pasajero_id) ON DELETE CASCADE,
+    CONSTRAINT chk_asi_est CHECK (estado IN ('PRESENTE', 'NO_SHOW', 'REZAGO')),
+    CONSTRAINT chk_asi_dia CHECK (dia BETWEEN 1 AND 30)
+);
+CREATE INDEX idx_asi_pasajero ON ASISTENCIAS (pasajero_id);
 
 -- Jornada del vehiculo: kilometraje y combustible al empezar y al terminar el dia
 CREATE TABLE JORNADAS_VEHICULO (
@@ -2889,6 +2915,12 @@ CREATE OR REPLACE PACKAGE PKG_CAMPO AS
 
     -- Agencia (Admin o Ventas): responde la novedad y le avisa a quien la reporto
     PROCEDURE atender_incidencia (p_incidencia_id NUMBER, p_respuesta VARCHAR2);
+
+    -- Guia: asistencia por dia (PRESENTE / NO_SHOW / REZAGO; NULL la borra), avance de la salida
+    -- (EN_CURSO -> EN_ATRACTIVO <-> EN_CURSO -> FINALIZADA) y sus certificaciones
+    PROCEDURE marcar_asistencia (p_salida_id NUMBER, p_pasajero_id NUMBER, p_dia NUMBER, p_estado VARCHAR2);
+    PROCEDURE estado_salida (p_salida_id NUMBER, p_estado VARCHAR2, p_observacion VARCHAR2 DEFAULT NULL);
+    PROCEDURE actualizar_certificaciones (p_carne VARCHAR2, p_venc_carne DATE, p_idiomas VARCHAR2);
 END PKG_CAMPO;
 /
 
@@ -3137,6 +3169,111 @@ CREATE OR REPLACE PACKAGE BODY PKG_CAMPO AS
             RAISE_APPLICATION_ERROR(-20728, 'Ese bloqueo no es tuyo o ya no existe');
         END IF;
     END quitar_bloqueo;
+
+    -- La salida debe ser del guia con sesion; devuelve su fila (con bloqueo)
+    FUNCTION salida_propia (p_salida_id NUMBER) RETURN SALIDAS_PROGRAMADAS%ROWTYPE IS
+        v SALIDAS_PROGRAMADAS%ROWTYPE;
+    BEGIN
+        IF NVL(PKG_SEGURIDAD_ROLES.rol_actual, '-') <> 'GUIA' THEN
+            RAISE_APPLICATION_ERROR(-20730, 'Solo el guia de la salida puede hacer esto');
+        END IF;
+        SELECT * INTO v FROM SALIDAS_PROGRAMADAS WHERE salida_id = p_salida_id FOR UPDATE;
+        IF NVL(v.guia_id, -1) <> NVL(PKG_SEGURIDAD_ROLES.personal_id_actual, -2) THEN
+            RAISE_APPLICATION_ERROR(-20730, 'Esa salida no esta asignada a ti');
+        END IF;
+        IF v.estado = 'CANCELADA' THEN
+            RAISE_APPLICATION_ERROR(-20730, 'La salida esta cancelada');
+        END IF;
+        RETURN v;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20730, 'La salida no existe');
+    END salida_propia;
+
+    PROCEDURE marcar_asistencia (p_salida_id NUMBER, p_pasajero_id NUMBER, p_dia NUMBER, p_estado VARCHAR2) IS
+        v      SALIDAS_PROGRAMADAS%ROWTYPE := salida_propia(p_salida_id);
+        v_n    NUMBER;
+        v_est  VARCHAR2(10) := UPPER(TRIM(p_estado));
+    BEGIN
+        IF p_dia IS NULL OR p_dia < 1 OR p_dia > v.fecha_fin - v.fecha_inicio + 1 THEN
+            RAISE_APPLICATION_ERROR(-20731, 'El dia debe estar entre 1 y ' || (v.fecha_fin - v.fecha_inicio + 1));
+        END IF;
+        IF v.fecha_inicio + p_dia - 1 > TRUNC(SYSDATE) THEN
+            RAISE_APPLICATION_ERROR(-20731, 'La asistencia del dia ' || p_dia || ' se marca desde el '
+                || TO_CHAR(v.fecha_inicio + p_dia - 1, 'DD/MM/YYYY'));
+        END IF;
+        SELECT COUNT(*) INTO v_n FROM PASAJEROS_RESERVA pr JOIN RESERVAS r ON r.reserva_id = pr.reserva_id
+         WHERE pr.pasajero_id = p_pasajero_id AND r.salida_id = p_salida_id
+           AND r.estado_reserva IN ('PENDIENTE', 'CONFIRMADA', 'COMPLETADA');
+        IF v_n = 0 THEN
+            RAISE_APPLICATION_ERROR(-20731, 'El pasajero no viaja en esta salida');
+        END IF;
+        IF v_est IS NULL THEN
+            DELETE FROM ASISTENCIAS WHERE salida_id = p_salida_id AND pasajero_id = p_pasajero_id AND dia = p_dia;
+            RETURN;
+        END IF;
+        MERGE INTO ASISTENCIAS a
+        USING (SELECT p_salida_id AS salida_id, p_pasajero_id AS pasajero_id, p_dia AS dia FROM DUAL) x
+           ON (a.salida_id = x.salida_id AND a.pasajero_id = x.pasajero_id AND a.dia = x.dia)
+         WHEN MATCHED THEN UPDATE SET estado = v_est, fecha = SYSTIMESTAMP, usuario = PKG_SEGURIDAD_ROLES.usuario_actual
+         WHEN NOT MATCHED THEN INSERT (salida_id, pasajero_id, dia, estado, usuario)
+              VALUES (x.salida_id, x.pasajero_id, x.dia, v_est, PKG_SEGURIDAD_ROLES.usuario_actual);
+    END marcar_asistencia;
+
+    PROCEDURE estado_salida (p_salida_id NUMBER, p_estado VARCHAR2, p_observacion VARCHAR2 DEFAULT NULL) IS
+        v       SALIDAS_PROGRAMADAS%ROWTYPE := salida_propia(p_salida_id);
+        v_nuevo VARCHAR2(20) := UPPER(TRIM(p_estado));
+        v_paq   PAQUETES_TOUR.nombre%TYPE;
+        v_pres  NUMBER;
+    BEGIN
+        IF NOT ((v.estado_campo IS NULL AND v_nuevo = 'EN_CURSO')
+             OR (v.estado_campo = 'EN_CURSO' AND v_nuevo IN ('EN_ATRACTIVO', 'FINALIZADA'))
+             OR (v.estado_campo = 'EN_ATRACTIVO' AND v_nuevo IN ('EN_CURSO', 'FINALIZADA'))) THEN
+            RAISE_APPLICATION_ERROR(-20732, 'La salida esta ' || NVL(v.estado_campo, 'sin iniciar')
+                || ': no puede pasar a ' || v_nuevo);
+        END IF;
+        IF v_nuevo = 'EN_CURSO' AND v.estado_campo IS NULL AND v.fecha_inicio > TRUNC(SYSDATE) THEN
+            RAISE_APPLICATION_ERROR(-20732, 'El tour empieza el ' || TO_CHAR(v.fecha_inicio, 'DD/MM/YYYY'));
+        END IF;
+        IF v_nuevo = 'FINALIZADA' AND v.fecha_fin > TRUNC(SYSDATE) THEN
+            RAISE_APPLICATION_ERROR(-20732, 'El tour termina el ' || TO_CHAR(v.fecha_fin, 'DD/MM/YYYY')
+                || ': se finaliza el ultimo dia');
+        END IF;
+        UPDATE SALIDAS_PROGRAMADAS
+           SET estado_campo = v_nuevo,
+               inicio_real = NVL(inicio_real, SYSTIMESTAMP),
+               fin_real = CASE WHEN v_nuevo = 'FINALIZADA' THEN SYSTIMESTAMP ELSE fin_real END,
+               observacion_cierre = CASE WHEN v_nuevo = 'FINALIZADA' THEN SUBSTR(TRIM(p_observacion), 1, 500)
+                                         ELSE observacion_cierre END
+         WHERE salida_id = p_salida_id;
+        IF v_nuevo = 'FINALIZADA' THEN
+            -- Una salida garantizada se cierra sola (sus reservas confirmadas pasan a COMPLETADA)
+            IF v.estado = 'GARANTIZADA' THEN
+                UPDATE SALIDAS_PROGRAMADAS SET estado = 'COMPLETADA' WHERE salida_id = p_salida_id;
+            END IF;
+            SELECT p.nombre INTO v_paq FROM PAQUETES_TOUR p WHERE p.paquete_id = v.paquete_id;
+            SELECT COUNT(DISTINCT pasajero_id) INTO v_pres FROM ASISTENCIAS
+             WHERE salida_id = p_salida_id AND estado = 'PRESENTE';
+            FOR r IN (SELECT 'ADMIN' AS rol FROM DUAL UNION ALL SELECT 'VENTAS' FROM DUAL) LOOP
+                notificar_rol(r.rol, 'SALIDA_FINALIZADA', 'El guia finalizo ' || v_paq || ' del '
+                    || TO_CHAR(v.fecha_inicio, 'DD/MM'), v_pres || ' pasajero(s) atendidos'
+                    || CASE WHEN TRIM(p_observacion) IS NOT NULL THEN '. ' || TRIM(p_observacion) END);
+            END LOOP;
+        END IF;
+    END estado_salida;
+
+    PROCEDURE actualizar_certificaciones (p_carne VARCHAR2, p_venc_carne DATE, p_idiomas VARCHAR2) IS
+    BEGIN
+        IF NVL(PKG_SEGURIDAD_ROLES.rol_actual, '-') <> 'GUIA' THEN
+            RAISE_APPLICATION_ERROR(-20733, 'Solo el guia registra sus certificaciones');
+        END IF;
+        IF (TRIM(p_carne) IS NULL) <> (p_venc_carne IS NULL) THEN
+            RAISE_APPLICATION_ERROR(-20733, 'Indica el numero de carne y su vencimiento juntos');
+        END IF;
+        UPDATE PERSONAL
+           SET carne_guia = UPPER(TRIM(p_carne)), venc_carne = p_venc_carne, idiomas = SUBSTR(TRIM(p_idiomas), 1, 200)
+         WHERE personal_id = PKG_SEGURIDAD_ROLES.personal_id_actual;
+    END actualizar_certificaciones;
 END PKG_CAMPO;
 /
 
@@ -4630,7 +4767,13 @@ SELECT s.salida_id,
        s.estado,
        s.cupos_maximos - s.cupos_disponibles AS pasajeros,
        (SELECT COUNT(*) FROM OPERACIONES_TRANSPORTE o
-         WHERE o.salida_id = s.salida_id AND o.estado <> 'CANCELADO') AS traslados
+         WHERE o.salida_id = s.salida_id AND o.estado <> 'CANCELADO') AS traslados,
+       s.estado_campo,
+       s.inicio_real,
+       s.fin_real,
+       s.observacion_cierre,
+       (SELECT COUNT(DISTINCT a.pasajero_id) FROM ASISTENCIAS a
+         WHERE a.salida_id = s.salida_id AND a.estado = 'PRESENTE') AS atendidos
   FROM SALIDAS_PROGRAMADAS s
   JOIN PAQUETES_TOUR p ON p.paquete_id = s.paquete_id
  WHERE s.estado <> 'CANCELADA'
@@ -5635,6 +5778,19 @@ BEGIN
         DBMS_OUTPUT.PUT_LINE(CASE WHEN v_n > 0 AND v_r = 0
             THEN '[OK] La guia ve solo sus salidas (' || v_n || ')'
             ELSE '[FALLA] Salidas de la guia: ' || v_n || ', ajenas: ' || v_r END);
+        -- Guia en campo (PKG_CAMPO): solo sus salidas
+        BEGIN
+            SELECT NVL(MIN(salida_id), -1) INTO v_n FROM SALIDAS_PROGRAMADAS
+             WHERE NVL(guia_id, -1) <> (SELECT personal_id FROM PERSONAL WHERE numero_documento = '45123678');
+            PKG_CAMPO.estado_salida(v_n, 'EN_CURSO');
+            resultado('Guia que inicia una salida ajena', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Guia que inicia una salida ajena', SQLERRM);
+        END;
+        BEGIN
+            PKG_CAMPO.actualizar_certificaciones('DIR-12345', NULL, 'Espanol');
+            resultado('Carne de guia sin vencimiento', NULL);
+        EXCEPTION WHEN OTHERS THEN resultado('Carne de guia sin vencimiento', SQLERRM);
+        END;
         SELECT COUNT(*) INTO v_n FROM VW_MIS_TRASLADOS_CONDUCTOR;
         SELECT COUNT(*) INTO v_r FROM VW_RESUMEN_PAQUETES_POR_ROL;
         DBMS_OUTPUT.PUT_LINE(CASE WHEN v_n = 0 AND PKG_SEGURIDAD_ROLES.puede('VER_RESERVAS') = 0

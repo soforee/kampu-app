@@ -19,11 +19,16 @@ public record PersonalDTO(
         LocalDate vencLicencia,
         String estado,
         // Personal propio: usuario de su cuenta de acceso (null si no tiene)
-        String usuario
+        String usuario,
+        // Guía: carné oficial, su vencimiento e idiomas
+        String carneGuia,
+        LocalDate vencCarne,
+        String idiomas
 ) {
     public static PersonalDTO desde(Personal p, String funcion, String usuario) {
         return new PersonalDTO(p.getPersonalId(), p.getProveedorId(), p.getNumeroDocumento() == null ? "" : p.getNumeroDocumento(),
                 p.getNombreCompleto(), p.getCargo(), funcion, p.getTelefono() == null ? "" : p.getTelefono(),
-                p.getNumLicencia(), p.getCatLicencia(), p.getVencLicencia(), p.getEstado(), usuario);
+                p.getNumLicencia(), p.getCatLicencia(), p.getVencLicencia(), p.getEstado(), usuario,
+                p.getCarneGuia(), p.getVencCarne(), p.getIdiomas());
     }
 }

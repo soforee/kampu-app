@@ -93,7 +93,7 @@ public class UsuarioServiceImpl implements IUsuarioService {
             var ficha = personal.crearPropio(new PersonalRequestDTO(null, dto.numeroDocumento(), nombre, dto.rol(),
                     dto.telefono(), "CONDUCTOR".equals(dto.rol()) ? dto.numLicencia() : null,
                     "CONDUCTOR".equals(dto.rol()) ? dto.catLicencia() : null,
-                    "CONDUCTOR".equals(dto.rol()) ? dto.vencLicencia() : null, "DISPONIBLE"));
+                    "CONDUCTOR".equals(dto.rol()) ? dto.vencLicencia() : null, "DISPONIBLE", null, null, null));
             personalId = ficha.personalId();
             personalNombre = ficha.nombreCompleto();
         }

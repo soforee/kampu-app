@@ -39,6 +39,23 @@ public class Personal {
     @Column(name = "venc_licencia")
     private LocalDate vencLicencia;
 
+    // Guía: carné oficial (DIRCETUR / MINCETUR), vencimiento e idiomas acreditados
+    @Column(name = "carne_guia")
+    private String carneGuia;
+
+    @Column(name = "venc_carne")
+    private LocalDate vencCarne;
+
+    @Column(name = "idiomas")
+    private String idiomas;
+
+    public String getCarneGuia() { return carneGuia; }
+    public void setCarneGuia(String carneGuia) { this.carneGuia = carneGuia; }
+    public LocalDate getVencCarne() { return vencCarne; }
+    public void setVencCarne(LocalDate vencCarne) { this.vencCarne = vencCarne; }
+    public String getIdiomas() { return idiomas; }
+    public void setIdiomas(String idiomas) { this.idiomas = idiomas; }
+
     @Column(name = "estado")
     private String estado;
 
