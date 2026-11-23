@@ -44,6 +44,10 @@ public final class ErroresOracle {
             Map.entry("UQ_PAG_OPERACION", "Esa operación (método y código de transacción) ya fue registrada."),
             Map.entry("UQ_SOL_PENDIENTE", "Ya hay una solicitud de anulación pendiente para esta reserva."),
             // CHECK
+            Map.entry("CHK_JOR_COMB", "El combustible se indica como LLENO, 3/4, 1/2, 1/4 o RESERVA."),
+            Map.entry("CHK_JOR_KM", "El kilometraje final no puede ser menor que el inicial."),
+            Map.entry("CHK_INC_TIPO", "Tipo de novedad no válido."),
+            Map.entry("CHK_BLO_RANGO", "El fin del bloqueo debe ser posterior al inicio."),
             Map.entry("CHK_PROV_RUC", "El RUC tiene 11 dígitos y empieza con 10, 15, 17 o 20."),
             Map.entry("CHK_PROV_SERVICIO", "El proveedor debe brindar al menos un soporte (transporte, guiado, hospedaje o alimentación)."),
             Map.entry("CHK_USU_ROL", "Rol no válido (ADMIN, VENTAS, GUIA o CONDUCTOR)."),

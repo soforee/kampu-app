@@ -98,6 +98,8 @@ public class VehiculoServiceImpl implements IVehiculoService {
         v.setMarcaModelo(dto.marcaModelo() == null || dto.marcaModelo().isBlank() ? null : dto.marcaModelo().trim());
         v.setCapacidadPax(dto.capacidadPax());
         v.setProxMantenimiento(dto.proxMantenimiento());
+        v.setVencSoat(dto.vencSoat());
+        v.setVencRevision(dto.vencRevision());
         v.setEstado(dto.estado());
     }
 }

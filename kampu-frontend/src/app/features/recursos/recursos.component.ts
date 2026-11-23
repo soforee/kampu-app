@@ -198,7 +198,9 @@ export class RecursosComponent {
         vPlaca: V.placa(this.vehiculo.placa),
         vMarca: V.texto(this.vehiculo.marcaModelo, 'La marca/modelo', 100),
         vCapacidad: V.entero(this.vehiculo.capacidadPax, 'La capacidad', 1, 80),
-        vMantenimiento: V.fecha(this.vehiculo.proxMantenimiento, 'La fecha del próximo mantenimiento', false)
+        vMantenimiento: V.fecha(this.vehiculo.proxMantenimiento, 'La fecha del próximo mantenimiento', false),
+        vSoat: V.fecha(this.vehiculo.vencSoat, 'El vencimiento del SOAT', false),
+        vRevision: V.fecha(this.vehiculo.vencRevision, 'El vencimiento de la revisión técnica', false)
       };
       case 'habitaciones': {
         const h = this.habitacion;
@@ -268,7 +270,7 @@ export class RecursosComponent {
   }
   private vehiculoVacio(): VehiculoForm {
     return { proveedorId: this.proveedorFiltro(), placa: '', tipoVehiculo: 'VAN', marcaModelo: '',
-      capacidadPax: 12, proxMantenimiento: addDays(hoy(), 180), estado: 'OPERATIVO' };
+      capacidadPax: 12, proxMantenimiento: addDays(hoy(), 180), estado: 'OPERATIVO', vencSoat: '', vencRevision: '' };
   }
   private lugarVacio(): LugarForm {
     return { nombre: '', tipoLugar: 'HOTEL', ciudad: '', latitud: null, longitud: null, direccion: '', esPuntoRecojo: false, minutosAntesRecojo: 0 };
@@ -328,7 +330,8 @@ export class RecursosComponent {
     const x = this.store.getVehiculo(id)!;
     this.editId = id;
     this.vehiculo = { proveedorId: x.proveedorId, placa: x.placa, tipoVehiculo: x.tipoVehiculo, marcaModelo: x.marcaModelo,
-      capacidadPax: x.capacidadPax, proxMantenimiento: x.proxMantenimiento ?? '', estado: x.estado };
+      capacidadPax: x.capacidadPax, proxMantenimiento: x.proxMantenimiento ?? '', estado: x.estado,
+      vencSoat: x.vencSoat ?? '', vencRevision: x.vencRevision ?? '' };
     this.abrir();
   }
   editarLugar(id: number) {
@@ -375,7 +378,7 @@ export class RecursosComponent {
         const x = this.vehiculo;
         peticion = this.store.guardarVehiculo({ ...x, proveedorId: this.propio ? null : x.proveedorId,
           placa: t(x.placa).toUpperCase(), marcaModelo: t(x.marcaModelo),
-          proxMantenimiento: x.proxMantenimiento || '' }, this.editId);
+          proxMantenimiento: x.proxMantenimiento || '', vencSoat: x.vencSoat || '', vencRevision: x.vencRevision || '' }, this.editId);
         break;
       }
       case 'habitaciones': {

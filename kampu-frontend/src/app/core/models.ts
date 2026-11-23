@@ -175,6 +175,8 @@ export interface Vehiculo {
   capacidadPax: number;
   proxMantenimiento: string | null;
   estado: EstadoVehiculo;
+  vencSoat: string | null;
+  vencRevision: string | null;
 }
 
 // Duración calculada con datos reales: OSRM (OpenStreetMap) o ESTIMADO (coordenadas)
@@ -551,6 +553,8 @@ export interface VehiculoForm {
   capacidadPax: number | null;
   proxMantenimiento: string;
   estado: EstadoVehiculo;
+  vencSoat: string;
+  vencRevision: string;
 }
 
 export interface OperacionForm {
@@ -785,11 +789,53 @@ export interface MisAsignaciones {
     salidaId: number; paqueteId: number; paqueteNombre: string; dias: number; noches: number; horaInicio: string;
     fechaInicio: string; fechaFin: string; estado: EstadoSalida; pasajeros: number; traslados: number;
   }[];
-  traslados: {
-    operacionId: number; codigoOperacion: string; salidaId: number | null; paqueteNombre: string | null;
-    horaSalida: string; horaLlegada: string; estado: EstadoOperacion; paxProgramados: number;
-    origen: string; origenDireccion: string | null; destino: string; destinoDireccion: string | null;
-    placa: string | null; tipoVehiculo: string | null; marcaModelo: string | null; capacidadPax: number | null;
-    observaciones: string | null;
-  }[];
+  traslados: TrasladoConductor[];
+}
+
+// ---------- Panel de campo (conductor y guía) ----------
+export interface TrasladoConductor {
+  operacionId: number; codigoOperacion: string; salidaId: number | null; paqueteNombre: string | null;
+  horaSalida: string; horaLlegada: string; estado: EstadoOperacion; paxProgramados: number;
+  origen: string; origenDireccion: string | null; origenLatitud: number | null; origenLongitud: number | null;
+  destino: string; destinoDireccion: string | null; destinoLatitud: number | null; destinoLongitud: number | null;
+  vehiculoId: number | null; placa: string | null; tipoVehiculo: string | null; marcaModelo: string | null; capacidadPax: number | null;
+  observaciones: string | null; guiaNombre: string | null; guiaTelefono: string | null;
+  inicioReal: string | null; finReal: string | null; abordados: number;
+}
+export interface RecojoCampo {
+  horaRecojo: string | null; puntoRecojo: string; direccion: string | null; latitud: number | null; longitud: number | null;
+  codigoReserva: string; cantidadPasajeros: number; pasajeros: string | null; titular: string; telefonoTitular: string | null;
+}
+export interface PasajeroTraslado {
+  pasajeroId: number; pasajero: string; tipoDocumento: string; numeroDocumento: string; codigoReserva: string;
+  puntoRecojo: string | null; horaRecojo: string | null; abordo: number;
+}
+export type Combustible = 'LLENO' | '3/4' | '1/2' | '1/4' | 'RESERVA';
+export interface JornadaVehiculo {
+  fecha: string; kmInicial: number; combustibleInicial: Combustible; kmFinal: number | null; combustibleFinal: Combustible | null;
+  observaciones: string | null;
+}
+export interface MiVehiculo {
+  hoy?: boolean;
+  vehiculo: {
+    vehiculoId: number; placa: string; tipoVehiculo: string; marcaModelo: string | null; capacidadPax: number; estado: string;
+    proxMantenimiento: string | null; vencSoat: string | null; vencRevision: string | null; proveedor: string | null;
+  } | null;
+  jornadas?: JornadaVehiculo[];
+}
+export type TipoIncidencia = 'TRAFICO' | 'RETRASO_VUELO' | 'FALLA_MECANICA' | 'NO_SHOW' | 'ACCIDENTE' | 'OTRO';
+export interface Incidencia {
+  incidenciaId: number; tipo: TipoIncidencia; descripcion: string; estado: 'ABIERTA' | 'ATENDIDA'; fechaReporte: string;
+  respuesta: string | null; fechaAtencion: string | null; codigoOperacion: string | null;
+  // Solo en la vista de la agencia
+  reportadoPor?: string; cargo?: string; telefono?: string | null; atendidaPor?: string | null; operacionId?: number | null;
+}
+export interface Disponibilidad {
+  traslados: { operacionId: number; codigoOperacion: string; horaSalida: string; horaLlegada: string; origen: string; destino: string; estado: string; paqueteNombre: string | null }[];
+  salidas: { salidaId: number; paqueteNombre: string; fechaInicio: string; fechaFin: string; horaInicio: string; estado: string }[];
+  bloqueos: { bloqueoId: number; inicio: string; fin: string; motivo: string | null }[];
+}
+export interface Notificacion {
+  notificacionId: number; tipo: string; titulo: string; detalle: string | null; operacionId: number | null;
+  incidenciaId: number | null; fecha: string; leida: boolean;
 }
