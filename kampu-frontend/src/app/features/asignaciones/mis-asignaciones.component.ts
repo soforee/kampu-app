@@ -14,14 +14,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-
-/**
- * (v11) Guía y conductor con cuenta: solo SUS asignaciones (lo filtra la base de datos).
- * Guía: sus salidas, itinerario, manifiesto y recojos.
- * Conductor: sus traslados con vehículo y ruta, y desde la tarjeta: avanzar el estado (en camino, a bordo,
- * finalizado), abrir la ruta en Google Maps o Waze, llamar o escribir por WhatsApp al titular, al guía o a la
- * agencia, marcar qué pasajeros abordaron y mostrar el cartel de recepción. Sin montos.
- */
 @Component({
   selector: 'app-mis-asignaciones',
   standalone: true,
@@ -51,7 +43,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
               </div>
             </div>
 
-            <!-- Estado en campo: lo marca el guía -->
             @if (s.estado !== 'CANCELADA' && s.estadoCampo !== 'FINALIZADA') {
               <div class="mt-3 flex flex-wrap gap-2">
                 @if (!s.estadoCampo) { <button type="button" class="btn-brand btn-sm" [disabled]="enviando() === -s.salidaId" (click)="campoSalida(s, 'EN_CURSO')"><app-icon name="flag" size="w-4 h-4" /> Iniciar tour</button> }
@@ -69,7 +60,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
               <button type="button" class="btn-light btn-sm" [disabled]="descargando() === s.salidaId" (click)="pdf(s.salidaId)"><app-icon name="download" size="w-4 h-4" /> {{ descargando() === s.salidaId ? 'Generando…' : 'Manifiesto PDF' }}</button>
             </div>
             @if (abierta() === s.salidaId) {
-              <!-- Transporte de la salida -->
               @if (transporte().length) {
                 <div class="mt-4 grid gap-2 sm:grid-cols-2">
                   @for (t of transporte(); track t.operacionId) {
@@ -147,7 +137,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
               <span class="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700"><app-badge [estado]="t.estado" /><span class="sr-only">{{ textoEstado(t.estado) }}</span></span>
             </div>
 
-            <!-- Avance del traslado -->
             <ol class="mt-3 flex flex-wrap items-center gap-1 text-xs" aria-label="Avance del traslado">
               @for (p of pasos; track p.estado; let i = $index) {
                 <li class="flex items-center gap-1">
@@ -166,7 +155,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
 
             <p class="mt-3 text-sm text-zinc-700"><app-icon name="truck" size="w-4 h-4" /> {{ t.placa ?? 'Sin vehículo' }}@if (t.marcaModelo) { · {{ t.marcaModelo }} } @if (t.tipoVehiculo) { · {{ etiqueta(t.tipoVehiculo) }} } @if (t.capacidadPax) { · {{ t.capacidadPax }} asientos }</p>
 
-            <!-- Ruta: abrir en Google Maps o Waze -->
             <div class="mt-2 grid gap-2 sm:grid-cols-2">
               <div class="rounded-lg border border-zinc-100 p-2.5 text-sm">
                 <p class="text-xs text-zinc-500">Origen</p><p class="font-medium text-zinc-900">{{ t.origen }}</p>
@@ -186,7 +174,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
               </div>
             </div>
 
-            <!-- Contacto rápido -->
             <div class="mt-3 flex flex-wrap gap-2">
               @if (t.guiaTelefono) {
                 <a class="btn-light btn-sm" [href]="llamar(t.guiaTelefono)"><app-icon name="phone" size="w-4 h-4" /> Guía {{ t.guiaNombre }}</a>
@@ -245,7 +232,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
     }
   } }
 
-  <!-- Cartel de recepción: pantalla completa para mostrar a la salida del aeropuerto o terminal -->
   @if (cartel(); as c) {
     <div class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-white p-6 text-center" role="dialog" aria-label="Cartel de recepción" (click)="cerrarCartel()">
       <app-logo variante="horizontal" [alto]="72" />
@@ -274,16 +260,13 @@ export class MisAsignacionesComponent {
   abiertoTraslado = signal<number | null>(null);
   itinerario = signal<ActividadItinerario[]>([]);
   recojos = signal<RecojoCampo[]>([]);
-  // Check-in del traslado abierto
   abordaje = signal<PasajeroTraslado[]>([]);
   aBordo = computed(() => this.abordaje().filter(p => p.abordo === 1).length);
   marcando = signal<number | null>(null);
   enviando = signal<number | null>(null);
-  // Teléfono de la agencia (para llamar o escribir desde la tarjeta)
   agencia = signal('');
   cartel = signal<{ nombres: string[]; paquete: string | null } | null>(null);
 
-  // ---------- Guía ----------
   transporte = signal<TransporteSalida[]>([]);
   asistencia = signal<AsistenciaSalida | null>(null);
   dia = signal(1);
@@ -298,7 +281,6 @@ export class MisAsignacionesComponent {
     return Math.round((new Date(s.fechaFin.slice(0, 10)).getTime() - new Date(s.fechaInicio.slice(0, 10)).getTime()) / 86400000) + 1;
   }
   rangoDias(s: MisAsignaciones['salidas'][number]) { return Array.from({ length: this.diasDe(s) }, (_, i) => i + 1); }
-  // Día que corresponde a hoy dentro de la salida (o el 1)
   private diaDeHoy(s: MisAsignaciones['salidas'][number]) {
     const n = Math.floor((Date.now() - new Date(s.fechaInicio.slice(0, 10) + 'T00:00:00').getTime()) / 86400000) + 1;
     return Math.min(Math.max(n, 1), this.diasDe(s));
@@ -314,7 +296,7 @@ export class MisAsignacionesComponent {
   asistir(s: MisAsignaciones['salidas'][number], pasajeroId: number, estado: EstadoAsistencia) {
     const a = this.asistencia();
     if (!a) return;
-    const nuevo = this.marca(pasajeroId) === estado ? null : estado;   // tocar de nuevo la quita
+    const nuevo = this.marca(pasajeroId) === estado ? null : estado;
     const dia = this.dia();
     const marcas = a.marcas.filter(m => !(m.pasajeroId === pasajeroId && m.dia === dia));
     this.asistencia.set({ ...a, marcas: nuevo ? [...marcas, { pasajeroId, dia, estado: nuevo }] : marcas });
@@ -356,7 +338,6 @@ export class MisAsignacionesComponent {
     });
   }
 
-  // Avance del traslado para el conductor
   pasos: { estado: EstadoOperacion; texto: string }[] = [
     { estado: 'ASIGNADO', texto: 'Asignado' }, { estado: 'EMBARQUE', texto: 'En camino al recojo' },
     { estado: 'EN_RUTA', texto: 'Pasajeros a bordo' }, { estado: 'FINALIZADO', texto: 'Finalizado' }
@@ -370,7 +351,6 @@ export class MisAsignacionesComponent {
   siguiente(e: string) { return this.acciones[e] ?? null; }
   textoEstado(e: string) { return this.pasos.find(p => p.estado === e)?.texto ?? etiqueta(e); }
   puedeMarcar(e: string) { return e === 'ASIGNADO' || e === 'EMBARQUE' || e === 'EN_RUTA'; }
-  // Mientras llegan el manifiesto y los recojos no se dice "no hay": se muestra "Cargando…"
   cargandoDetalle = signal(0);
 
   constructor() {
@@ -384,7 +364,6 @@ export class MisAsignacionesComponent {
     });
   }
 
-  // Reemplaza el traslado actualizado en la lista
   private actualizar(t: TrasladoConductor) {
     const d = this.datos();
     if (d) this.datos.set({ ...d, traslados: d.traslados.map(x => x.operacionId === t.operacionId ? t : x) });
@@ -419,11 +398,10 @@ export class MisAsignacionesComponent {
     });
   }
 
-  // Nombres de los titulares (o de los pasajeros) del traslado, en grande
   abrirCartel(t: TrasladoConductor) {
     const mostrar = (nombres: string[]) => {
       this.cartel.set({ nombres: nombres.length ? nombres : ['Kampu Tours'], paquete: t.paqueteNombre });
-      try { document.documentElement.requestFullscreen?.().catch(() => undefined); } catch { /* sin pantalla completa */ }
+      try { document.documentElement.requestFullscreen?.().catch(() => undefined); } catch {  }
     };
     if (this.abiertoTraslado() === t.operacionId && this.recojos().length) {
       mostrar([...new Set(this.recojos().map(r => r.titular))].slice(0, 6));
@@ -436,7 +414,7 @@ export class MisAsignacionesComponent {
   }
   cerrarCartel() {
     this.cartel.set(null);
-    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined); } catch { /* nada */ }
+    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined); } catch {  }
   }
 
   detalle(salidaId: number, paqueteId: number | null, operacionId: number | null = null) {

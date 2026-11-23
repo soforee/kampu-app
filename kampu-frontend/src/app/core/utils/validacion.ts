@@ -7,8 +7,8 @@ const TEXTO = /^[\p{L}\p{N} .,;:'"()&/+#°ºª¡!¿?%-]*$/u;
 const NACIONALIDAD = /^\p{L}[\p{L} ]*$/u;
 const TELEFONO = /^\+?[0-9][0-9 ()-]*$/;
 const EMAIL = /^[^@\s]+@[^@\s]+\.[A-Za-z]{2,}$/;
-const PLACA = /^[A-Za-z0-9-]{3,10}$/;   // VEHICULO.placa VARCHAR2(10)
-const RUC = /^(10|15|17|20)\d{9}$/;      // chk_prov_ruc
+const PLACA = /^[A-Za-z0-9-]{3,10}$/;
+const RUC = /^(10|15|17|20)\d{9}$/;
 const CODIGO = /^[A-Za-z0-9 ._/#-]*$/;
 
 const debe = (campo: string) => /^(Los|Las) /.test(campo) ? 'deben' : 'debe';
@@ -105,7 +105,6 @@ export const V = {
   }
 };
 
-// Solo los dígitos de un teléfono: así se compara si está repetido (igual que el backend)
 export function digitos(telefono?: string | null): string {
   return (telefono ?? '').replace(/\D/g, '');
 }
@@ -149,7 +148,6 @@ export class FormValidacion {
     return true;
   }
 
-  // Valida solo algunos campos (un paso de un asistente): los marca como tocados para mostrar sus errores
   validos(campos: string[]): boolean {
     const errores = this.reglas();
     campos.forEach(c => this.tocar(c));

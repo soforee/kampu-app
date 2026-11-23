@@ -70,7 +70,6 @@ public class ClienteServiceImpl implements IClienteService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_bd.sql no otorga DELETE sobre CLIENTES: la cuenta se desactiva (estado_cuenta INACTIVO)
         Cliente c = obtener(id);
         if ("INACTIVO".equals(c.getEstadoCuenta())) throw new BusinessException("El cliente ya está INACTIVO.");
         c.setEstadoCuenta("INACTIVO");
@@ -86,25 +85,21 @@ public class ClienteServiceImpl implements IClienteService {
         if (!Reglas.documentoValido(dto.tipoDocumento(), dto.numeroDocumento())) {
             throw new BusinessException(Reglas.MSG_DOCUMENTO);
         }
-        // Personas: solo letras; con RUC el nombre es una razón social
         if (!"RUC".equals(dto.tipoDocumento()) && !dto.nombreCompleto().matches(Reglas.NOMBRE_PERSONA)) {
             throw new BusinessException("El nombre " + Reglas.MSG_NOMBRE_PERSONA);
         }
         String errorTelefono = Reglas.errorTelefonoPais(dto.telefono());
         if (errorTelefono != null) throw new BusinessException(errorTelefono);
         String documento = dto.numeroDocumento().trim().toUpperCase();
-        // uq_cli_numero_doc: el número de documento no se repite (sin importar el tipo)
         Optional<Cliente> existente = clienteRepository.findFirstByNumeroDocumentoIgnoreCase(documento);
         if (existente.isPresent() && !existente.get().getClienteId().equals(id)) {
             Cliente otro = existente.get();
             throw new DuplicateResourceException("El documento " + documento + " ya está registrado para "
                     + otro.getNombreCompleto() + " (" + otro.getTipoDocumento() + ").");
         }
-        // uq_cli_telefono: el teléfono no se repite
         if (clienteRepository.contarTelefono(Reglas.digitos(dto.telefono()), Reglas.idOMenosUno(id)) > 0) {
             throw new DuplicateResourceException("El teléfono " + dto.telefono().trim() + " ya está registrado para otro cliente.");
         }
-        // uq_cli_email: el correo identifica la cuenta del portal
         Optional<Cliente> mismoCorreo = clienteRepository.findFirstByEmailIgnoreCase(dto.email().trim());
         if (mismoCorreo.isPresent() && !mismoCorreo.get().getClienteId().equals(id)) {
             throw new DuplicateResourceException("El correo " + dto.email().trim() + " ya está registrado para otro cliente.");

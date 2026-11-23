@@ -11,7 +11,6 @@ public record ClienteDTO(
         String numeroDocumento,
         String email,
         String telefono,
-        // true si el cliente ya se registró en el portal web (tiene contraseña)
         boolean cuentaWeb,
         String estadoCuenta,
         LocalDateTime fechaRegistro,

@@ -19,8 +19,6 @@ import { PortalHeaderComponent } from './portal-header.component';
 
 type Filtro = 'TODOS' | EstadoEjecucion;
 
-// "Mis paquetes": GET /portal/paquetes -> VW_PAQUETES_CLIENTE (filtrada en Oracle por el cliente de la sesión).
-// v10: el cliente también reserva desde aquí (PKG_GESTION_PAQUETES_CLIENTE.reservar): paquete + fecha + cantidad.
 @Component({
   selector: 'app-mis-paquetes',
   standalone: true,
@@ -43,12 +41,10 @@ export class MisPaquetesComponent {
   private router = inject(Router);
   private cotizaciones = inject(CotizacionService);
 
-  // ---------- Reservar desde el portal ----------
   reservando = signal(false);
   enviando = signal(false);
   paquetes$ = computed(() => this.store.paquetes().filter(p => p.estado === 'ACTIVO'));
   nueva = { paqueteId: null as number | null, fecha: '', cantidad: 1, habitacionId: null as number | null };
-  // Habitaciones de hotel (paquetes con noches: elegir una es obligatorio)
   habitaciones = signal<HabitacionCotizable[]>([]);
   get conNoches() { return (this.paqueteElegido?.noches ?? 0) > 0; }
   get habitacionElegida() { return this.habitaciones().find(h => h.habitacionId === this.nueva.habitacionId); }
@@ -59,7 +55,6 @@ export class MisPaquetesComponent {
   fotoHabitacion(h: HabitacionCotizable) { return this.imagenes.url(h.imagen); }
   calendario = signal<CalendarioDia[]>([]);
   puntos = signal<PuntoRecojo[]>([]);
-  // Fechas que se pueden reservar por la web (operan, tienen cupos y cumplen la anticipación mínima)
   fechasWeb = computed(() => this.calendario().filter(d => d.reservableWeb));
   get paqueteElegido() { return this.store.getPaquete(this.nueva.paqueteId); }
 
@@ -69,7 +64,6 @@ export class MisPaquetesComponent {
     this.cotizaciones.habitaciones().subscribe({
       next: h => {
         this.habitaciones.set(h);
-        // Sin la opción «sin hotel»: se parte de la más económica y el cliente puede cambiarla
         if (this.nueva.habitacionId === null && h.length) this.nueva.habitacionId = h[0].habitacionId;
       },
       error: () => undefined
@@ -80,7 +74,6 @@ export class MisPaquetesComponent {
     if (paqueteId) this.elegirPaquete(fecha);
   }
 
-  // fecha: la que el cliente cotizó en la página principal (si sigue disponible por la web)
   elegirPaquete(fecha?: string) {
     const id = this.nueva.paqueteId;
     this.calendario.set([]);
@@ -131,7 +124,6 @@ export class MisPaquetesComponent {
 
   constructor() {
     this.cargar();
-    // ?reservar=<paqueteId>&fecha=&cantidad=: llega desde una cotización de la página principal
     const pendiente = leerReservaPendiente(this.ruta);
     if (pendiente) this.abrirReserva(pendiente.reservar, pendiente.fecha, pendiente.cantidad);
   }

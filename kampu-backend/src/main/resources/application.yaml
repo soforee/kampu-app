@@ -20,9 +20,6 @@ spring:
     deserialization:
       accept-float-as-int: false
 
-  # Correo (boleta informativa). Con Gmail usa una "contraseña de aplicación".
-  # Las credenciales se leen de variables de entorno para no subirlas a GitHub.
-  # Si MAIL_USERNAME está vacío, el envío queda desactivado (la vista previa sí funciona).
   mail:
     host: smtp.gmail.com
     port: 587
@@ -51,10 +48,11 @@ server:
 storage:
   location: "images"
 
-# OpenStreetMap (gratis, sin clave). Requiere internet en la PC donde corre el backend.
-#  - buscador-url: Photon, autocompleta el formulario de Lugares.
-#  - osrm-url: OSRM, duración y distancia por carretera de los traslados.
-# Si no responden, los lugares se llenan a mano y la duración se estima en línea recta.
+security:
+  jwt:
+    secret-key: ${KAMPU_JWT_SECRETO:th709/oSd2994iPlWdXgTgFlrZZ1rI93iLeNgrLWOCLPM9dvIGRoRV4/wEdiFbIm}
+    expiration-time: 36000000
+
 kampu:
   mapas:
     buscador-url: https://photon.komoot.io

@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-// Habitaciones de hotel de los proveedores de hospedaje (Proveedores → Habitaciones de hotel)
 @Service
 public class HabitacionService {
     private final HabitacionRepository habitacionRepository;
@@ -56,7 +55,6 @@ public class HabitacionService {
 
     @Transactional
     public void eliminar(Long id) {
-        // Las cotizaciones guardan la habitación elegida: la baja es lógica (estado INACTIVO)
         Habitacion h = obtener(id);
         if ("INACTIVO".equals(h.getEstado())) throw new BusinessException("La habitación ya está INACTIVA.");
         h.setEstado("INACTIVO");

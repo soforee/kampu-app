@@ -7,9 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-// PERSONAL (v10): cargo del catálogo CARGOS. Si el cargo requiere licencia, TRG_PERSONAL_VALIDAR la exige vigente.
 public record PersonalRequestDTO(
-        // null = personal propio de Kampu Tours
         Long proveedorId,
         @Size(max = 20, message = "El documento admite máximo 20 caracteres.")
         @Pattern(regexp = "^$|^\\s*[A-Za-z0-9]{6,20}\\s*$", message = "El documento solo admite letras y números (6 a 20 caracteres).")
@@ -32,7 +30,6 @@ public record PersonalRequestDTO(
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "DISPONIBLE|OCUPADO|INACTIVO", message = "El estado debe ser DISPONIBLE, OCUPADO o INACTIVO.")
         String estado,
-        // Guía (opcionales): carné DIRCETUR / MINCETUR con su vencimiento, e idiomas
         @Size(max = 30, message = "El carné admite máximo 30 caracteres.")
         @Pattern(regexp = "^$|^[A-Za-z0-9-]{3,30}$", message = "El carné solo admite letras, números y guion.")
         String carneGuia,

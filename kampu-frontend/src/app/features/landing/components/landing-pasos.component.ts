@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
 
-// "Cómo funciona": el recorrido real de un cliente en el sistema
 @Component({
   selector: 'app-landing-pasos',
   standalone: true,

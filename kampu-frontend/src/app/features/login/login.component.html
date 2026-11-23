@@ -1,7 +1,5 @@
-<!-- Login a pantalla completa: foto a sangre (izquierda, mismo lenguaje que la portada) y panel blanco a toda altura con el formulario -->
 <div class="grid min-h-screen bg-white [min-height:100svh] lg:grid-cols-[1.25fr_1fr]">
 
-  <!-- Foto de destinos con fundido, título y barras como en la portada -->
   <section class="foto-panel relative min-h-[34vh] overflow-hidden bg-brand-950 lg:min-h-0">
     @for (f of fotos; track f.clave; let i = $index) {
       <img [src]="f.src" [alt]="i === foto() ? f.lugar + ', ' + f.region : ''" class="foto" [class.activa]="i === foto()" [attr.aria-hidden]="i !== foto()">
@@ -32,7 +30,6 @@
     </div>
   </section>
 
-  <!-- Formulario -->
   <section class="flex flex-col px-6 py-8 sm:px-12 lg:px-14 xl:px-20" aria-labelledby="titulo-login">
     <div class="entra entra-1 flex justify-end">
       <a routerLink="/" class="inline-flex items-center gap-1.5 text-sm text-zinc-500 transition-colors hover:text-zinc-900">

@@ -4,19 +4,15 @@ import { LoginComponent } from './features/login/login.component';
 import { ShellComponent } from './layout/shell.component';
 import { clienteGuard, panelGuard, permisoGuard, personalGuard } from './core/services/guards';
 
-// Permiso que exige cada pantalla (PKG_SEGURIDAD_ROLES; el backend vuelve a validarlo en cada petición)
 const permiso = (p: string) => ({ permiso: p });
 
 export const routes: Routes = [
   { path: '', component: LandingComponent, pathMatch: 'full' },
   { path: 'login', component: LoginComponent },
-  // (v11) Cotización sin cuenta: cotizador, una cotización (código + clave) y su seguimiento
   { path: 'cotizar/:paqueteId', loadComponent: () => import('./features/cotizar/cotizador.component').then(m => m.CotizadorComponent) },
   { path: 'cotizacion/:codigo', loadComponent: () => import('./features/cotizar/cotizacion-detalle.component').then(m => m.CotizacionDetalleComponent) },
-  // Invitado con su cotización ya RESERVADA: gestiona la reserva como un cliente, con el código + clave
   { path: 'cotizacion/:codigo/reserva', loadComponent: () => import('./features/portal/paquete-cliente.component').then(m => m.PaqueteClienteComponent) },
   { path: 'seguimiento', loadComponent: () => import('./features/cotizar/seguimiento.component').then(m => m.SeguimientoComponent) },
-  // Módulo de clientes (v4)
   { path: 'registro', loadComponent: () => import('./features/portal/registro.component').then(m => m.RegistroComponent) },
   { path: 'mi-cuenta', loadComponent: () => import('./features/portal/mis-paquetes.component').then(m => m.MisPaquetesComponent), canActivate: [clienteGuard] },
   { path: 'mi-cuenta/paquetes/:id', loadComponent: () => import('./features/portal/paquete-cliente.component').then(m => m.PaqueteClienteComponent), canActivate: [clienteGuard] },
@@ -27,11 +23,9 @@ export const routes: Routes = [
     canActivateChild: [permisoGuard],
     children: [
       { path: 'dashboard', loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent), canActivate: [panelGuard] },
-      // (v11) Solicitudes que llegan por cotización, catálogo de adicionales y asignaciones del personal de campo
       { path: 'cotizaciones', loadComponent: () => import('./features/cotizaciones/cotizaciones.component').then(m => m.CotizacionesComponent), data: permiso('VER_COTIZACIONES') },
       { path: 'servicios-adicionales', loadComponent: () => import('./features/servicios/servicios.component').then(m => m.ServiciosComponent), data: permiso('GESTIONAR_CATALOGO') },
       { path: 'mis-asignaciones', loadComponent: () => import('./features/asignaciones/mis-asignaciones.component').then(m => m.MisAsignacionesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
-      // Panel de campo: historial y vehículo (conductor); novedades y disponibilidad (guía y conductor)
       { path: 'historial-viajes', loadComponent: () => import('./features/campo/historial.component').then(m => m.HistorialViajesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'historial-tours', loadComponent: () => import('./features/campo/historial-tours.component').then(m => m.HistorialToursComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
       { path: 'mi-vehiculo', loadComponent: () => import('./features/campo/mi-vehiculo.component').then(m => m.MiVehiculoComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
@@ -47,7 +41,6 @@ export const routes: Routes = [
       { path: 'pagos', loadComponent: () => import('./features/pagos/pagos.component').then(m => m.PagosComponent), data: permiso('VER_MONTOS') },
       { path: 'clientes', loadComponent: () => import('./features/clientes/clientes.component').then(m => m.ClientesComponent), data: permiso('VER_CLIENTES') },
       { path: 'operaciones', loadComponent: () => import('./features/operaciones/operaciones.component').then(m => m.OperacionesComponent), data: permiso('VER_OPERACIONES') },
-      // Logística dividida: personal propio (nace en Usuarios), flota propia y proveedores (con su personal, flota y los lugares)
       { path: 'personal', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'personal' } },
       { path: 'vehiculos', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'vehiculos' } },
       { path: 'proveedores', loadComponent: () => import('./features/recursos/recursos.component').then(m => m.RecursosComponent), data: { ...permiso('VER_LOGISTICA'), seccion: 'proveedores' } },

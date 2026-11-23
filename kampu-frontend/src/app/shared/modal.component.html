@@ -1,4 +1,4 @@
-<div class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" [attr.aria-labelledby]="idTitulo">
+<div (keydown)="teclado($event)" class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-6" role="dialog" aria-modal="true" [attr.aria-labelledby]="idTitulo">
   <div class="absolute inset-0 bg-brand-950/30 animate-fade-in transition-opacity duration-150" [class.opacity-0]="saliendo()" (click)="pedirCierre()"></div>
   <div data-panel tabindex="-1"
        class="relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-modal outline-none animate-pop-in sm:max-h-[calc(100vh-3rem)] sm:rounded-2xl"

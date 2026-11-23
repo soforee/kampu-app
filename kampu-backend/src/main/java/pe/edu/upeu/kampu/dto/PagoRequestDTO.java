@@ -14,7 +14,6 @@ public record PagoRequestDTO(
         @NotNull(message = "La moneda es obligatoria.")
         @Pattern(regexp = "PEN|USD|EUR", message = "La moneda debe ser PEN, USD o EUR.")
         String moneda,
-        // chk_pag_metodo (v10)
         @NotNull(message = "Selecciona el método de pago.")
         @Pattern(regexp = "EFECTIVO|TRANSFERENCIA|DEPOSITO|YAPE|PLIN|TARJETA|PASARELA", message = "Método de pago no válido (EFECTIVO, TRANSFERENCIA, DEPOSITO, YAPE, PLIN, TARJETA, PASARELA).")
         String metodoPago,

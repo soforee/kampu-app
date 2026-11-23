@@ -3,7 +3,6 @@ import { Notificacion } from '../models';
 import { AuthService } from './auth.service';
 import { CampoService } from './campo.service';
 
-// Campana: avisos que escribe la BD (NOTIFICACIONES) para el usuario con sesión. Se consultan cada minuto.
 @Injectable({ providedIn: 'root' })
 export class NotificacionesService {
   private campo = inject(CampoService);
@@ -30,7 +29,6 @@ export class NotificacionesService {
   }
 
   cargar() {
-    // Solo el personal interno (el cliente del portal no usa la campana)
     if (!this.auth.autenticado() || this.auth.esCliente()) { this.detener(); return; }
     this.campo.notificaciones().subscribe({
       next: l => { this.lista.set(l); this.sinLeer.set(l.filter(n => !n.leida).length); },
@@ -38,7 +36,6 @@ export class NotificacionesService {
     });
   }
 
-  // Quedan leídas en la BD; en pantalla se siguen viendo resaltadas hasta la próxima consulta
   marcarLeidas() {
     if (!this.sinLeer()) return;
     this.sinLeer.set(0);

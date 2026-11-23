@@ -21,17 +21,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 
-/**
- * Cotizaciones (v11). Todo pasa por PKG_COTIZACIONES: la base calcula precios con las reglas de venta del
- * paquete, valida la clave, guarda el historial (AUDITORIA) y controla los estados.
- *
- * Acceso del visitante sin cuenta: código (KC-2026-000123, no es secreto) + clave (12 caracteres, se
- * muestra una sola vez). La base guarda solo el SHA-256 de la clave y bloquea el código 30 minutos tras
- * 10 claves erradas. Un cliente con sesión abre sus propias cotizaciones sin clave.
- */
 @Service
 public class CotizacionService {
-    // Sin 0/O, 1/I/L: se dicta y se copia sin confusiones
     private static final char[] ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789".toCharArray();
     private static final SecureRandom AZAR = new SecureRandom();
 
@@ -43,9 +34,6 @@ public class CotizacionService {
         this.catalogo = catalogo;
     }
 
-    // ---------------------------------------------------------------- público
-
-    /** Vista previa: precios y disponibilidad sin guardar nada. */
     @Transactional(readOnly = true)
     public Calculo calcular(Datos d) {
         return traducir(() -> jdbc.execute((Connection con) -> {
@@ -71,7 +59,7 @@ public class CotizacionService {
                 Map<String, Object> p = jdbc.queryForMap("SELECT nombre, dias, noches, hora_inicio, anticipacion_min_horas "
                         + "FROM PAQUETES_TOUR WHERE paquete_id = ?", d.paqueteId());
                 BigDecimal precio = cs.getBigDecimal(7);
-                BigDecimal adicionales = cs.getBigDecimal(8);   // servicios + habitación (calculado por la BD)
+                BigDecimal adicionales = cs.getBigDecimal(8);
                 BigDecimal montoPaquete = precio.multiply(BigDecimal.valueOf(d.cantidad()));
                 int dias = ((Number) p.get("DIAS")).intValue();
                 int noches = ((Number) p.get("NOCHES")).intValue();
@@ -87,7 +75,6 @@ public class CotizacionService {
         }));
     }
 
-    /** Guarda la cotización y devuelve su código y clave (la clave no se vuelve a mostrar). */
     @Transactional
     public Creada crear(Datos d) {
         String clave = nuevaClave();
@@ -110,7 +97,6 @@ public class CotizacionService {
         return new Creada(c.codigo(), formatear(clave), c);
     }
 
-    /** Abre una cotización con su código y clave (o sin clave si es del cliente con sesión). */
     @Transactional(noRollbackFor = {AccesoDenegadoException.class, DemasiadasSolicitudesException.class})
     public Cotizacion abrir(String codigo, String clave) {
         vencer();
@@ -138,7 +124,6 @@ public class CotizacionService {
         return detalle(id, false);
     }
 
-    /** El visitante acepta la cotización y pide reservar (sin crear cuenta). */
     @Transactional
     public Cotizacion solicitar(String codigo, Solicitud s) {
         long id = acceder(codigo, s.clave());
@@ -171,13 +156,11 @@ public class CotizacionService {
         return detalle(id, false);
     }
 
-    /** Datos para el PDF del visitante (mismo control de acceso que abrir). */
     @Transactional(noRollbackFor = {AccesoDenegadoException.class, DemasiadasSolicitudesException.class})
     public Cotizacion paraPdf(String codigo, String clave) {
         return detalle(acceder(codigo, clave), false);
     }
 
-    /** Cotizaciones del cliente con sesión (portal). */
     @Transactional
     public List<Cotizacion> delCliente() {
         SesionUsuario s = SesionActual.get();
@@ -186,8 +169,6 @@ public class CotizacionService {
         return jdbc.queryForList("SELECT cotizacion_id FROM COTIZACIONES WHERE cliente_id = ? ORDER BY fecha_creacion DESC",
                 Long.class, s.clienteId()).stream().map(id -> detalle(id, false)).toList();
     }
-
-    // ---------------------------------------------------------------- personal
 
     @Transactional
     public List<Cotizacion> listar(String estado) {
@@ -206,7 +187,6 @@ public class CotizacionService {
         return detalle(id, true);
     }
 
-    /** SOLICITADA -> RESERVADA: busca o crea el cliente (sin cuenta web) y crea la reserva PENDIENTE. */
     @Transactional
     public Cotizacion confirmar(Long id) {
         existe(id);
@@ -228,9 +208,6 @@ public class CotizacionService {
         return detalle(id, true);
     }
 
-    // ---------------------------------------------------------------- internos
-
-    // Id de la cotización si la clave es la suya (PKG_COTIZACIONES.acceder cuenta los intentos) o si es del cliente con sesión
     private long acceder(String codigo, String clave) {
         String cod = codigo == null ? "" : codigo.trim().toUpperCase();
         SesionUsuario s = SesionActual.get();
@@ -295,7 +272,6 @@ public class CotizacionService {
         BigDecimal montoPaquete = precio.multiply(BigDecimal.valueOf(adultos + ninos));
         LocalDate fecha = fecha(f.get("FECHA_VIAJE"));
         String horaInicio = (String) f.get("HORA_INICIO");
-        // Habitación de hotel con la tarifa congelada al cotizar
         BigDecimal hospedaje = f.get("MONTO_HOSPEDAJE") == null ? BigDecimal.ZERO : dec(f.get("MONTO_HOSPEDAJE"));
         HabitacionElegida habitacion = f.get("HABITACION_ID") == null ? null : new HabitacionElegida(lng(f.get("HABITACION_ID")),
                 (String) f.get("HABITACION_NOMBRE"), (String) f.get("HOTEL"), (String) f.get("HABITACION_IMAGEN"),
@@ -307,7 +283,6 @@ public class CotizacionService {
                 + "FROM AUDITORIA WHERE entidad = 'COTIZACION' AND entidad_id = ? ORDER BY fecha, auditoria_id", (rs, i) ->
                 new Evento(rs.getTimestamp("fecha").toLocalDateTime(), rs.getString("campo"), rs.getString("valor_anterior"),
                         rs.getString("valor_nuevo"), personal ? rs.getString("detalle") : null,
-                        // El visitante ve quién actuó por tipo (usted / la agencia), no los usuarios internos
                         personal ? rs.getString("usuario") + " (" + rs.getString("rol_usuario") + ")"
                                 : actorPublico(rs.getString("rol_usuario"))), id) : List.of();
         return new Cotizacion(personal ? id : null, (String) f.get("CODIGO_COTIZACION"), (String) f.get("ESTADO"),
@@ -325,7 +300,6 @@ public class CotizacionService {
                 decONulo(f.get("TOTAL_RESERVA")), decONulo(f.get("MONTO_PAGADO")), historial);
     }
 
-    // Quién la creó: un visitante (PKG_COTIZACIONES deja "invitado KC-...") o un cliente con sesión
     private static String origen(Map<String, Object> f) {
         String creador = (String) f.get("CREADO_POR");
         return creador == null || creador.startsWith("invitado ") ? "INVITADO" : "CLIENTE";
@@ -342,7 +316,6 @@ public class CotizacionService {
                 rs.getBigDecimal("precio_unitario"), rs.getBigDecimal("subtotal"));
     }
 
-    // Habitación para la vista previa (la BD ya validó que se puede cotizar; misma fórmula que PKG_COTIZACIONES.hospedaje)
     private HabitacionElegida habitacionDe(Long habitacionId, int noches, int cantidad) {
         if (habitacionId == null || noches < 1) return null;
         Map<String, Object> h = jdbc.queryForMap("SELECT h.nombre, h.imagen, h.modalidad_precio, h.precio_noche, "
@@ -355,7 +328,6 @@ public class CotizacionService {
                 (String) h.get("IMAGEN"), modalidad, precio, noches, subtotal);
     }
 
-    /** Habitaciones de hotel activas de proveedores de hospedaje activos: obligatorias si el paquete tiene noches. */
     @Transactional(readOnly = true)
     public List<HabitacionCotizable> habitaciones() {
         return jdbc.query("SELECT h.habitacion_id, h.nombre, h.descripcion, p.nombre_comercial, h.imagen, "
@@ -367,14 +339,14 @@ public class CotizacionService {
                         rs.getString("modalidad_precio"), rs.getBigDecimal("precio_noche")));
     }
 
-    // Errores de la base: clave errada -> 403, código bloqueado -> 429; el resto lo traduce ErroresOracle (400)
     private <T> T traducir(java.util.function.Supplier<T> accion) {
         try {
             return accion.get();
         } catch (DataAccessException e) {
             Throwable t = e;
             while (t != null && !(t instanceof SQLException)) t = t.getCause();
-            if (t instanceof SQLException sql) {
+            if (t instanceof SQLException) {
+                SQLException sql = (SQLException) t;
                 if (sql.getErrorCode() == 20512) {
                     throw new AccesoDenegadoException("El código o la clave de la cotización no son correctos.");
                 }
@@ -400,7 +372,6 @@ public class CotizacionService {
         return new String(c);
     }
 
-    // "abcd-efgh-jkmn" y "ABCDEFGHJKMN" son la misma clave
     static String normalizar(String clave) {
         return clave == null ? "" : clave.toUpperCase().replaceAll("[^A-Z0-9]", "");
     }
@@ -453,16 +424,16 @@ public class CotizacionService {
     }
 
     private static LocalDate fecha(Object o) {
-        if (o instanceof Timestamp t) return t.toLocalDateTime().toLocalDate();
-        if (o instanceof java.sql.Date d) return d.toLocalDate();
-        if (o instanceof java.time.LocalDateTime l) return l.toLocalDate();
+        if (o instanceof Timestamp) return ((Timestamp) o).toLocalDateTime().toLocalDate();
+        if (o instanceof java.sql.Date) return ((java.sql.Date) o).toLocalDate();
+        if (o instanceof java.time.LocalDateTime) return ((java.time.LocalDateTime) o).toLocalDate();
         return LocalDate.parse(o.toString().substring(0, 10));
     }
 
     private static java.time.LocalDateTime fechaHora(Object o) {
         if (o == null) return null;
-        if (o instanceof Timestamp t) return t.toLocalDateTime();
-        if (o instanceof java.time.LocalDateTime l) return l;
-        return null;   // JdbcTemplate ya convierte oracle.sql.TIMESTAMP a java.sql.Timestamp
+        if (o instanceof Timestamp) return ((Timestamp) o).toLocalDateTime();
+        if (o instanceof java.time.LocalDateTime) return (java.time.LocalDateTime) o;
+        return null;
     }
 }

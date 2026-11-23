@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mail.MailException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.TransactionSystemException;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
@@ -21,6 +22,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import pe.edu.upeu.kampu.dto.ErrorDTO;
+import pe.edu.upeu.kampu.seguridad.SesionActual;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -35,6 +37,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorDTO> noEncontrado(ResourceNotFoundException e) {
         return responder(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorDTO> sinPermiso(AccessDeniedException e) {
+        if (SesionActual.get() == null) {
+            return responder(HttpStatus.UNAUTHORIZED, "Inicia sesión para continuar.");
+        }
+        return responder(HttpStatus.FORBIDDEN, CustomAccessDeniedHandler.mensaje());
     }
 
     @ExceptionHandler(AccesoDenegadoException.class)
@@ -137,8 +147,6 @@ public class GlobalExceptionHandler {
         return responder(HttpStatus.PAYLOAD_TOO_LARGE, "La imagen supera el tamaño máximo permitido.");
     }
 
-    // Errores de la base de datos: reglas de los triggers y paquetes PL/SQL (ORA-20xxx)
-    // y restricciones UNIQUE, CHECK y FK (ver ErroresOracle)
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorDTO> integridad(DataIntegrityViolationException e) {
         String mensaje = ErroresOracle.mensaje(e);
@@ -168,7 +176,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorDTO> general(Exception e, jakarta.servlet.http.HttpServletRequest req) {
         String mensajeOracle = ErroresOracle.mensaje(e);
         if (mensajeOracle != null) return responder(HttpStatus.BAD_REQUEST, mensajeOracle);
-        // La petición que falló ayuda a ubicar el problema (el detalle técnico no se envía al navegador)
         System.err.println("Error no controlado en " + req.getMethod() + " " + req.getRequestURI() + ": " + e.getMessage());
         e.printStackTrace();
         return responder(HttpStatus.INTERNAL_SERVER_ERROR, "Ocurrió un error inesperado en el servidor.");

@@ -34,7 +34,6 @@
           <div class="px-4 py-4 text-sm text-zinc-500">No hay clientes que coincidan con «{{ texto().trim() }}».</div>
         }
         @for (c of resultados(); track c.clienteId; let i = $index) {
-          <!-- mousedown evita que el input pierda el foco antes de elegir -->
           <div class="opcion" role="option" [id]="'cliente-opcion-' + i" [attr.aria-selected]="i === activo()"
                [class.opcion-activa]="i === activo()" (mouseenter)="activo.set(i)"
                (mousedown)="$event.preventDefault(); elegir(c)">

@@ -4,7 +4,6 @@ import { Observable } from 'rxjs';
 import { FiltroAuditoria, Pagina, RegistroAuditoria } from '../models';
 import { API } from '../utils/api';
 
-// Bitácora AUDITORIA (solo ADMIN: el backend exige VER_AUDITORIA)
 @Injectable({ providedIn: 'root' })
 export class AuditoriaService {
   private http = inject(HttpClient);
@@ -18,7 +17,6 @@ export class AuditoriaService {
     return this.http.get<{ entidades: string[]; usuarios: string[] }>(`${API}/auditoria/filtros`);
   }
 
-  // CSV con los mismos filtros (se descarga con el token de la sesión)
   exportar(f: FiltroAuditoria): Observable<Blob> {
     return this.http.get(`${API}/auditoria/exportar`, { params: this.params(f), responseType: 'blob' });
   }

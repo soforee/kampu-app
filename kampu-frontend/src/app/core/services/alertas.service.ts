@@ -4,14 +4,11 @@ import { Alerta } from '../models';
 import { cuando, diasHasta } from '../utils/date.util';
 import { TourStore } from './tour-store.service';
 
-// Ventanas de aviso (días)
 const DIAS_SALIDA = 7;
 const DIAS_SIN_CONFIRMAR = 3;
 const DIAS_LICENCIA = 30;
 const DIAS_MANTENIMIENTO = 15;
 
-// Lo que el tour manager debe resolver antes de que sea un problema.
-// Solo usa las listas que la sesión puede leer, así cada rol ve los avisos de su trabajo.
 @Injectable({ providedIn: 'root' })
 export class AlertasService {
   private store = inject(TourStore);
@@ -19,11 +16,9 @@ export class AlertasService {
 
   lista = computed<Alerta[]>(() => {
     const alertas: Alerta[] = [];
-    // (v11) Avisos de gestión de salidas: no aplican a guías ni conductores (no gestionan salidas)
     if (!this.auth.puede('VER_RESUMEN')) return alertas;
     const activa = (estado: string) => estado === 'PROGRAMADA' || estado === 'GARANTIZADA';
 
-    // v10: solicitudes de anulación del portal pendientes (Ventas aprueba con reembolso o rechaza)
     for (const sol of this.store.solicitudes()) {
       if (sol.estado !== 'PENDIENTE') continue;
       alertas.push({
@@ -32,7 +27,6 @@ export class AlertasService {
       });
     }
 
-    // Salidas próximas o que ya terminaron y siguen abiertas
     for (const s of this.store.salidas()) {
       if (!activa(s.estado)) continue;
       const nombre = this.store.getPaquete(s.paqueteId)?.nombre ?? 'Salida';
@@ -63,7 +57,6 @@ export class AlertasService {
       }
     }
 
-    // Reservas que siguen pendientes con el viaje encima
     for (const r of this.store.reservas()) {
       if (r.estadoReserva !== 'PENDIENTE') continue;
       const s = this.store.getSalida(r.salidaId);
@@ -78,7 +71,6 @@ export class AlertasService {
       });
     }
 
-    // Pagos informados que esperan validación
     const porValidar = this.store.pagos().filter(p => p.estadoTransaccion === 'PENDIENTE').length;
     if (porValidar > 0) {
       alertas.push({
@@ -87,7 +79,6 @@ export class AlertasService {
       });
     }
 
-    // Traslados sueltos (sin salida) que salen pronto y no tienen vehículo
     for (const o of this.store.operaciones()) {
       if (o.salidaId !== null || o.estadoActual !== 'PROGRAMADO') continue;
       const dias = diasHasta(o.horaProgramadaSalida);
@@ -98,7 +89,6 @@ export class AlertasService {
       });
     }
 
-    // Licencias de conducir y mantenimiento de la flota
     for (const p of this.store.personal()) {
       if (p.estado === 'INACTIVO' || p.funcion !== 'TRANSPORTE' || !p.vencLicencia) continue;
       const dias = diasHasta(p.vencLicencia);
@@ -125,7 +115,6 @@ export class AlertasService {
     return alertas.sort((a, b) => (a.nivel === b.nivel ? 0 : a.nivel === 'alta' ? -1 : 1));
   });
 
-  // ["no tiene guía", "falta transporte"] -> "No tiene guía y falta transporte."
   private frase(partes: string[]): string {
     const texto = partes.length === 1 ? partes[0] : partes.slice(0, -1).join(', ') + ' y ' + partes[partes.length - 1];
     return texto.charAt(0).toUpperCase() + texto.slice(1) + '.';

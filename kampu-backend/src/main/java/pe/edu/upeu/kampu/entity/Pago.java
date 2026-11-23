@@ -5,8 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// PAGOS (v10): TRG_VALIDAR_PAGO_PAQUETE valida el ciclo del pago, registra quien lo registra/valida
-// y recalcula la reserva (monto_pagado, estado_pago y confirmacion automatica).
 @Entity
 @DynamicUpdate
 @Table(name = "PAGOS")

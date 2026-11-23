@@ -6,8 +6,6 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-// Alta de un usuario interno por el administrador (USUARIOS_SISTEMA, chk_usu_rol).
-// GUIA y CONDUCTOR: con la cuenta se crea su ficha de PERSONAL propio (documento, teléfono y, el conductor, licencia).
 public record UsuarioRequestDTO(
         @NotBlank(message = "Ingresa el nombre de usuario.")
         @Size(min = 3, max = 50, message = "El usuario debe tener entre 3 y 50 caracteres.")
@@ -25,7 +23,6 @@ public record UsuarioRequestDTO(
         @Pattern(regexp = "ADMIN|VENTAS|GUIA|CONDUCTOR",
                 message = "El rol debe ser ADMIN, VENTAS, GUIA o CONDUCTOR.")
         String rol,
-        // Solo GUIA y CONDUCTOR (datos de su ficha de personal)
         @Size(max = 20, message = "El documento admite máximo 20 caracteres.")
         @Pattern(regexp = "^$|^\\s*[A-Za-z0-9]{6,20}\\s*$", message = "El documento solo admite letras y números (6 a 20 caracteres).")
         String numeroDocumento,

@@ -3,7 +3,6 @@ package pe.edu.upeu.kampu.entity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.DynamicUpdate;
 
-// CARGOS (v10): catalogo de cargos del personal. funcion: GUIADO, TRANSPORTE o APOYO.
 @Entity
 @DynamicUpdate
 @Table(name = "CARGOS")

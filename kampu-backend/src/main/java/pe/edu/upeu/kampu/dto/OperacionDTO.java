@@ -2,7 +2,6 @@ package pe.edu.upeu.kampu.dto;
 
 import java.time.LocalDateTime;
 
-// Operación de transporte con los nombres para el tablero (FIDS)
 public record OperacionDTO(
         Long operacionId,
         String codigoOperacion,
@@ -25,7 +24,6 @@ public record OperacionDTO(
         String conductor,
         String estadoNombre,
         Integer ordenEstado,
-        // Del historial: cuándo salió y llegó realmente y los minutos de retraso
         LocalDateTime horaRealSalida,
         LocalDateTime horaRealLlegada,
         Integer minRetrasoSalida,

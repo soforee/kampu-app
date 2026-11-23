@@ -4,7 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-// Fila de VW_PAQUETES_CLIENTE (v10): reserva del cliente con estado de ejecución, de pago y recojo
 public record PortalPaqueteDTO(
         Long reservaId,
         String codigoReserva,
@@ -23,9 +22,7 @@ public record PortalPaqueteDTO(
         BigDecimal descuento,
         LocalDateTime fechaReserva,
         String estadoReserva,
-        // POR_EMPEZAR / EN_CURSO / TERMINADO (CANCELADO)
         String estadoEjecucion,
-        // PAGADO_COMPLETO / FALTA_PAGAR / PENDIENTE_PAGO (ANULADO)
         String estadoPago,
         BigDecimal montoTotal,
         BigDecimal montoPagado,
@@ -34,7 +31,6 @@ public record PortalPaqueteDTO(
         String puntoRecojo,
         String direccionRecojo,
         LocalDateTime horaRecojo,
-        // Habitación de hotel elegida (paquetes con noches) y su costo (incluido en montoTotal)
         String habitacion,
         String hotel,
         BigDecimal montoHospedaje

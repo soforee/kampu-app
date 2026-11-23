@@ -9,7 +9,6 @@ import { duracion } from '../../core/utils/etiquetas';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-// Conductor: traslados ya finalizados, con filtros y el total de horas trabajadas
 @Component({
   selector: 'app-historial-viajes',
   standalone: true,
@@ -63,7 +62,6 @@ export class HistorialViajesComponent {
   error = signal('');
   texto = duracion;
 
-  // Duración real (inicio y fin marcados por el conductor) o, si no hay, la programada
   minutos(t: TrasladoConductor): number {
     const ini = new Date(t.inicioReal ?? t.horaSalida).getTime();
     const fin = new Date(t.finReal ?? t.horaLlegada).getTime();

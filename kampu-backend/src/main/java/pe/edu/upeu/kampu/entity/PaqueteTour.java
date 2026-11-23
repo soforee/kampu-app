@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import org.hibernate.annotations.DynamicUpdate;
 
-// PAQUETES_TOUR (v10): catalogo y reglas para crear salidas al reservar
 @Entity
 @DynamicUpdate
 @Table(name = "PAQUETES_TOUR")
@@ -50,7 +49,6 @@ public class PaqueteTour {
     @Column(name = "estado")
     private String estado;
 
-    // (v11) Lo que incluye el paquete, uno por línea
     @Column(name = "servicios_incluidos")
     private String serviciosIncluidos;
 

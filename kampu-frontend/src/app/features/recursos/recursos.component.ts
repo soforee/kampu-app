@@ -1,8 +1,8 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { catchError, debounceTime, distinctUntilChanged, Observable, Subject } from 'rxjs';
+import { Observable } from 'rxjs';
 import {
   CategoriaLicencia, EstadoPersonal, EstadoProveedor, EstadoVehiculo, HabitacionForm, Lugar, LugarForm, LugarSugerido, PersonalForm, ProveedorForm,
   RolPersonal, TipoLugar, TipoVehiculo, VehiculoForm
@@ -21,15 +21,8 @@ import { ImagenService } from '../../core/services/imagen.service';
 import { of, switchMap } from 'rxjs';
 
 type Tab = 'proveedores' | 'personal' | 'vehiculos' | 'habitaciones' | 'lugares';
-// Sección del menú (data.seccion de la ruta):
-//  - personal: personal PROPIO (nace en Usuarios con su cuenta); aquí solo se activa o desactiva.
-//  - vehiculos: flota PROPIA (sin proveedor).
-//  - proveedores: terceros, con su personal, su flota, las habitaciones de hotel y los lugares.
 type Seccion = 'personal' | 'vehiculos' | 'proveedores';
 
-/**
- * Logística dividida en tres secciones que comparten este componente (proveedor_id NULL = propio de la agencia).
- */
 import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-recursos',
@@ -37,18 +30,16 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
   imports: [PageHeaderComponent, FormsModule, DatePipe, DecimalPipe, IconComponent, BadgeComponent, ModalComponent],
   templateUrl: './recursos.component.html'
 })
-export class RecursosComponent {
+export class RecursosComponent implements OnDestroy {
   store = inject(TourStore);
   private alerts = inject(AlertService);
   private auth = inject(AuthService);
   imagenes = inject(ImagenService);
-  // Foto de la habitación elegida en el formulario (se sube al guardar)
   foto: File | null = null;
   vistaFoto = signal<string | null>(null);
 
   private ruta = inject(ActivatedRoute);
   seccion: Seccion = (this.ruta.snapshot.data['seccion'] as Seccion) ?? 'proveedores';
-  // Personal y Vehículos muestran solo lo propio; Proveedores, solo lo de terceros
   propio = this.seccion !== 'proveedores';
   encabezado = {
     personal: { titulo: 'Personal', subtitulo: 'Guías y conductores propios de la agencia. Se registran en Usuarios al crear su cuenta.' },
@@ -56,7 +47,6 @@ export class RecursosComponent {
     proveedores: { titulo: 'Proveedores', subtitulo: 'Proveedores externos con sus guías, conductores, vehículos y habitaciones de hotel, y los lugares de la operación.' }
   }[this.seccion];
 
-  // nueva: el botón dice «Nueva …» (femenino)
   tabs: { id: Tab; texto: string; icono: string; singular: string; nueva?: boolean }[] = this.seccion === 'personal'
     ? [{ id: 'personal', texto: 'Personal', icono: 'id', singular: 'guía o conductor' }]
     : this.seccion === 'vehiculos'
@@ -70,7 +60,6 @@ export class RecursosComponent {
       ];
   categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
   estadosProveedor: EstadoProveedor[] = ['ACTIVO', 'INACTIVO', 'SUSPENDIDO'];
-  // Cargos del catálogo CARGOS (v10): store.cargos()
   estadosPersonal: EstadoPersonal[] = ['DISPONIBLE', 'OCUPADO', 'INACTIVO'];
   tiposVehiculo: TipoVehiculo[] = ['AUTO', 'CAMIONETA_4X4', 'VAN', 'MINIBUS', 'BUS'];
   estadosVehiculo: EstadoVehiculo[] = ['OPERATIVO', 'MANTENIMIENTO', 'INACTIVO'];
@@ -80,53 +69,42 @@ export class RecursosComponent {
   hoy = hoy();
   pronto = addDays(hoy(), 30);
 
-  // ?tab=personal|vehiculos|lugares (sección Proveedores): llega desde los avisos del panel
   tab = signal<Tab>(this.tabInicial());
   private tabInicial(): Tab {
     if (this.seccion !== 'proveedores') return this.seccion;
     const t = this.ruta.snapshot.queryParamMap.get('tab');
     return t === 'personal' || t === 'vehiculos' || t === 'habitaciones' || t === 'lugares' ? t : 'proveedores';
   }
-  // null = todos los proveedores · n = un proveedor
   filtroProveedor = signal<number | null>(null);
-  // '' = todos · GUIA = función GUIADO · CONDUCTOR = función TRANSPORTE
   filtroRol = signal<'' | 'GUIA' | 'CONDUCTOR'>('');
   abierto = signal(false);
   editId: number | null = null;
 
-
-  // Al entrar se piden de nuevo: el personal propio se crea desde Usuarios (otra pantalla)
   constructor() {
     this.store.cargarPersonal();
     this.store.cargarCargos();
     this.store.cargarVehiculos();
     this.store.cargarProveedores();
     if (this.seccion === 'proveedores') this.store.cargarHabitaciones();
-    // Buscador de lugares: espera a que se deje de escribir antes de consultar OpenStreetMap
-    const sub = this.textoBusqueda.pipe(debounceTime(450), distinctUntilChanged(), switchMap(q => {
-      if (q.length < 3) { this.buscando.set(false); return of(null); }
-      this.buscando.set(true);
-      return this.store.buscarLugares(q).pipe(catchError(() => of([] as LugarSugerido[])));
-    })).subscribe(r => {
-      this.buscando.set(false);
-      this.sugerencias.set(r ?? []);
-      this.sinResultados.set(r !== null && r.length === 0);
-    });
-    inject(DestroyRef).onDestroy(() => sub.unsubscribe());
   }
 
-  // ---------- Buscador de lugares (OpenStreetMap) ----------
+  ngOnDestroy() {
+    if (this.temporizadorBusqueda) clearTimeout(this.temporizadorBusqueda);
+    this.numeroBusqueda++;
+  }
+
   busqueda = '';
-  private textoBusqueda = new Subject<string>();
+  private temporizadorBusqueda: ReturnType<typeof setTimeout> | null = null;
+  private ultimaBusqueda: string | null = null;
+  private numeroBusqueda = 0;
   sugerencias = signal<LugarSugerido[]>([]);
   buscando = signal(false);
   sinResultados = signal(false);
   buscar(texto: string) {
     this.sinResultados.set(false);
     if (texto.trim().length < 3) this.sugerencias.set([]);
-    this.textoBusqueda.next(texto.trim());
+    this.programarBusqueda(texto.trim());
   }
-  // Llena el formulario con la sugerencia; luego se puede corregir a mano
   usarSugerencia(s: LugarSugerido) {
     const tipo = this.lugar.tipoLugar === 'OFICINA' && this.editId ? 'OFICINA' : s.tipoLugar;
     this.lugar = { ...this.lugar, nombre: s.nombre.slice(0, 150), tipoLugar: tipo, ciudad: (s.ciudad || this.lugar.ciudad).slice(0, 100),
@@ -138,7 +116,37 @@ export class RecursosComponent {
     this.busqueda = '';
     this.sugerencias.set([]);
     this.sinResultados.set(false);
-    this.textoBusqueda.next('');
+    this.programarBusqueda('');
+  }
+  private programarBusqueda(q: string) {
+    if (this.temporizadorBusqueda) clearTimeout(this.temporizadorBusqueda);
+    this.temporizadorBusqueda = setTimeout(() => this.consultarLugares(q), 450);
+  }
+  private consultarLugares(q: string) {
+    if (q === this.ultimaBusqueda) return;
+    this.ultimaBusqueda = q;
+    const numero = ++this.numeroBusqueda;
+    if (q.length < 3) {
+      this.buscando.set(false);
+      this.sugerencias.set([]);
+      this.sinResultados.set(false);
+      return;
+    }
+    this.buscando.set(true);
+    this.store.buscarLugares(q).subscribe({
+      next: r => {
+        if (numero !== this.numeroBusqueda) return;
+        this.buscando.set(false);
+        this.sugerencias.set(r);
+        this.sinResultados.set(r.length === 0);
+      },
+      error: () => {
+        if (numero !== this.numeroBusqueda) return;
+        this.buscando.set(false);
+        this.sugerencias.set([]);
+        this.sinResultados.set(true);
+      }
+    });
   }
 
   proveedor: ProveedorForm = this.proveedorVacio();
@@ -147,7 +155,6 @@ export class RecursosComponent {
   lugar: LugarForm = this.lugarVacio();
   habitacion: HabitacionForm = this.habitacionVacia();
 
-  // GESTIONAR_LOGISTICA (PKG_SEGURIDAD_ROLES): solo Admin; Ventas solo consulta (VER_LOGISTICA)
   puedeEditar = computed(() => this.auth.puede('GESTIONAR_LOGISTICA'));
 
   v = new FormValidacion(() => {
@@ -161,7 +168,6 @@ export class RecursosComponent {
             ?? (telefonoRepetido(p.telefono, this.store.proveedores(), x => x.telefono, x => x.proveedorId === this.editId)
               ? 'Ese teléfono ya está registrado para otro proveedor.' : null),
           pEmail: p.email.trim() ? V.email(p.email) : null,
-          // chk_prov_servicio: todo proveedor brinda al menos un soporte
           pServicio: p.ofreceTransporte || p.ofreceGuiado || p.ofreceHospedaje
             ? null : 'Marca al menos un soporte que brinda.'
         };
@@ -173,7 +179,6 @@ export class RecursosComponent {
         const prov = this.store.getProveedor(p.proveedorId);
         const funcion = this.store.getCargo(p.cargo)?.funcion;
         return {
-          // Personal de proveedores: el proveedor es obligatorio y debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
           rProveedor: !prov ? 'Elige el proveedor.'
             : funcion === 'TRANSPORTE' && !prov.ofreceTransporte ? 'Ese proveedor no brinda transporte.'
             : funcion === 'GUIADO' && !prov.ofreceGuiado ? 'Ese proveedor no brinda guiado.' : null,
@@ -261,12 +266,10 @@ export class RecursosComponent {
 
   get actual() { return this.tabs.find(t => t.id === this.tab())!; }
 
-  // ---------- Formularios ----------
   private proveedorVacio(): ProveedorForm {
     return { nombreComercial: '', ruc: '', telefono: '', email: '', ofreceTransporte: true, ofreceGuiado: false,
       ofreceHospedaje: false, estado: 'ACTIVO' };
   }
-  // Propio: sin proveedor · Proveedores: el que está filtrado (o ninguno, y se elige en el formulario)
   private proveedorFiltro(): number | null { return this.propio ? null : this.filtroProveedor(); }
   private personaVacia(): PersonalForm {
     return { proveedorId: this.proveedorFiltro(), numeroDocumento: '', nombreCompleto: '', cargo: 'GUIA', telefono: '',
@@ -298,9 +301,7 @@ export class RecursosComponent {
     this.vistaFoto.set(null);
     this.habitacion.imagen = '';
   }
-  // Guía (función GUIADO): carné e idiomas
   get esGuia(): boolean { return this.store.getCargo(this.persona.cargo)?.funcion === 'GUIADO'; }
-  // Licencia: la exige el cargo (CARGOS.requiere_licencia)
   get requiereLicencia(): boolean { return !!this.store.getCargo(this.persona.cargo)?.requiereLicencia; }
 
   private abrir() { this.limpiarBusqueda(); this.v.reiniciar(); this.abierto.set(true); }
@@ -393,7 +394,6 @@ export class RecursosComponent {
       case 'habitaciones': {
         const h = this.habitacion;
         const id = this.editId;
-        // La foto se sube primero; luego se guarda la habitación con su ruta
         const subida = this.foto ? this.imagenes.subirHabitacion(this.foto) : of({ imagen: h.imagen });
         peticion = subida.pipe(switchMap(r => this.store.guardarHabitacion({ ...h, nombre: t(h.nombre),
           descripcion: t(h.descripcion), precioNoche: num(h.precioNoche), imagen: r.imagen }, id)));
@@ -421,7 +421,6 @@ export class RecursosComponent {
     });
   }
 
-  // La flota y el personal cambian los totales de cada proveedor
   private recargar() {
     if (this.tab() === 'lugares') { this.store.cargarLugares(); return; }
     if (this.tab() === 'habitaciones') { this.store.cargarHabitaciones(); return; }
@@ -432,7 +431,6 @@ export class RecursosComponent {
 
   async eliminar(id: number) {
     const tab = this.tab();
-    // v10 no otorga DELETE sobre proveedores, personal ni vehículos: la baja los deja INACTIVOS (el historial se conserva)
     const texto = tab === 'lugares' ? 'Esta acción no se puede deshacer.' : 'Quedará INACTIVO: no se borra para conservar su historial.';
     if (!(await this.alerts.confirm(texto, (tab === 'lugares' ? 'Eliminar ' : 'Dar de baja ') + this.actual.singular))) return;
     const peticiones: { [t in Tab]: () => Observable<void> } = {
@@ -448,7 +446,6 @@ export class RecursosComponent {
     });
   }
 
-  // Personal propio: activar o desactivar (su cuenta de acceso queda en el mismo estado)
   async cambiarEstado(id: number) {
     const p = this.store.getPersonal(id);
     if (!p) return;

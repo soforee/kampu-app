@@ -18,11 +18,6 @@ import { IconComponent } from '../../shared/icon.component';
 import { MigasComponent } from '../../shared/migas.component';
 import { PortalHeaderComponent } from './portal-header.component';
 
-// Detalle de un paquete del cliente: GET /portal/paquetes/{id}
-// (PKG_GESTION_PAQUETES_CLIENTE.detalle_paquete; exigir_propietario impide ver reservas ajenas).
-// v10: hasta antes del viaje el cliente registra o quita pasajeros, y pide la anulación (el punto de recojo lo define la agencia) (sin pagos aprobados se anula al instante; con pagos queda una solicitud para Ventas).
-// Sus pagos informados quedan PENDIENTES hasta que Ventas los valide.
-// Invitado sin cuenta (/cotizacion/:codigo/reserva): lo mismo sobre la reserva de su cotización, con el código + clave.
 @Component({
   selector: 'app-paquete-cliente',
   standalone: true,
@@ -36,7 +31,6 @@ export class PaqueteClienteComponent {
   private router = inject(Router);
   private locales = inject(CotizacionesLocales);
   private id = Number(this.ruta.snapshot.paramMap.get('id'));
-  // Invitado: código de su cotización y la clave (la trae la navegación o la recuerda este navegador)
   codigo = (this.ruta.snapshot.paramMap.get('codigo') ?? '').toUpperCase();
   invitado = !!this.codigo;
   private clave: string = ((this.router.getCurrentNavigation()?.extras.state ?? history.state ?? {}) as { clave?: string }).clave
@@ -53,7 +47,6 @@ export class PaqueteClienteComponent {
   cargando = signal(true);
   error = signal('');
 
-  // chk_pag_metodo (v10)
   metodos = METODOS_PAGO.filter(m => m !== 'EFECTIVO');
   pago = { monto: null as number | null, metodoPago: 'TRANSFERENCIA', codigoTransaccion: '' };
   informando = signal(false);
@@ -64,7 +57,6 @@ export class PaqueteClienteComponent {
   paquete = computed(() => this.detalle()?.paquete ?? null);
   linea = computed(() => this.paquete() ? lineaViaje(this.paquete()!) : []);
   faltan = computed(() => this.paquete() ? cuentaRegresiva(this.paquete()!) : null);
-  // Lo que todavía se puede informar: saldo menos lo que ya está por validar
   maximo = computed(() => {
     const p = this.paquete();
     return p ? Math.max(0, Math.round((p.saldo - p.montoPorValidar) * 100) / 100) : 0;
@@ -75,7 +67,6 @@ export class PaqueteClienteComponent {
   });
   porcentaje = computed(() => this.paquete() ? porcentajePagado(this.paquete()!) : 0);
 
-  // Editable desde el portal: reserva abierta cuyo viaje aún no empieza
   editable = computed(() => {
     const p = this.paquete();
     return !!p && (p.estadoReserva === 'PENDIENTE' || p.estadoReserva === 'CONFIRMADA') && p.fechaInicio > hoy();
@@ -83,7 +74,6 @@ export class PaqueteClienteComponent {
   faltanPasajeros = computed(() => Math.max((this.paquete()?.pasajeros ?? 0) - (this.detalle()?.pasajeros.length ?? 0), 0));
   solicitudPendiente = computed(() => this.detalle()?.solicitud?.estado === 'PENDIENTE');
 
-  // Pasajeros
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
   nuevo: PasajeroDraft = this.pasajeroVacio();
   agregando = signal(false);
@@ -103,7 +93,6 @@ export class PaqueteClienteComponent {
   }));
 
   constructor() {
-    // Sin clave no se muestra nada: la cotización la pide
     if (this.invitado && !this.clave) { this.router.navigate(['/cotizacion', this.codigo]); return; }
     this.cargar();
   }
@@ -185,7 +174,6 @@ export class PaqueteClienteComponent {
       : this.portal.solicitarAnulacion(this.id, motivo)).subscribe({
       next: r => {
         if (r.resultado === 'ANULADA') {
-          // Anulada: deja de figurar en "Mis paquetes" (la agencia la conserva en su historial)
           this.alerts.toast('Reserva anulada');
           if (this.invitado) this.router.navigate(['/cotizacion', this.codigo]);
           else this.router.navigate(['/mi-cuenta']);

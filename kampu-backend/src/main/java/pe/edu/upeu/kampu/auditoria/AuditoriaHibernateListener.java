@@ -17,20 +17,9 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.*;
 
-/**
- * Auditoría automática de TODA escritura hecha con JPA (todas las pantallas del sistema):
- *   - CREAR      : una fila con el resumen de los datos guardados.
- *   - ACTUALIZAR : una fila POR CAMPO modificado, con valor anterior y nuevo.
- *   - ELIMINAR   : una fila con los datos que tenía el registro.
- * Se escribe con la misma conexión de Hibernate: queda en la misma transacción que el cambio.
- *
- * No se duplica lo que ya audita Oracle: RESERVAS.estado_reserva y estado_pago los registra
- * TRG_AUDITORIA_ESTADO_PAQUETE. Las contraseñas nunca se guardan en claro.
- */
 @Component
 public class AuditoriaHibernateListener implements PostInsertEventListener, PostUpdateEventListener, PostDeleteEventListener {
 
-    // Tabla -> nombre de la entidad en la bitácora
     private static final Map<String, String> NOMBRES = Map.ofEntries(
             Map.entry("RESERVAS", "RESERVA"), Map.entry("PAGOS", "PAGO"), Map.entry("CLIENTES", "CLIENTE"),
             Map.entry("PAQUETES_TOUR", "PAQUETE"), Map.entry("SALIDAS_PROGRAMADAS", "SALIDA"),
@@ -39,13 +28,9 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
             Map.entry("LUGARES", "LUGAR"), Map.entry("OPERACIONES_TRANSPORTE", "OPERACION"),
             Map.entry("USUARIOS_SISTEMA", "USUARIO"));
 
-    // Ya auditados por Oracle o que son bitácoras en sí mismas
     private static final Set<Class<?>> EXCLUIDAS = Set.of(Auditoria.class, HistorialOperacion.class);
-    // Campos que ya audita kampu_bd.sql (TRG_AUDITORIA_ESTADO_PAQUETE, TRG_VALIDAR_PAGO_PAQUETE,
-    // TRG_USUARIOS_AUDITORIA) y datos técnicos del login que no son cambios de negocio
     private static final Set<String> CAMPOS_TRIGGER = Set.of("RESERVA.ESTADO_RESERVA", "RESERVA.ESTADO_PAGO",
             "PAGO.ESTADO_TRANSACCION", "USUARIO.ROL", "USUARIO.ESTADO", "USUARIO.INTENTOS_FALLIDOS", "USUARIO.ULTIMO_ACCESO");
-    // Altas que ya registra la base de datos
     private static final Set<String> ALTAS_TRIGGER = Set.of("PAGO", "USUARIO");
     private static final Set<String> SECRETOS = Set.of("PASSWORD_HASH");
 
@@ -103,8 +88,6 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
         return false;
     }
 
-    // ---------------------------------------------------------------------
-
     private void guardar(SharedSessionContractImplementor sesion, String accion, EntityPersister p, Object id,
                          String campo, String antes, String despues, String detalle) {
         RegistroAuditoria r = new RegistroAuditoria(accion, entidad(p), id instanceof Number n ? n.longValue() : null,
@@ -112,7 +95,6 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
         try {
             AuditoriaService.insertar(sesion.getJdbcCoordinator().getLogicalConnection().getPhysicalConnection(), r);
         } catch (SQLException ex) {
-            // Sin bitácora no se confirma el cambio (falla la transacción completa)
             throw new IllegalStateException("No se pudo registrar la auditoría (¿ejecutaste kampu_bd.sql?): "
                     + ex.getMessage(), ex);
         }
@@ -124,7 +106,7 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
 
     private static String entidad(EntityPersister p) {
         String tabla = p instanceof AbstractEntityPersister a ? a.getTableName().toUpperCase() : p.getEntityName();
-        tabla = tabla.substring(tabla.lastIndexOf('.') + 1);   // sin prefijo de esquema, si lo hubiera
+        tabla = tabla.substring(tabla.lastIndexOf('.') + 1);
         return NOMBRES.getOrDefault(tabla, tabla);
     }
 
@@ -136,7 +118,6 @@ public class AuditoriaHibernateListener implements PostInsertEventListener, Post
         return p.getPropertyNames()[i].toUpperCase();
     }
 
-    // "campo=valor, ..." sin nulos ni secretos
     private static String resumen(EntityPersister p, Object[] estado) {
         if (estado == null) return "";
         StringJoiner j = new StringJoiner(", ");

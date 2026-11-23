@@ -1,4 +1,3 @@
-/* Ítem activo del menú: fondo oliva muy claro, ícono en el oliva del logo y una barra lima en el borde izquierdo */
 .nav-item.nav-active { background: #F4F6E4; color: #3F4C18; font-weight: 500; box-shadow: inset 0 0 0 1px #E7ECC9; }
 .nav-item::before {
   content: ''; position: absolute; left: -16px; top: 50%; height: 0; width: 3px; border-radius: 0 3px 3px 0;
@@ -6,7 +5,6 @@
 }
 .nav-item.nav-active::before { height: 22px; }
 
-/* Escritorio: el contenido deja el espacio del menú (desplegado 240 px, compacto 76 px) */
 @media (min-width: 1024px) {
   .raiz { padding-left: 240px; transition: padding-left .3s cubic-bezier(.16, 1, .3, 1); }
   .raiz.compacto { padding-left: 76px; }
@@ -23,7 +21,6 @@
   .raiz, .nav-item::before { transition: none; }
 }
 
-/* Tooltip flotante del menú compacto */
 .tip-flotante {
   position: fixed; left: 88px; z-index: 60; transform: translateY(-50%); pointer-events: none; white-space: nowrap;
   border-radius: 8px; background: #262E0F; padding: 6px 10px; font-size: 12px; font-weight: 500; color: #fff;

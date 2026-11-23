@@ -10,7 +10,6 @@ const TIPOS = ['image/jpeg', 'image/png', 'image/webp'];
 export class ImagenService {
   private http = inject(HttpClient);
 
-  // La ruta guardada puede venir con o sin "/" inicial (p. ej. "/img/paquetes/x.jpg" en los datos semilla)
   url(ref?: string | null): string | null {
     const ruta = ref?.trim().replace(/^\/+/, '');
     return ruta ? `${IMAGENES}/${ruta}` : null;
@@ -22,7 +21,6 @@ export class ImagenService {
     return '';
   }
 
-  // Foto de una habitación de hotel (Proveedores > Habitaciones de hotel): sale en la cotización
   subirHabitacion(file: File): Observable<{ imagen: string }> {
     const formData = new FormData();
     formData.append('file', file);

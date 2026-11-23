@@ -23,7 +23,6 @@ public interface OperacionTransporteRepository extends JpaRepository<OperacionTr
 
     boolean existsByOrigenIdOrDestinoId(Long origenId, Long destinoId);
 
-    // Operaciones vigentes del vehículo que se cruzan con [desde, hasta)
     @Query("select o from OperacionTransporte o where o.vehiculoId = :id and o.estado <> 'CANCELADO' " +
             "and o.operacionId <> :excluir and o.horaSalida < :hasta and o.horaLlegada > :desde order by o.horaSalida")
     List<OperacionTransporte> crucesVehiculo(@Param("id") Long id, @Param("excluir") Long excluir,
@@ -34,13 +33,11 @@ public interface OperacionTransporteRepository extends JpaRepository<OperacionTr
     List<OperacionTransporte> crucesConductor(@Param("id") Long id, @Param("excluir") Long excluir,
                                               @Param("desde") LocalDateTime desde, @Param("hasta") LocalDateTime hasta);
 
-    // Operaciones vigentes del conductor que salen en el día [inicio, fin)
     @Query("select o from OperacionTransporte o where o.conductorId = :id and o.estado <> 'CANCELADO' " +
             "and o.operacionId <> :excluir and o.horaSalida >= :inicio and o.horaSalida < :fin")
     List<OperacionTransporte> delConductorEnElDia(@Param("id") Long id, @Param("excluir") Long excluir,
                                                   @Param("inicio") LocalDateTime inicio, @Param("fin") LocalDateTime fin);
 
-    // Operaciones ASIGNADAS que aún no salen y usan el vehículo, el conductor o algún vehículo del proveedor
     @Query("select o from OperacionTransporte o where o.estado = 'ASIGNADO' and o.horaSalida > :desde " +
             "and (o.vehiculoId = :vehiculo or o.conductorId = :conductor " +
             "or o.vehiculoId in (select v.vehiculoId from Vehiculo v where v.proveedorId = :proveedor)) " +

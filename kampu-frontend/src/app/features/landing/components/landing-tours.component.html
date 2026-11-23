@@ -5,10 +5,8 @@
       <h2 class="diapo-titulo">Elige tu próximo viaje.</h2>
     </div>
 
-    <!-- Buscador (destino y fecha): vive en esta sección, junto a los tours que filtra -->
     <div class="mt-6" appRevelar [retraso]="60" data-entra style="--i: 1"><ng-content /></div>
 
-    <!-- Categorías por duración (con la cantidad de tours de cada una), quitar filtros y flechas del carrusel -->
     <div class="mt-6 flex flex-wrap items-center justify-between gap-3" appRevelar [retraso]="80" data-entra style="--i: 2">
       <nav class="categorias" aria-label="Categorías de tours">
         @for (c of categorias; track c.valor) {
@@ -22,7 +20,6 @@
         @if (hayFiltro) {
           <button type="button" class="limpiar" (click)="limpiar.emit()"><app-icon name="x" size="w-4 h-4" /> Quitar filtros</button>
         }
-        <!-- Flechas: solo si hay más tours de los que caben -->
         @if (!cargando && tours.length > 0 && !(alInicio() && alFinal())) {
           <button type="button" class="flecha hidden sm:grid" (click)="mover(-1)" [disabled]="alInicio()" aria-label="Tours anteriores" data-tip="Anteriores"><app-icon name="arrow-left" size="w-4 h-4" /></button>
           <button type="button" class="flecha hidden sm:grid" (click)="mover(1)" [disabled]="alFinal()" aria-label="Más tours" data-tip="Siguientes"><app-icon name="arrow-right" size="w-4 h-4" /></button>
@@ -52,8 +49,6 @@
         }
       </div>
     } @else {
-      <!-- Carrusel horizontal: los tours en una sola fila para que la sección quepa en la pantalla.
-           La clave incluye la categoría: al cambiarla, las tarjetas entran de nuevo con un fundido escalonado. -->
       <div #carrusel class="carrusel mt-6" data-entra style="--i: 3" (scroll)="revisarBordes()" tabindex="0" aria-label="Tours disponibles" role="region">
         @for (t of tours; track categoria + '-' + t.paquete.paqueteId; let i = $index) {
           <article class="tour" [style.animation-delay.ms]="i * 70">
@@ -100,7 +95,6 @@
                     Reservar <app-icon name="arrow-right" size="w-4 h-4" />
                   </a>
                 }
-                <!-- Cotizador en línea (sin cuenta): /cotizar/:id -->
                 <button type="button" class="tour-cotizar" (click)="cotizar.emit(t.paquete)" [attr.aria-label]="'Cotizar ' + t.paquete.nombre"
                         title="Cotiza al instante, sin crear cuenta" data-testid="cotizar">
                   Cotizar

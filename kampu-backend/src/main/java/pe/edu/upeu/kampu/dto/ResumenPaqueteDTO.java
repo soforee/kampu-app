@@ -5,7 +5,6 @@ import pe.edu.upeu.kampu.entity.VistaResumenPaquete;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-// Fila de VW_RESUMEN_PAQUETES_POR_ROL (montos nulos si el rol no puede VER_MONTOS)
 public record ResumenPaqueteDTO(
         Long salidaId,
         Long paqueteId,

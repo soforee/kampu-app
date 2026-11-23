@@ -1,5 +1,3 @@
-// Códigos telefónicos y cantidad de dígitos del número nacional (sin el código) por país.
-// Debe coincidir con Reglas.PAISES_TELEFONO del backend.
 export interface PaisTelefono {
   iso: string;
   nombre: string;
@@ -46,18 +44,14 @@ export const PAISES: PaisTelefono[] = [
 
 export const PAIS_DEFECTO = PAISES[0];
 
-// Imagen de la bandera (public/banderas/xx.png, generadas desde flag-icons, licencia MIT).
-// Se usan imágenes y no emojis porque Windows no dibuja los emojis de banderas.
 export function banderaUrl(iso: string): string {
   return `banderas/${iso.toLowerCase()}.png`;
 }
 
-// Para buscar sin importar tildes ni mayúsculas: "Perú" -> "peru"
 export function normalizar(texto: string): string {
   return texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 }
 
-// "+51 987654321" → país y número. Si no hay código, se asume Perú.
 export function separarTelefono(valor: string | null | undefined): { pais: PaisTelefono; numero: string } {
   const t = (valor ?? '').trim();
   const m = /^\+(\d{1,3})\s*(.*)$/.exec(t);
@@ -73,7 +67,6 @@ export function unirTelefono(pais: PaisTelefono, numero: string): string {
   return n ? `+${pais.codigo} ${n}` : '';
 }
 
-// Mensaje de error o null (misma regla que el backend)
 export function errorTelefonoPais(valor: string | null | undefined, obligatorio = true): string | null {
   const t = (valor ?? '').trim();
   if (!t) return obligatorio ? 'El teléfono es obligatorio.' : null;

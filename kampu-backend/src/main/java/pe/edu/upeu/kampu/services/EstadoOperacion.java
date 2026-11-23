@@ -3,10 +3,6 @@ package pe.edu.upeu.kampu.services;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Máquina de estados de las operaciones de transporte (v4: en el backend, no en tablas).
- * CHECK chk_op_est de OPERACIONES_TRANSPORTE admite exactamente estos valores.
- */
 public enum EstadoOperacion {
     PROGRAMADO("Programado", 1, false, false),
     ASIGNADO("Asignado", 2, true, false),
@@ -27,15 +23,12 @@ public enum EstadoOperacion {
         this.esFinal = esFinal;
     }
 
-    /** Transiciones permitidas desde este estado */
     public Set<EstadoOperacion> siguientes() {
-        return switch (this) {
-            case PROGRAMADO -> Set.of(ASIGNADO, CANCELADO);
-            case ASIGNADO -> Set.of(PROGRAMADO, EMBARQUE, CANCELADO);   // PROGRAMADO = desasignar
-            case EMBARQUE -> Set.of(EN_RUTA, CANCELADO);
-            case EN_RUTA -> Set.of(FINALIZADO);
-            case FINALIZADO, CANCELADO -> Set.of();
-        };
+        if (this == PROGRAMADO) return Set.of(ASIGNADO, CANCELADO);
+        if (this == ASIGNADO) return Set.of(PROGRAMADO, EMBARQUE, CANCELADO);
+        if (this == EMBARQUE) return Set.of(EN_RUTA, CANCELADO);
+        if (this == EN_RUTA) return Set.of(FINALIZADO);
+        return Set.of();
     }
 
     public List<String> siguientesOrdenados() {
@@ -58,7 +51,6 @@ public enum EstadoOperacion {
         return requiereRecursos;
     }
 
-    /** Ocupa vehículo y conductor (cuenta para cruces y horas): todo menos CANCELADO */
     public boolean ocupaRecursos() {
         return this != CANCELADO;
     }

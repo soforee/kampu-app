@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// Proveedor tercero (v10): debe brindar al menos un soporte (chk_prov_servicio)
 public record ProveedorRequestDTO(
         @NotBlank(message = "El nombre comercial es obligatorio.")
         @Size(max = 150, message = "El nombre comercial admite máximo 150 caracteres.")

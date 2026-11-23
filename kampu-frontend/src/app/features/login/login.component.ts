@@ -18,10 +18,8 @@ import { FOTOS_DESTINOS } from '../landing/landing.models';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
-  // ?reservar=<paqueteId>: llega desde una cotización de la página principal; el cliente sigue a reservar ese paquete
   private consulta = inject(ActivatedRoute).snapshot.queryParamMap;
   private pendiente = leerReservaPendiente(this.consulta);
-  // (v11) La sesión venció o la cuenta se desactivó (el backend respondió 401)
   vencida = this.consulta.get('vencida') === '1';
 
   username = '';
@@ -29,11 +27,9 @@ export class LoginComponent {
   ver = signal(false);
   error = signal('');
   cargando = signal(false);
-  // Se marca al intentar ingresar: desde ahí cada campo vacío muestra su propio mensaje
   enviado = signal(false);
   mayusculas = signal(false);
 
-  // Fotos del panel izquierdo (las mismas de la página principal), cambian cada 7 s
   fotos = FOTOS_DESTINOS.filter(f => ['machu', 'colca', 'titicaca', 'ollantaytambo'].includes(f.clave));
   foto = signal(0);
 
@@ -49,7 +45,6 @@ export class LoginComponent {
   faltaUsuario() { return this.enviado() && !this.username.trim(); }
   faltaClave() { return this.enviado() && !this.password; }
 
-  // Al escribir se oculta el error del servidor; el aviso de mayúsculas ayuda a no fallar la contraseña
   escribiendo() { if (this.error()) this.error.set(''); }
   revisarMayusculas(e: KeyboardEvent) {
     if (typeof e.getModifierState === 'function') this.mayusculas.set(e.getModifierState('CapsLock'));
@@ -66,7 +61,6 @@ export class LoginComponent {
     this.auth.login(this.username, this.password).subscribe({
       next: (sesion) => {
         this.auth.guardarSesion(sesion);
-        // Personal interno -> panel · Cliente -> "Mis paquetes" (con el paquete cotizado listo para reservar)
         if (this.auth.esCliente() && this.pendiente) this.router.navigate(['/mi-cuenta'], { queryParams: { ...this.pendiente } });
         else this.router.navigateByUrl(this.auth.inicio());
       },

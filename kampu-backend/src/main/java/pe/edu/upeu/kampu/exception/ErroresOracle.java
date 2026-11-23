@@ -5,22 +5,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Traduce los errores de Oracle a mensajes para el usuario:
- *  - ORA-20000..20999: RAISE_APPLICATION_ERROR de los triggers, paquetes y procedimientos
- *    de kampu_bd.sql; su texto ya está en español y se devuelve tal cual.
- *  - ORA-00001 / 02290 / 02291 / 02292: restricciones UNIQUE, CHECK y FK, con un
- *    mensaje por nombre de restricción.
- */
 public final class ErroresOracle {
     private ErroresOracle() {
     }
 
     private static final Pattern RESTRICCION = Pattern.compile("\\(([A-Za-z0-9_$#]+)\\.([A-Za-z0-9_$#]+)\\)");
 
-    // Nombres de restricciones e índices únicos de kampu_bd.sql
     private static final Map<String, String> MENSAJES = Map.ofEntries(
-            // UNIQUE
             Map.entry("UQ_CLI_EMAIL", "Ese correo ya está registrado para otro cliente."),
             Map.entry("UQ_CLI_DOCUMENTO", "Ese documento ya está registrado para otro cliente."),
             Map.entry("UQ_CLI_TELEFONO", "Ese teléfono ya está registrado para otro cliente."),
@@ -43,7 +34,6 @@ public final class ErroresOracle {
             Map.entry("UQ_PAS_RESERVA_DOC", "El documento de un pasajero está repetido en la reserva."),
             Map.entry("UQ_PAG_OPERACION", "Esa operación (método y código de transacción) ya fue registrada."),
             Map.entry("UQ_SOL_PENDIENTE", "Ya hay una solicitud de anulación pendiente para esta reserva."),
-            // CHECK
             Map.entry("CHK_JOR_COMB", "El combustible se indica como LLENO, 3/4, 1/2, 1/4 o RESERVA."),
             Map.entry("CHK_JOR_KM", "El kilometraje final no puede ser menor que el inicial."),
             Map.entry("CHK_INC_TIPO", "Tipo de novedad no válido."),
@@ -80,7 +70,6 @@ public final class ErroresOracle {
             Map.entry("CHK_RES_REEMBOLSO", "Forma de reembolso no válida."),
             Map.entry("CHK_PAG_TC", "En soles el tipo de cambio es 1; en otra moneda debe ser distinto de 1."),
             Map.entry("CHK_PAG_METODO", "Método de pago no válido."),
-            // FOREIGN KEY
             Map.entry("FK_OP_VEH", "El vehículo indicado no existe."),
             Map.entry("FK_OP_CON", "El conductor indicado no existe."),
             Map.entry("FK_OP_SAL", "La salida indicada no existe."),
@@ -91,7 +80,6 @@ public final class ErroresOracle {
             Map.entry("FK_RES_RECOJO", "El punto de recojo indicado no existe.")
     );
 
-    /** Mensaje para el usuario, o null si la excepción no viene de Oracle. */
     public static String mensaje(Throwable e) {
         SQLException sql = buscarSql(e);
         if (sql == null) return null;

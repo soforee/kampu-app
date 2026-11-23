@@ -1,8 +1,7 @@
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { Subject, debounceTime, switchMap, catchError, of, tap } from 'rxjs';
 import {
   ActividadItinerario, CalculoCotizacion, CalendarioDia, DatosCotizacion, HabitacionCotizable, PaqueteTour, ServicioAdicional
 } from '../../core/models';
@@ -17,11 +16,6 @@ import { IconComponent } from '../../shared/icon.component';
 import { LogoComponent } from '../../shared/logo.component';
 import { fotoDePaquete } from '../landing/landing.models';
 
-/**
- * (v11) Cotizar un paquete SIN cuenta: explorar (descripción, incluye, itinerario), personalizar (fecha,
- * adultos y niños, recojo, servicios adicionales) y ver el precio calculado por el servidor al instante.
- * "Guardar" crea la cotización (código + clave). Con ?editar=KC-... modifica una cotización GENERADA.
- */
 @Component({
   selector: 'app-cotizador',
   standalone: true,
@@ -29,7 +23,7 @@ import { fotoDePaquete } from '../landing/landing.models';
   templateUrl: './cotizador.component.html',
   styleUrl: './cotizador.component.css'
 })
-export class CotizadorComponent {
+export class CotizadorComponent implements OnDestroy {
   private api = inject(CotizacionService);
   private store = inject(TourStore);
   private locales = inject(CotizacionesLocales);
@@ -50,7 +44,6 @@ export class CotizadorComponent {
   cargando = signal(true);
   errorCarga = signal('');
 
-  // Fechas que se pueden cotizar: opera, hay cupos y la salida sigue abierta
   fechas = computed(() => this.calendario().filter(d => d.opera && d.cuposDisponibles > 0
     && ['SIN_SALIDA', 'PROGRAMADA', 'GARANTIZADA'].includes(d.estadoSalida)));
   fechasRapidas = computed(() => this.fechas().slice(0, 10));
@@ -61,12 +54,9 @@ export class CotizadorComponent {
     return [...porDia.entries()].sort((a, b) => a[0] - b[0]);
   });
 
-  // ---------- Calendario de mes (solo presentación: usa el mismo calendario de la base) ----------
-  // Mes visible (YYYY-MM); por defecto el de la fecha elegida o el de la primera fecha disponible
   private mesElegido = signal('');
   meses = computed(() => [...new Set(this.fechas().map(d => d.fecha.slice(0, 7)))]);
   mes = computed(() => this.mesElegido() || this.fecha.slice(0, 7) || this.meses()[0] || '');
-  // Celdas del mes empezando en lunes: null = hueco antes del día 1
   celdas = computed(() => {
     const m = this.mes();
     if (!m) return [];
@@ -96,41 +86,57 @@ export class CotizadorComponent {
     const otro = this.meses()[i + dir];
     if (otro) this.mesElegido.set(otro);
   }
-  // Foto de referencia del destino (con crédito) cuando el paquete no tiene una propia
   credito = computed(() => {
     const p = this.paquete();
     return p ? fotoDePaquete(p.nombre, p.descripcion ?? '') : null;
   });
 
-  // Elecciones del visitante
   fecha = '';
   adultos = 2;
   ninos = 0;
-  habitacionId: number | null = null; // sección 5: habitación de hotel (obligatoria si hay noches)
+  habitacionId: number | null = null;
   observaciones = '';
-  elegidos: Record<number, number> = {};   // servicioId -> cantidad (0 = no)
+  elegidos: Record<number, number> = {};
 
   calculo = signal<CalculoCotizacion | null>(null);
   calculando = signal(false);
   errorCalculo = signal('');
   guardando = signal(false);
-  private cambios = new Subject<void>();
+  private temporizador: ReturnType<typeof setTimeout> | null = null;
+  private numeroCalculo = 0;
 
   get cantidad() { return (this.adultos || 0) + (this.ninos || 0); }
 
   constructor() {
-    // Cada cambio vuelve a pedir el precio al servidor (con una pausa para no enviar una petición por tecla)
-    const sub = this.cambios.pipe(
-      tap(() => { this.calculando.set(true); this.errorCalculo.set(''); }),
-      debounceTime(350),
-      switchMap(() => {
-        const d = this.datos();
-        if (!d) return of(null);
-        return this.api.calcular(d).pipe(catchError(e => { this.errorCalculo.set(mensajeError(e)); return of(null); }));
-      })
-    ).subscribe(c => { this.calculo.set(c); this.calculando.set(false); });
-    inject(DestroyRef).onDestroy(() => sub.unsubscribe());
     this.cargar();
+  }
+
+  ngOnDestroy() {
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.numeroCalculo++;
+  }
+
+  private calcular() {
+    const numero = ++this.numeroCalculo;
+    const d = this.datos();
+    if (!d) {
+      this.calculo.set(null);
+      this.calculando.set(false);
+      return;
+    }
+    this.api.calcular(d).subscribe({
+      next: c => {
+        if (numero !== this.numeroCalculo) return;
+        this.calculo.set(c);
+        this.calculando.set(false);
+      },
+      error: e => {
+        if (numero !== this.numeroCalculo) return;
+        this.errorCalculo.set(mensajeError(e));
+        this.calculo.set(null);
+        this.calculando.set(false);
+      }
+    });
   }
 
   private cargar() {
@@ -143,7 +149,6 @@ export class CotizadorComponent {
         if (p.noches > 0) this.api.habitaciones().subscribe({
           next: h => {
             this.habitaciones.set(h);
-            // Sin la opción «sin hotel»: se parte de la más económica y el visitante puede cambiarla
             if (this.habitacionId === null && h.length) { this.habitacionId = h[0].habitacionId; this.recalcular(); }
           },
           error: () => undefined
@@ -167,7 +172,6 @@ export class CotizadorComponent {
     });
   }
 
-  // Modificar: se parte de lo guardado en la cotización
   private cargarEdicion() {
     this.api.abrir(this.editar, this.claveEdicion).subscribe({
       next: c => {
@@ -185,7 +189,6 @@ export class CotizadorComponent {
     });
   }
 
-  // Imagen propia del paquete o, si no tiene (o no carga), la foto de su destino
   private imagenFallo = signal(false);
   imagen(): string | null {
     const p = this.paquete();
@@ -200,7 +203,6 @@ export class CotizadorComponent {
   pasajeros(campo: 'adultos' | 'ninos', delta: number) {
     const min = campo === 'adultos' ? 1 : 0;
     this[campo] = Math.max(min, Math.min(99 - (campo === 'adultos' ? this.ninos : this.adultos), (this[campo] || 0) + delta));
-    // Un servicio por persona no puede superar a los pasajeros
     for (const s of this.servicios()) {
       if (s.modalidad === 'POR_PERSONA' && (this.elegidos[s.servicioId] ?? 0) > this.cantidad) this.elegidos[s.servicioId] = this.cantidad;
     }
@@ -217,16 +219,19 @@ export class CotizadorComponent {
     this.recalcular();
   }
 
-  recalcular() { this.cambios.next(); }
+  recalcular() {
+    this.calculando.set(true);
+    this.errorCalculo.set('');
+    if (this.temporizador) clearTimeout(this.temporizador);
+    this.temporizador = setTimeout(() => this.calcular(), 350);
+  }
 
   elegirHabitacion(id: number) { if (this.habitacionId !== id) { this.habitacionId = id; this.recalcular(); } }
-  // Costo estimado de la estadía para la tarjeta (el total lo confirma el servidor)
   costoHabitacion(h: HabitacionCotizable): number {
     const noches = this.paquete()?.noches ?? 0;
     return h.precioNoche * noches * (h.modalidad === 'POR_PERSONA' ? this.cantidad : 1);
   }
   fotoHabitacion(h: HabitacionCotizable) { return this.imagenes.url(h.imagen); }
-  // Paquete con noches: la habitación es obligatoria
   get faltaHabitacion(): boolean { return (this.paquete()?.noches ?? 0) > 0 && this.habitacionId === null; }
 
   private datos(): DatosCotizacion | null {

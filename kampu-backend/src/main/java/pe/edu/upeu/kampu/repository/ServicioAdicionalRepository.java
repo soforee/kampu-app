@@ -11,7 +11,6 @@ import java.util.List;
 public interface ServicioAdicionalRepository extends JpaRepository<ServicioAdicional, Long> {
     List<ServicioAdicional> findAllByOrderByPaqueteIdAscNombreAsc();
 
-    // Activos que se pueden sumar a un paquete: los suyos y los generales
     @Query("SELECT s FROM ServicioAdicional s WHERE s.estado = 'ACTIVO' AND (s.paqueteId IS NULL OR s.paqueteId = :paqueteId) "
             + "ORDER BY s.paqueteId DESC NULLS LAST, s.nombre")
     List<ServicioAdicional> disponiblesPara(Long paqueteId);

@@ -4,8 +4,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
-// Manifiesto de una salida: lista de pasajeros para el guía y el conductor.
-// estadoPago y saldo solo se envían a quien puede ver montos (VER_MONTOS).
 public record ManifiestoDTO(
         Long salidaId,
         String paquete,

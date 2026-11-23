@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.services;
 
 import jakarta.persistence.EntityManager;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.kampu.dto.PagoDTO;
@@ -23,15 +22,13 @@ public class PagoServiceImpl implements IPagoService {
     private final PagoRepository pagoRepository;
     private final ReservaRepository reservaRepository;
     private final ConversorMoneda conversor;
-    private final ApplicationEventPublisher eventos;
     private final EntityManager em;
 
     public PagoServiceImpl(PagoRepository pagoRepository, ReservaRepository reservaRepository, ConversorMoneda conversor,
-                           ApplicationEventPublisher eventos, EntityManager em) {
+                           EntityManager em) {
         this.pagoRepository = pagoRepository;
         this.reservaRepository = reservaRepository;
         this.conversor = conversor;
-        this.eventos = eventos;
         this.em = em;
     }
 
@@ -60,7 +57,7 @@ public class PagoServiceImpl implements IPagoService {
         p.setReservaId(dto.reservaId());
         p.setMonto(dto.monto().setScale(2, java.math.RoundingMode.HALF_UP));
         p.setMoneda(dto.moneda());
-        p.setTipoCambio(conversor.tasa(dto.moneda()));   // monto_pen = monto * tipo_cambio (columna virtual)
+        p.setTipoCambio(conversor.tasa(dto.moneda()));
         p.setMetodoPago(dto.metodoPago() == null || dto.metodoPago().isBlank() ? null : dto.metodoPago().trim());
         String codigo = dto.codigoTransaccion() == null || dto.codigoTransaccion().isBlank() ? null : dto.codigoTransaccion().trim();
         if (codigo == null) {
@@ -70,15 +67,9 @@ public class PagoServiceImpl implements IPagoService {
         p.setCodigoTransaccion(codigo);
         p.setFechaPago(LocalDateTime.now());
         p.setEstadoTransaccion(dto.estadoTransaccion());
-        // Clave de partición de PAGOS: quién lo registró
         p.setRegistradoPor("ADMIN".equals(SesionActual.rol()) ? "ADMIN" : "VENTAS");
-        // TRG_VALIDAR_PAGO_PAQUETE: valida, audita y recalcula la reserva (monto pagado, estado de pago
-        // y confirmación automática con el primer pago aprobado)
         Pago guardado = pagoRepository.saveAndFlush(p);
-        em.refresh(guardado);   // monto_pen y quién registró/validó los calcula Oracle
-        if ("APROBADO".equals(guardado.getEstadoTransaccion())) {
-            eventos.publishEvent(new BoletaEvento(r.getReservaId(), "pago aprobado"));
-        }
+        em.refresh(guardado);
         return PagoDTO.desde(guardado);
     }
 
@@ -87,8 +78,6 @@ public class PagoServiceImpl implements IPagoService {
     public PagoDTO resolver(Long pagoId, String estado) {
         Pago p = pagoRepository.findById(pagoId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pago no encontrado con Id: " + pagoId));
-        // Primero se bloquea la reserva (mismo orden que registrar y anular) y luego se relee el pago:
-        // así dos resoluciones simultáneas, o una anulación, no trabajan sobre un estado ya cambiado.
         Reserva r = reservaRepository.findByIdParaActualizar(p.getReservaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada."));
         em.refresh(p, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
@@ -99,11 +88,8 @@ public class PagoServiceImpl implements IPagoService {
             throw new BusinessException("Aprobar este pago excedería el saldo de la reserva.");
         }
         p.setEstadoTransaccion(estado);
-        Pago guardado = pagoRepository.saveAndFlush(p);   // el trigger recalcula la reserva
+        Pago guardado = pagoRepository.saveAndFlush(p);
         em.refresh(guardado);
-        if ("APROBADO".equals(estado)) {
-            eventos.publishEvent(new BoletaEvento(r.getReservaId(), "pago aprobado"));
-        }
         return PagoDTO.desde(guardado);
     }
 

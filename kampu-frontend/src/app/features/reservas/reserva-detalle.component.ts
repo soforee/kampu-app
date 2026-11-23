@@ -26,14 +26,12 @@ export class ReservaDetalleComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
   private auth = inject(AuthService);
-  // GESTIONAR_RESERVAS (confirmar, completar, anular, boleta) y REGISTRAR_PAGO (registrar/validar pagos)
   gestiona = this.auth.puede('GESTIONAR_RESERVAS');
   cobra = this.auth.puede('REGISTRAR_PAGO');
   private router = inject(Router);
   private id = Number(inject(ActivatedRoute).snapshot.paramMap.get('id'));
 
   monedas: Moneda[] = ['PEN', 'USD', 'EUR'];
-  // chk_pag_metodo y chk_res_reembolso (v10)
   metodos = METODOS_PAGO;
   etiqueta = etiqueta;
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
@@ -55,7 +53,6 @@ export class ReservaDetalleComponent {
   salida = computed(() => this.store.getSalida(this.reserva()?.salidaId));
   paquete = computed(() => this.store.getPaquete(this.salida()?.paqueteId));
   guia = computed(() => this.store.getGuia(this.salida()?.guiaId));
-  // Transporte de la salida: sus operaciones (tramos) vigentes
   operaciones = computed(() => {
     const s = this.salida();
     return s ? this.store.operacionesDe(s.salidaId).filter(o => o.estadoActual !== 'CANCELADO') : [];
@@ -76,13 +73,11 @@ export class ReservaDetalleComponent {
   });
   usuarioAnula = computed(() => this.reserva()?.usuarioAnula ?? 'usuario #' + this.reserva()?.usuarioAnulaId);
   abierta = computed(() => { const e = this.reserva()?.estadoReserva; return e === 'PENDIENTE' || e === 'CONFIRMADA'; });
-  // Solicitud de anulación del portal pendiente de atender (Ventas)
   solicitud = computed(() => {
     const id = this.reserva()?.solicitudPendienteId;
     return id ? this.store.solicitudes().find(s => s.solicitudId === id) ?? null : null;
   });
 
-  // Pasajeros: hasta la cantidad reservada (TRG_PASAJEROS_VALIDAR)
   faltanPasajeros = computed(() => Math.max((this.reserva()?.numeroViajeros ?? 0) - this.pasajeros().length, 0));
   nuevoPasajero: PasajeroDraft = this.pasajeroVacio();
   agregando = signal(false);
@@ -95,7 +90,6 @@ export class ReservaDetalleComponent {
     nacionalidad: V.nacionalidad(this.nuevoPasajero.nacionalidad)
   }));
 
-  // Puntos de recojo del paquete (v10)
   puntos = signal<PuntoRecojo[]>([]);
   recojoSel: number | null = null;
   private puntosCargados = false;
@@ -134,8 +128,6 @@ export class ReservaDetalleComponent {
     });
   }
 
-  // v10: la confirmación es automática (primer pago aprobado) y la reserva se completa con su salida.
-  // Anular (PKG_RESERVAS.anular): motivo obligatorio; con pagos aprobados, forma de reembolso.
   async anular() {
     const r = this.reserva();
     if (!r) return;
@@ -149,7 +141,6 @@ export class ReservaDetalleComponent {
 
   private formas(): [string, string][] { return FORMAS_REEMBOLSO.map(f => [f, etiqueta(f)] as [string, string]); }
 
-  // Solicitud del portal: aprobar (anula y reembolsa) o rechazar (con respuesta al cliente)
   async atenderSolicitud(aprobar: boolean) {
     const s = this.solicitud();
     const r = this.reserva();
@@ -168,7 +159,6 @@ export class ReservaDetalleComponent {
     }
   }
 
-  // ---------- Pasajeros ----------
   agregarPasajero() {
     if (this.store.ocupado()) return;
     if (!this.vp.valido()) { this.alerts.toast('Revisa los campos marcados en rojo', 'error'); return; }
@@ -187,7 +177,6 @@ export class ReservaDetalleComponent {
     this.ejecutar(this.store.eliminarPasajero(pasajeroId), 'Pasajero quitado');
   }
 
-  // ---------- Punto de recojo ----------
   private cargarPuntos() {
     const paqueteId = this.reserva()?.paqueteId;
     if (!paqueteId || this.puntosCargados) return;
@@ -201,7 +190,6 @@ export class ReservaDetalleComponent {
     this.ejecutar(this.store.cambiarRecojo(this.id, this.recojoSel), 'Punto de recojo actualizado');
   }
 
-  // La boleta se pide con el token de la sesión y se abre en una pestaña nueva
   verBoleta() {
     const ventana = window.open('', '_blank');
     this.store.verBoleta(this.id).subscribe({

@@ -14,8 +14,6 @@ import { FiltroBusqueda } from '../landing.models';
 export class LandingSearchComponent {
   @Input() destinos: string[] = [];
   @Output() buscar = new EventEmitter<FiltroBusqueda>();
-  // Filtro vigente de la página: al "Quitar filtros" los campos también se vacían
-  // (solo cuando cambia lo aplicado; tocar una pestaña no borra lo que se está escribiendo)
   private aplicado = { destino: '', fecha: '' };
   @Input() set valores(f: FiltroBusqueda) {
     if (f.destino === this.aplicado.destino && f.fecha === this.aplicado.fecha) return;
@@ -28,7 +26,6 @@ export class LandingSearchComponent {
   fecha = '';
   hoy = hoy();
 
-  // La categoría (duración) se elige con las pestañas de la sección, no aquí
   enviar() {
     this.buscar.emit({ destino: this.destino.trim(), fecha: this.fecha, tipo: '' });
   }

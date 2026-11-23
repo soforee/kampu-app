@@ -27,7 +27,6 @@ export class PaquetesComponent {
   private alerts = inject(AlertService);
   imagenes = inject(ImagenService);
 
-
   texto = signal('');
   abierto = signal(false);
   fotoSeleccionada: File | null = null;
@@ -42,7 +41,6 @@ export class PaquetesComponent {
     noches: V.entero(this.form.noches, 'Las noches', 0, 99)
       ?? (this.form.noches > this.form.dias ? 'Las noches no pueden ser más que los días.' : null),
     precio: V.importe(this.form.precioBase, 'El precio base'),
-    // Reglas de venta (v10): la BD las usa al crear una salida cuando se reserva una fecha nueva
     cupo: V.entero(this.form.cupoPorDefecto, 'El cupo por defecto', 1, 999),
     minimo: V.entero(this.form.minimoPasajeros, 'El mínimo de pasajeros', 1, 999)
       ?? ((this.form.minimoPasajeros ?? 0) > (this.form.cupoPorDefecto ?? 0) ? 'El mínimo no puede superar el cupo por defecto.' : null),
@@ -52,7 +50,6 @@ export class PaquetesComponent {
   }));
   diasSemana = DIAS_SEMANA;
 
-  // Itinerario del paquete (PAQUETE_ITINERARIO), solo al editar
   itinerario = signal<ActividadItinerario[]>([]);
   actividad = { diaNumero: 1, titulo: '', horaInicio: '', lugarId: null as number | null };
 
@@ -61,7 +58,6 @@ export class PaquetesComponent {
       cupoPorDefecto: 12, minimoPasajeros: 2, diasOperacion: '1111111', anticipacionMinHoras: 48, horaInicio: '08:00', serviciosIncluidos: '' };
   }
 
-  // Días de operación: L M M J V S D como '1'/'0'
   opera(i: number) { return this.form.diasOperacion.charAt(i) === '1'; }
   alternarDia(i: number) {
     const d = this.form.diasOperacion.split('');
@@ -213,7 +209,6 @@ export class PaquetesComponent {
   }
 
   async eliminar(id: number) {
-    // v10 no otorga DELETE sobre PAQUETES_TOUR: el paquete se retira de la venta (INACTIVO)
     if (!(await this.alerts.confirm('Quedará INACTIVO: no se vende más, pero se conservan sus salidas y reservas.', 'Retirar paquete'))) return;
     this.store.eliminarPaquete(id).subscribe({
       next: () => {

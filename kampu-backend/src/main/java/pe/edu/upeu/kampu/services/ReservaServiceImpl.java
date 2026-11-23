@@ -18,16 +18,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Reservas según kampu_bd.sql:
- *  - Venta: PKG_RESERVAS.reservar(cliente, paquete, fecha, cantidad...). La BD busca la salida de ese
- *    paquete en esa fecha o la crea; TRG_RESERVAS_BIU toma los cupos sin sobreventa, congela el precio,
- *    genera el código KR-AAAA-NNNNNN y marca la salida GARANTIZADA al llegar al mínimo.
- *  - Confirmación: automática al aprobarse el primer pago (PKG_RESERVAS.recalcular, desde PAGOS).
- *  - Completada: automática al completarse la salida (TRG_SALIDAS_VALIDAR).
- *  - Anulación: PKG_RESERVAS.anular (reembolsa pagos, devuelve cupos y cierra la solicitud del portal).
- *  - Pasajeros: se registran con la reserva o después, hasta la cantidad reservada (TRG_PASAJEROS_VALIDAR).
- */
 @Service
 public class ReservaServiceImpl implements IReservaService {
     private final ReservaRepository reservaRepository;
@@ -59,8 +49,6 @@ public class ReservaServiceImpl implements IReservaService {
         this.jdbc = jdbc;
         this.em = em;
     }
-
-    // ---------- Consultas ----------
 
     @Override
     @Transactional(readOnly = true)
@@ -104,8 +92,6 @@ public class ReservaServiceImpl implements IReservaService {
         return lista;
     }
 
-    // ---------- Venta ----------
-
     @Override
     @Transactional
     public ReservaDTO crear(ReservaRequestDTO dto) {
@@ -120,7 +106,6 @@ public class ReservaServiceImpl implements IReservaService {
         if (dto.clienteId() == null && dto.contacto() == null) throw new BusinessException("Selecciona un cliente o registra uno nuevo.");
         if (dto.clienteId() != null && !clienteRepository.existsById(dto.clienteId())) throw new BusinessException("El cliente seleccionado no existe.");
 
-        // Invitado: se crea en CLIENTES sin cuenta web (podrá activarla con "Registrarse")
         Long clienteId = dto.clienteId();
         if (clienteId == null) {
             ContactoReservaDTO c = dto.contacto();
@@ -135,7 +120,6 @@ public class ReservaServiceImpl implements IReservaService {
         return dto(r, contexto());
     }
 
-    // PKG_RESERVAS.reservar: única puerta de entrada para vender cupos
     private Long reservar(Long clienteId, ReservaRequestDTO dto) {
         Long id = jdbc.execute((java.sql.Connection con) -> {
             try (CallableStatement cs = con.prepareCall("{call PKG_RESERVAS.reservar(?, ?, ?, ?, ?, ?, ?, ?, ?)}")) {
@@ -156,8 +140,6 @@ public class ReservaServiceImpl implements IReservaService {
         return Objects.requireNonNull(id);
     }
 
-    // ---------- Pasajeros ----------
-
     @Override
     @Transactional
     public PasajeroReservaDTO agregarPasajero(Long reservaId, PasajeroRequestDTO dto) {
@@ -173,7 +155,6 @@ public class ReservaServiceImpl implements IReservaService {
     public void eliminarPasajero(Long pasajeroId) {
         PasajeroReserva p = pasajeroRepository.findById(pasajeroId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pasajero no encontrado con Id: " + pasajeroId));
-        // TRG_PASAJEROS_VALIDAR: no se borra el manifiesto de una reserva cerrada
         pasajeroRepository.delete(p);
         pasajeroRepository.flush();
     }
@@ -207,8 +188,6 @@ public class ReservaServiceImpl implements IReservaService {
         }
     }
 
-    // ---------- Anulación, recojo y solicitudes ----------
-
     @Override
     @Transactional
     public ReservaDTO anular(Long id, String motivo, String formaReembolso) {
@@ -222,8 +201,7 @@ public class ReservaServiceImpl implements IReservaService {
     @Transactional
     public ReservaDTO cambiarRecojo(Long id, Long lugarRecojoId) {
         Reserva r = obtener(id);
-        // null = por definir (la agencia aún no elige dónde recoger al cliente)
-        r.setLugarRecojoId(lugarRecojoId);   // TRG_RESERVAS_BIU valida que sea punto de recojo y que la reserva siga abierta
+        r.setLugarRecojoId(lugarRecojoId);
         reservaRepository.saveAndFlush(r);
         return recargar(id);
     }
@@ -243,11 +221,9 @@ public class ReservaServiceImpl implements IReservaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Solicitud no encontrada para la reserva " + reservaId));
     }
 
-    // ---------- Apoyo ----------
-
     private ReservaDTO recargar(Long id) {
         em.flush();
-        em.clear();   // la BD cambió estados y montos por PL/SQL
+        em.clear();
         return dto(obtener(id), contexto());
     }
 

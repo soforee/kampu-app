@@ -12,14 +12,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Types;
 
-/**
- * Escribe en la bitácora AUDITORIA (origen = 'APP').
- *
- * - registrar(...)            : dentro de la transacción en curso (si el cambio se deshace, su registro también).
- * - registrarIndependiente(...): en una transacción propia; para eventos que deben quedar aunque la
- *                                operación falle (login fallido) o que ocurren fuera de una transacción.
- * - insertar(Connection, ...) : lo usa AuditoriaHibernateListener con la conexión de Hibernate.
- */
 @Service
 public class AuditoriaService {
     private final JdbcTemplate jdbc;
@@ -31,7 +23,6 @@ public class AuditoriaService {
         this.nueva.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
-    /** Con el usuario y rol de la sesión de la petición */
     public void registrar(String accion, String entidad, Long entidadId, String detalle) {
         registrar(new RegistroAuditoria(accion, entidad, entidadId, null, null, null, detalle,
                 SesionActual.usuario(), SesionActual.rol()));

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.Immutable;
 
-// HISTORIAL_OPERACIONES (v10): lo escribe TRG_OPERACIONES_VALIDAR (solo lectura en JPA)
 @Entity
 @Immutable
 @Table(name = "HISTORIAL_OPERACIONES")

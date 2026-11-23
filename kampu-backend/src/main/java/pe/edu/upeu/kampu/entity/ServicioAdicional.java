@@ -5,7 +5,6 @@ import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 
-// SERVICIOS_ADICIONALES (v11): lo que el cliente suma a un paquete. paqueteId NULL = para todos los paquetes.
 @Entity
 @DynamicUpdate
 @Table(name = "SERVICIOS_ADICIONALES")
@@ -27,7 +26,6 @@ public class ServicioAdicional {
     @Column(name = "precio")
     private BigDecimal precio;
 
-    // POR_PERSONA | POR_GRUPO
     @Column(name = "modalidad")
     private String modalidad;
 

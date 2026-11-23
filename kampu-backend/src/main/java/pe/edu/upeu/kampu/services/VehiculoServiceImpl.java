@@ -66,7 +66,6 @@ public class VehiculoServiceImpl implements IVehiculoService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_bd.sql no otorga DELETE sobre VEHICULOS: la baja es lógica (estado INACTIVO)
         Vehiculo v = obtener(id);
         if ("INACTIVO".equals(v.getEstado())) throw new BusinessException("El vehículo ya está INACTIVO.");
         v.setEstado("INACTIVO");
@@ -80,7 +79,6 @@ public class VehiculoServiceImpl implements IVehiculoService {
     }
 
     private void copiar(VehiculoRequestDTO dto, Vehiculo v, Long id) {
-        // proveedorId null = flota propia; si es de un tercero, TRG_VEHICULOS_VALIDAR exige que brinde transporte
         if (dto.proveedorId() != null) {
             var p = proveedorRepository.findById(dto.proveedorId()).orElseThrow(() -> new BusinessException("El proveedor seleccionado no existe."));
             if (!Integer.valueOf(1).equals(p.getOfreceTransporte())) {

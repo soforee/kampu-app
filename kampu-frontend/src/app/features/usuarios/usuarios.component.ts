@@ -21,13 +21,6 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 const PASSWORD_MIN = 8;
 type FiltroRol = 'TODOS' | RolInterno | 'CAMPO';
 
-/**
- * Usuarios del sistema (solo ADMIN, permiso GESTIONAR_USUARIOS).
- * El administrador crea las cuentas del personal y elige su rol (guía y conductor nacen con su ficha
- * en el personal propio); también cambia el rol dentro del grupo,
- * revoca o restablece el acceso (desbloquea) y asigna una contraseña nueva.
- * Las cuentas de clientes no se crean aquí: el cliente se registra en el portal.
- */
 @Component({
   selector: 'app-usuarios',
   standalone: true,
@@ -43,16 +36,13 @@ export class UsuariosComponent {
   min = PASSWORD_MIN;
   etiqueta = etiqueta;
 
-  // Roles que el administrador puede asignar (chk_usu_rol) y qué puede hacer cada uno (PKG_SEGURIDAD_ROLES.puede)
   roles: { valor: RolInterno; texto: string; icono: string; detalle: string }[] = [
     { valor: 'ADMIN', texto: 'Administrador', icono: 'lock', detalle: 'Acceso completo: usuarios, auditoría, ventas, catálogo, logística y operaciones.' },
     { valor: 'VENTAS', texto: 'Ventas', icono: 'ticket', detalle: 'Clientes, reservas, pagos, cotizaciones y catálogo de paquetes. Sin usuarios ni gestión de flota.' },
-    // Personal de campo: al crear la cuenta se registra su ficha en Personal
     { valor: 'GUIA', texto: 'Guía', icono: 'flag', detalle: 'Solo sus salidas: itinerario, manifiesto y recojos. Sin montos ni clientes.' },
     { valor: 'CONDUCTOR', texto: 'Conductor', icono: 'map-pin', detalle: 'Solo sus traslados: vehículo, ruta y recojos. Sin montos ni clientes.' }
   ];
   esCampo = (rol: RolInterno) => rol === 'GUIA' || rol === 'CONDUCTOR';
-  // El rol solo cambia dentro de su grupo: oficina (Admin/Ventas) o campo (Guía/Conductor)
   mismoGrupo = (a: RolInterno, b: RolInterno) => this.esCampo(a) === this.esCampo(b);
   categorias: CategoriaLicencia[] = ['A-I', 'A-IIa', 'A-IIb', 'A-IIIa', 'A-IIIb', 'A-IIIc'];
 
@@ -85,7 +75,6 @@ export class UsuariosComponent {
     return filas.slice(pagina * 10, pagina * 10 + 10);
   });
 
-  // ---------- Nuevo usuario ----------
   abierto = signal(false);
   verClave = signal(false);
   form: UsuarioForm = this.vacio();
@@ -104,12 +93,10 @@ export class UsuariosComponent {
       : this.form.confirmacion !== this.form.password ? 'Las contraseñas no coinciden.' : null
   }));
 
-  // ---------- Cambiar rol ----------
   editando = signal<UsuarioSistema | null>(null);
   cambio: CambioRolForm = { rol: 'VENTAS', numLicencia: '', catLicencia: '', vencLicencia: '' };
   vr = new FormValidacion(() => this.erroresLicencia(this.cambio.rol === 'CONDUCTOR' && this.editando()?.rol !== 'CONDUCTOR', this.cambio));
 
-  // ---------- Contraseña nueva ----------
   claveDe = signal<UsuarioSistema | null>(null);
   clave = { password: '', confirmacion: '' };
   vc = new FormValidacion(() => ({
@@ -139,7 +126,6 @@ export class UsuariosComponent {
       numLicencia: '', catLicencia: '', vencLicencia: '', password: '', confirmacion: '' };
   }
 
-  // Licencia del conductor: número, categoría y vencimiento vigente
   private erroresLicencia(conduce: boolean, f: { numLicencia: string; catLicencia: string; vencLicencia: string }) {
     const lic = f.numLicencia.trim();
     return {
@@ -172,7 +158,6 @@ export class UsuariosComponent {
     return p.length > 64 ? 'La contraseña admite máximo 64 caracteres.' : null;
   }
 
-  // Indicador orientativo de fortaleza (0 a 4)
   fuerza(p: string): number {
     let n = 0;
     if (p.length >= PASSWORD_MIN) n++;
@@ -182,7 +167,6 @@ export class UsuariosComponent {
     return n;
   }
 
-  // Sugerencia de usuario a partir del nombre: "María Quispe" -> "mquispe"
   sugerirUsuario() {
     if (this.form.username.trim()) return;
     const partes = this.form.nombreCompleto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
@@ -221,7 +205,7 @@ export class UsuariosComponent {
         this.ocupado.set(false);
         this.abierto.set(false);
         this.usuarios.set([...this.usuarios(), u]);
-        if (this.esCampo(u.rol)) this.store.cargarPersonal();   // su ficha aparece en Personal
+        if (this.esCampo(u.rol)) this.store.cargarPersonal();
         this.marcar(u.usuarioId);
         this.alerts.toast(`Usuario ${u.username} creado como ${etiqueta(u.rol)}`);
       },
@@ -295,7 +279,7 @@ export class UsuariosComponent {
 
   private reemplazar(u: UsuarioSistema) {
     this.usuarios.set(this.usuarios().map(x => x.usuarioId === u.usuarioId ? u : x));
-    if (this.esCampo(u.rol)) this.store.cargarPersonal();   // rol o estado también cambian su ficha en Personal
+    if (this.esCampo(u.rol)) this.store.cargarPersonal();
     this.marcar(u.usuarioId);
   }
 

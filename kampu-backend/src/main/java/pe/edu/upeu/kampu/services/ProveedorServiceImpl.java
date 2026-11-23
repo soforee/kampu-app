@@ -18,11 +18,6 @@ import pe.edu.upeu.kampu.repository.VehiculoRepository;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Proveedores: Kampu Tours (es_propio = 1, único) y terceros. Tanto la flota propia
- * como la de terceros cuelgan de un proveedor, así no hace falta inventar una
- * "empresa de transporte" para registrar los vehículos de Kampu.
- */
 @Service
 public class ProveedorServiceImpl implements IProveedorService {
     private final ProveedorRepository proveedorRepository;
@@ -77,7 +72,6 @@ public class ProveedorServiceImpl implements IProveedorService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_bd.sql no otorga DELETE sobre PROVEEDORES: la baja es lógica (estado INACTIVO)
         Proveedor p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("El proveedor ya está INACTIVO.");
         p.setEstado("INACTIVO");

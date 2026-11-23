@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter, map } from 'rxjs';
@@ -27,23 +27,17 @@ export class ShellComponent {
   private avisos = inject(AlertasService);
 
   abierto = signal(false);
-  // Escritorio: menú compacto (solo íconos, con nombre al pasar el cursor) o desplegado; se recuerda en este navegador
   compacto = signal(this.leerPreferencia());
-  // Desplegables de la barra superior: 'busqueda' | 'avisos' | 'usuario' | null
   desplegado = signal<string | null>(null);
   consulta = signal('');
   alertas = this.avisos.lista;
-  // Avisos de la BD (asignaciones, cambios de recojo, novedades): se consultan cada minuto
   private campana = inject(NotificacionesService);
   notificaciones = this.campana.lista;
   sinLeer = this.campana.sinLeer;
   totalAvisos = computed(() => this.alertas().length + this.sinLeer());
 
-  // Sección actual (título de la barra superior), según la ruta
   private url = toSignal(this.router.events.pipe(filter(e => e instanceof NavigationEnd), map(() => this.router.url)), { initialValue: this.router.url });
 
-  // Menú según los permisos de la sesión (mismos que exigen app.routes.ts y el backend)
-  // rol: solo para ese rol (p. ej. el historial y el vehículo son del conductor)
   private todo: { ruta: string; texto: string; icono: string; permiso?: Permiso; rol?: string }[] = [
     { ruta: '/dashboard', texto: 'Panel', icono: 'chart', permiso: 'VER_RESUMEN' },
     { ruta: '/mis-asignaciones', texto: 'Mis asignaciones', icono: 'flag', permiso: 'VER_ASIGNACIONES_PROPIAS' },
@@ -70,7 +64,6 @@ export class ShellComponent {
   menu = computed(() => this.todo.filter(m => (!m.permiso || this.auth.puede(m.permiso)) && (!m.rol || m.rol === this.auth.rol())));
   seccion = computed(() => this.todo.find(m => this.url().startsWith(m.ruta)) ?? this.todo[0]);
 
-  // Búsqueda global sobre los datos ya cargados (solo lo que el rol puede ver)
   resultados = computed(() => {
     const q = this.consulta().trim().toLowerCase();
     if (q.length < 2) return [];
@@ -104,7 +97,6 @@ export class ShellComponent {
 
   alternar(panel: string) {
     this.desplegado.set(this.desplegado() === panel ? null : panel);
-    // Al abrir la campana, los avisos nuevos quedan como leídos (se siguen viendo resaltados esta vez)
     if (panel === 'avisos' && this.desplegado() === 'avisos') this.campana.marcarLeidas();
   }
 
@@ -126,8 +118,6 @@ export class ShellComponent {
     this.irA(ruta);
   }
 
-  // Cierra los desplegables al hacer clic fuera de la barra superior
-  @HostListener('document:click', ['$event'])
   clicFuera(e: MouseEvent) {
     if (!(e.target as HTMLElement).closest('[data-barra]')) this.desplegado.set(null);
   }
@@ -151,7 +141,6 @@ export class ShellComponent {
     });
   }
 
-  // Tooltip del menú compacto (solo escritorio): se ubica a la altura del ícono, fuera del menú
   tip = signal<{ texto: string; top: number } | null>(null);
   mostrarTip(texto: string, e: Event) {
     if (!this.compacto() || window.innerWidth < 1024) return;
@@ -162,7 +151,7 @@ export class ShellComponent {
   alternarMenu() {
     this.tip.set(null);
     this.compacto.set(!this.compacto());
-    try { localStorage.setItem('kampu.menuCompacto', this.compacto() ? '1' : '0'); } catch { /* sin almacenamiento: solo dura la sesión */ }
+    try { localStorage.setItem('kampu.menuCompacto', this.compacto() ? '1' : '0'); } catch {  }
   }
 
   private leerPreferencia() {

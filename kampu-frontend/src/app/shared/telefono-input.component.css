@@ -6,7 +6,7 @@
   display: flex;
   align-items: stretch;
   width: 100%;
-  height: 2.25rem;   /* mismo alto que .field */
+  height: 2.25rem;
   border-radius: 8px;
   border: 1px solid #E6E4DA;
   background: #FFFFFF;
@@ -18,7 +18,6 @@
 .grupo-invalido, .grupo-invalido:hover { border-color: #CC735D; background: rgba(255, 241, 242, .4); }
 .grupo-invalido:focus-within { border-color: #B4533F; box-shadow: 0 0 0 4px rgba(180, 83, 63, .12); }
 
-/* Botón del país: bandera + código */
 .pais {
   display: flex;
   align-items: center;
@@ -74,7 +73,6 @@
 }
 .contador.completo { color: #5D5A4E; }
 
-/* Lista de países */
 .panel {
   position: absolute;
   z-index: 40;

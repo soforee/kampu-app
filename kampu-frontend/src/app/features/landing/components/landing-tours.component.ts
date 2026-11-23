@@ -18,7 +18,6 @@ import { Contacto, TipoTour, TourCard, fotoDePaquete } from '../landing.models';
 export class LandingToursComponent implements OnChanges, OnDestroy {
   private observador?: ResizeObserver;
   private _carrusel?: ElementRef<HTMLElement>;
-  // El carrusel aparece cuando terminan de cargar los tours: al aparecer se observa su tamaño para mostrar u ocultar las flechas
   @ViewChild('carrusel') set carrusel(ref: ElementRef<HTMLElement> | undefined) {
     this.observador?.disconnect();
     this._carrusel = ref;
@@ -31,7 +30,6 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   alInicio = signal(true);
   alFinal = signal(true);
 
-  // Flechas: avanzan o retroceden el ancho visible del carrusel (el navegador ajusta a la tarjeta más cercana)
   mover(dir: number) {
     const el = this.carrusel?.nativeElement;
     if (el) el.scrollBy({ left: dir * el.clientWidth * 0.9, behavior: 'smooth' });
@@ -45,13 +43,11 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
     if (fin !== this.alFinal()) this.alFinal.set(fin);
   }
 
-  // Al cambiar de categoría el carrusel vuelve al inicio
   cambiar(valor: TipoTour) {
     this.categoriaChange.emit(valor);
     this.carrusel?.nativeElement.scrollTo({ left: 0 });
   }
 
-  // Con otra lista de tours (búsqueda o categoría) cambian los bordes del carrusel
   ngOnChanges() { setTimeout(() => this.revisarBordes()); }
 
   ngOnDestroy() { this.observador?.disconnect(); }
@@ -61,11 +57,8 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
   @Input() hayFiltro = false;
   @Input({ required: true }) contacto!: Contacto;
   @Output() limpiar = new EventEmitter<void>();
-  // "Cotizar": abre la cotización en línea (sin cuenta) del paquete
   @Output() cotizar = new EventEmitter<PaqueteTour>();
-  // Categoría activa (por duración del tour) y aviso al cambiarla
   @Input() categoria: TipoTour = '';
-  // Cantidad de tours por categoría con el destino y la fecha actuales
   @Input() conteos: Record<string, number> = {};
   @Output() categoriaChange = new EventEmitter<TipoTour>();
 
@@ -78,18 +71,15 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
 
   imagenes = inject(ImagenService);
   private auth = inject(AuthService);
-  // Paquetes cuya foto propia no cargó (archivo inexistente): se usa la del destino
   private fallidas = signal<Set<number>>(new Set());
 
   private meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-  // '2026-12-12' → '12 dic 2026'
   fecha(iso: string): string {
     const [y, m, d] = iso.split('-').map(Number);
     return `${d} ${this.meses[m - 1]} ${y}`;
   }
 
-  // Foto propia del paquete; si no tiene o no cargó, la foto real de su destino (con su crédito); si no hay, null
   imagen(t: TourCard): { src: string; posicion?: string; credito?: { autor: string; licencia: string; fuente: string } } | null {
     const propia = this.imagenes.url(t.paquete.imagen);
     if (propia && !this.fallidas().has(t.paquete.paqueteId)) return { src: propia };
@@ -103,9 +93,6 @@ export class LandingToursComponent implements OnChanges, OnDestroy {
     this.fallidas.set(new Set(this.fallidas()).add(id));
   }
 
-  // Reservar: el cliente va a "Mis paquetes" con el paquete elegido; sin sesión, al login con ?reservar=
-  // (el login lo lleva después a "Mis paquetes", ver reserva-pendiente.ts); el personal de ventas, a "Nueva reserva".
-  // Guías y conductores no venden: solo ven "Cotizar".
   reservar(t: TourCard): { ruta: string; params: Record<string, number> } | null {
     const id = t.paquete.paqueteId;
     if (!this.auth.autenticado()) return { ruta: '/login', params: { reservar: id } };

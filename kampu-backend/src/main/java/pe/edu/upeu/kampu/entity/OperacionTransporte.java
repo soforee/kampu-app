@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// OPERACIONES_TRANSPORTE (v10): TRG_OPERACIONES_VALIDAR genera el codigo KMP-###, valida recursos,
-// transiciones y cruces de horario, y escribe HISTORIAL_OPERACIONES.
 @Entity
 @DynamicUpdate
 @Table(name = "OPERACIONES_TRANSPORTE")

@@ -1,7 +1,6 @@
 @if (salida(); as s) {
   <app-migas [items]="[{ texto: 'Salidas', ruta: '/salidas' }, { texto: (paquete()?.nombre ?? 'Salida') + ' · ' + (s.fechaInicio | date:'dd/MM/yyyy') }]" />
 
-  <!-- Cabecera -->
   <app-page-header class="no-print block" [titulo]="paquete()?.nombre ?? 'Salida'">
     <div detalle class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-zinc-500">
       <app-badge [estado]="s.estado" />
@@ -29,9 +28,7 @@
   <div class="detalle grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
     <div class="lg:col-span-2 space-y-6 min-w-0">
 
-      <!-- Manifiesto -->
       <section class="card overflow-hidden manifiesto">
-        <!-- Encabezado solo para la hoja impresa -->
         <div class="solo-impresion px-6 pt-6">
           <div class="flex items-center justify-between">
             <app-logo variante="horizontal" [alto]="26" />
@@ -114,7 +111,6 @@
         }
       </section>
 
-      <!-- Traslados -->
       @if (veTrafico) {
         <section class="card overflow-hidden no-print">
           <div class="card-header">
@@ -149,7 +145,6 @@
       }
     </div>
 
-    <!-- Columna derecha -->
     <aside class="space-y-6 no-print lg:sticky lg:top-8 min-w-0">
       <section class="card overflow-hidden">
         <div class="border-b border-zinc-100 px-5 py-4">

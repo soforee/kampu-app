@@ -1,7 +1,6 @@
 package pe.edu.upeu.kampu.controller;
 
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,13 +20,13 @@ public class PasajeroReservaController {
         this.reservaService = reservaService;
     }
 
-    @Permiso("VER_RESERVAS")
+    @PreAuthorize("hasAuthority('VER_RESERVAS')")
     @GetMapping
     public ResponseEntity<List<PasajeroReservaDTO>> listar(@RequestParam(required = false) Long reservaId) {
         return ResponseEntity.ok(reservaService.listarPasajeros(reservaId));
     }
 
-    @Permiso("GESTIONAR_RESERVAS")
+    @PreAuthorize("hasAuthority('GESTIONAR_RESERVAS')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable Long id) {
         reservaService.eliminarPasajero(id);

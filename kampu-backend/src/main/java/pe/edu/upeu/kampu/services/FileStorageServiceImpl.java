@@ -55,7 +55,6 @@ public class FileStorageServiceImpl implements IFileStorageService {
         if (ruta == null || ruta.isBlank()) return;
         Path archivo = raiz().resolve(ruta).normalize();
         if (!archivo.startsWith(raiz())) return;
-        // images/demo/ viene con el proyecto (datos de demostración): reemplazar la foto no la borra del disco
         if (archivo.startsWith(raiz().resolve(CARPETA_DEMO).normalize())) return;
         try {
             Files.deleteIfExists(archivo);

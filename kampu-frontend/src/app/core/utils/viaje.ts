@@ -3,7 +3,6 @@ import { diasHasta } from './date.util';
 
 export type EstadoPaso = 'hecho' | 'actual' | 'pendiente';
 
-// Línea de tiempo del viaje para el cliente: Reservado → Pagado → Por empezar → En curso → Terminado
 export function lineaViaje(p: PortalPaquete): { texto: string; estado: EstadoPaso }[] {
   const ejec = p.estadoEjecucion;
   const pagado = p.estadoPago === 'PAGADO_COMPLETO';
@@ -17,7 +16,6 @@ export function lineaViaje(p: PortalPaquete): { texto: string; estado: EstadoPas
   ];
 }
 
-// "Faltan 12 días" / "¡Sale mañana!" / null si ya empezó o se canceló
 export function cuentaRegresiva(p: PortalPaquete): string | null {
   if (p.estadoEjecucion !== 'POR_EMPEZAR' || p.estadoPago === 'ANULADO') return null;
   const d = diasHasta(p.fechaInicio);

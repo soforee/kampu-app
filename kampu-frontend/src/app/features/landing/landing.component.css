@@ -1,17 +1,16 @@
-/* Paleta de la página principal (tema claro) */
 :host {
-  --kp-primary: #4B5B1D;       /* verde oliva del logo: botones primarios */
+  --kp-primary: #4B5B1D;
   --kp-primary-hover: #3F4C18;
   --kp-primary-soft: #F4F6E4;
   --kp-on-primary: #FFFFFF;
-  --kp-secondary: #4B5B1D;     /* oliva de la marca: íconos y enlaces */
-  --kp-accent: #C4BD45;        /* lima de la hoja del logo: detalles */
+  --kp-secondary: #4B5B1D;
+  --kp-accent: #C4BD45;
   --kp-bg: #FFFFFF;
-  --kp-bg-alt: #FDFCF6;        /* crema muy claro (derivado de #FDF8E6) */
+  --kp-bg-alt: #FDFCF6;
   --kp-text: #22231B;
   --kp-muted: #7A7668;
   --kp-border: #E6E4DA;
-  --kp-dark: #262E0F;          /* oliva muy oscuro: pie de página */
+  --kp-dark: #262E0F;
   --kp-ease: cubic-bezier(.4, 0, .2, 1);
 
   display: block;
@@ -19,7 +18,6 @@
   color: var(--kp-text);
 }
 
-/* Puntos de secciones: fijos a la derecha, sobre un fondo translúcido para verse en fotos y en fondos claros */
 .puntos {
   position: fixed; right: 1.25rem; top: 50%; z-index: 30; transform: translateY(-50%);
   display: none; flex-direction: column; align-items: center; gap: .65rem;
@@ -32,7 +30,6 @@
 .punto:hover { background: #7A7668; }
 .punto-activo { height: 22px; background: var(--kp-primary); }
 .punto:focus-visible { outline: 2px solid var(--kp-accent); outline-offset: 3px; }
-/* Nombre de la sección al pasar el cursor */
 .punto-texto {
   position: absolute; right: calc(100% + 18px); top: 50%; transform: translate(4px, -50%); white-space: nowrap;
   border-radius: 7px; background: var(--kp-dark); padding: 4px 9px; font-size: 12px; font-weight: 500; color: #fff;
@@ -40,7 +37,6 @@
 }
 .punto:hover .punto-texto, .punto:focus-visible .punto-texto { opacity: 1; transform: translate(0, -50%); }
 .puntos-num { font-size: 10px; font-weight: 600; letter-spacing: .04em; color: var(--kp-primary); font-variant-numeric: tabular-nums; }
-/* Sobre fotos y fondos oscuros: puntos claros sin fondo */
 .puntos { transition: background-color .4s ease, box-shadow .4s ease; }
 .puntos-claros { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14); }
 .puntos-claros .punto { background: rgba(255, 255, 255, .4); }

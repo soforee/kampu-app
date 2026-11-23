@@ -1,13 +1,10 @@
-// v10: PROGRAMADA -> GARANTIZADA (llegó al mínimo de pasajeros) -> COMPLETADA | CANCELADA
 export type EstadoSalida = 'PROGRAMADA' | 'GARANTIZADA' | 'COMPLETADA' | 'CANCELADA';
 export type EstadoReserva = 'PENDIENTE' | 'CONFIRMADA' | 'ANULADA' | 'COMPLETADA';
 export type EstadoPagoReserva = 'PENDIENTE' | 'PARCIAL' | 'PAGADO' | 'REEMBOLSADO';
 export type EstadoTransaccion = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'REEMBOLSADO';
 export type TipoDocumento = 'DNI' | 'CE' | 'PASAPORTE';
-// Los clientes también pueden ser empresas (RUC); los pasajeros no
 export type TipoDocumentoCliente = TipoDocumento | 'RUC';
 export type Moneda = 'PEN' | 'USD' | 'EUR';
-// chk_usu_rol (personal interno y, desde v11, personal de campo) + CLIENTE (portal web)
 export type Rol = 'ADMIN' | 'VENTAS' | 'GUIA' | 'CONDUCTOR' | 'CLIENTE';
 export type EstadoRegistro = 'ACTIVO' | 'INACTIVO';
 export type CategoriaLicencia = 'A-I' | 'A-IIa' | 'A-IIb' | 'A-IIIa' | 'A-IIIb' | 'A-IIIc';
@@ -15,18 +12,13 @@ export type EstadoProveedor = 'ACTIVO' | 'INACTIVO' | 'SUSPENDIDO';
 export type TipoLugar = 'AEROPUERTO' | 'TERMINAL' | 'HOTEL' | 'ATRACTIVO' | 'CIUDAD' | 'OFICINA' | 'OTRO';
 export type TipoVehiculo = 'AUTO' | 'CAMIONETA_4X4' | 'VAN' | 'MINIBUS' | 'BUS';
 export type EstadoVehiculo = 'OPERATIVO' | 'MANTENIMIENTO' | 'INACTIVO';
-// Cargo del personal: catálogo CARGOS (v10). Por defecto GUIA y CONDUCTOR
 export type RolPersonal = string;
 export type FuncionCargo = 'GUIADO' | 'TRANSPORTE' | 'APOYO';
-// chk_pag_metodo (v10)
 export type MetodoPago = 'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO' | 'YAPE' | 'PLIN' | 'TARJETA' | 'PASARELA';
-// chk_res_reembolso (v10)
 export type FormaReembolso = 'EFECTIVO' | 'TRANSFERENCIA' | 'YAPE' | 'PLIN' | 'TARJETA' | 'NOTA_CREDITO';
 export type CanalReserva = 'WEB' | 'PRESENCIAL' | 'TELEFONO' | 'WHATSAPP';
 export type EstadoPersonal = 'DISPONIBLE' | 'OCUPADO' | 'INACTIVO';
-// Estados de tráfico v4 (EstadoOperacion.java)
 export type EstadoOperacion = 'PROGRAMADO' | 'ASIGNADO' | 'EMBARQUE' | 'EN_RUTA' | 'FINALIZADO' | 'CANCELADO';
-// Portal del cliente (VW_PAQUETES_CLIENTE)
 export type EstadoEjecucion = 'POR_EMPEZAR' | 'EN_CURSO' | 'TERMINADO' | 'CANCELADO';
 export type EstadoPagoPaquete = 'PAGADO_COMPLETO' | 'FALTA_PAGAR' | 'PENDIENTE_PAGO' | 'ANULADO';
 
@@ -38,17 +30,15 @@ export interface PaqueteTour {
   dias: number;
   noches: number;
   imagen: string;
-  // v10: reglas con las que la BD crea la salida al reservar una fecha nueva
   cupoPorDefecto: number;
   minimoPasajeros: number;
-  diasOperacion: string;          // L M M J V S D (1 = opera)
+  diasOperacion: string;
   anticipacionMinHoras: number;
-  horaInicio: string;             // HH:MM del día 1
+  horaInicio: string;
   estado: EstadoRegistro;
-  serviciosIncluidos: string;     // (v11) uno por línea
+  serviciosIncluidos: string;
 }
 
-// Día del calendario de un paquete (PKG_RESERVAS.calendario)
 export interface CalendarioDia {
   fecha: string;
   opera: boolean;
@@ -59,7 +49,6 @@ export interface CalendarioDia {
   reservableWeb: boolean;
 }
 
-// Punto de recojo y hora a la que pasa la movilidad
 export interface PuntoRecojo {
   lugarId: number;
   nombre: string;
@@ -91,7 +80,6 @@ export interface Cargo {
   estado: EstadoRegistro;
 }
 
-// ---------- Proveedores (v10): solo terceros; lo propio de Kampu no tiene proveedor ----------
 export interface Proveedor {
   proveedorId: number;
   nombreComercial: string;
@@ -108,7 +96,6 @@ export interface Proveedor {
   guias: number;
 }
 
-// Personal (v10): cargo del catálogo; proveedorId null = propio de Kampu Tours
 export interface Personal {
   personalId: number;
   proveedorId: number | null;
@@ -121,8 +108,7 @@ export interface Personal {
   catLicencia: CategoriaLicencia | null;
   vencLicencia: string | null;
   estado: EstadoPersonal;
-  usuario: string | null;           // personal propio: usuario de su cuenta
-  // Guía: carné DIRCETUR / MINCETUR, su vencimiento e idiomas
+  usuario: string | null;
   carneGuia: string | null;
   vencCarne: string | null;
   idiomas: string | null;
@@ -133,21 +119,17 @@ export interface Lugar {
   nombre: string;
   tipoLugar: TipoLugar;
   ciudad: string;
-  // Coordenadas reales: con ellas se calcula la duración de las rutas
   latitud: number | null;
   longitud: number | null;
-  // v10: punto de recojo (la movilidad pasa minutosAntesRecojo antes de la hora de inicio)
   direccion: string;
   esPuntoRecojo: boolean;
   minutosAntesRecojo: number;
 }
 
-// Sugerencia del buscador de OpenStreetMap (Lugares): autocompleta el formulario
 export interface LugarSugerido {
   nombre: string; tipoLugar: TipoLugar; ciudad: string; latitud: number; longitud: number; direccion: string; region: string;
 }
 
-// Habitación de hotel de un proveedor de hospedaje: se elige en la cotización con su precio por noche
 export type ModalidadPrecio = 'POR_PERSONA' | 'POR_GRUPO';
 export interface Habitacion {
   habitacionId: number;
@@ -183,7 +165,6 @@ export interface Vehiculo {
   vencRevision: string | null;
 }
 
-// Duración calculada con datos reales: OSRM (OpenStreetMap) o ESTIMADO (coordenadas)
 export interface EstimacionDuracion {
   minutos: number | null;
   distanciaKm: number | null;
@@ -191,7 +172,6 @@ export interface EstimacionDuracion {
   detalle: string;
 }
 
-// ---------- Tráfico (OPERACIONES_TRANSPORTE) ----------
 export interface Operacion {
   operacionId: number;
   codigoOperacion: string;
@@ -240,7 +220,6 @@ export interface HistorialOperacion {
   observacion: string;
 }
 
-// Vehículo o conductor posible para una operación (motivo = null: elegible)
 export interface RecursoCandidato {
   tipoRecurso: 'VEHICULO' | 'CONDUCTOR';
   recursoId: number;
@@ -260,7 +239,7 @@ export interface Cliente {
   numeroDocumento: string;
   email: string;
   telefono: string;
-  cuentaWeb: boolean;       // ya se registró en el portal
+  cuentaWeb: boolean;
   estadoCuenta: string;
   fechaRegistro: string | null;
   nacionalidad: string;
@@ -275,16 +254,13 @@ export interface SalidaProgramada {
   cuposDisponibles: number;
   guiaId?: number | null;
   estado: EstadoSalida;
-  // MANUAL (abierta por la agencia) o RESERVA (la creó la BD al reservar una fecha nueva)
   origen: 'MANUAL' | 'RESERVA';
   minimoPasajeros: number | null;
   faltanParaGarantizar: number;
-  // Operaciones de transporte vigentes y tramo sin transporte suficiente (null = alcanza)
   operaciones: number;
   faltanteTransporte: string | null;
 }
 
-// Reserva (v10): un paquete en una fecha (salida). numeroViajeros = cupos tomados
 export interface Reserva {
   reservaId: number;
   codigoReserva: string;
@@ -296,7 +272,7 @@ export interface Reserva {
   pasajerosRegistrados: number;
   precioUnitario: number;
   descuento: number;
-  montoAdicionales: number;       // (v11) servicios adicionales de la cotización (entran en el total)
+  montoAdicionales: number;
   montoTotal: number;
   montoPagado: number;
   saldo: number;
@@ -313,11 +289,9 @@ export interface Reserva {
   lugarRecojoId: number | null;
   puntoRecojo: string | null;
   boletaEnviadaEn?: string | null;
-  // Solicitud de anulación del portal pendiente (null si no hay)
   solicitudPendienteId: number | null;
 }
 
-// Solicitud de anulación del portal (SOLICITUDES_ANULACION)
 export interface SolicitudAnulacion {
   solicitudId: number;
   reservaId: number;
@@ -335,7 +309,6 @@ export interface SolicitudAnulacion {
   respuesta: string | null;
 }
 
-// Cliente nuevo que se registra al reservar (v4: toda reserva tiene cliente)
 export interface ContactoReserva {
   nombre: string;
   tipoDocumento: TipoDocumentoCliente;
@@ -372,7 +345,6 @@ export interface Pago {
   observaciones: string;
 }
 
-// ---------- Portal del cliente ----------
 export interface PortalPaquete {
   reservaId: number;
   codigoReserva: string;
@@ -400,7 +372,6 @@ export interface PortalPaquete {
   puntoRecojo: string | null;
   direccionRecojo: string | null;
   horaRecojo: string | null;
-  // Habitación de hotel elegida (paquetes con noches); su costo ya está en montoTotal
   habitacion: string | null;
   hotel: string | null;
   montoHospedaje: number;
@@ -425,7 +396,6 @@ export interface PortalDetalle {
   solicitud: SolicitudAnulacion | null;
 }
 
-// VW_RESUMEN_PAQUETES_POR_ROL (montos nulos si el rol no puede VER_MONTOS)
 export interface ResumenPaquete {
   salidaId: number;
   paqueteId: number;
@@ -447,7 +417,6 @@ export interface ResumenPaquete {
   montoCobrado: number | null;
 }
 
-// Manifiesto de una salida (GET /salidas/{id}/manifiesto). estadoPago y saldo solo llegan con VER_MONTOS.
 export interface PasajeroManifiesto {
   pasajeroId: number;
   nombreCompleto: string;
@@ -478,7 +447,6 @@ export interface Manifiesto {
   pasajeros: PasajeroManifiesto[];
 }
 
-// Aviso del panel "Requiere atención"
 export interface Alerta {
   nivel: 'alta' | 'media';
   icono: string;
@@ -511,9 +479,8 @@ export interface PaqueteForm {
   diasOperacion: string;
   anticipacionMinHoras: number | null;
   horaInicio: string;
-  serviciosIncluidos: string;     // (v11) uno por línea
+  serviciosIncluidos: string;
 }
-
 
 export interface ProveedorForm {
   nombreComercial: string;
@@ -527,7 +494,7 @@ export interface ProveedorForm {
 }
 
 export interface PersonalForm {
-  proveedorId: number | null;       // null = personal propio
+  proveedorId: number | null;
   numeroDocumento: string;
   nombreCompleto: string;
   cargo: RolPersonal;
@@ -571,7 +538,7 @@ export interface OperacionForm {
   vehiculoId: number | null;
   conductorId: number | null;
   paxProgramados: number | null;
-  horaProgramadaSalida: string;      // 'YYYY-MM-DDTHH:mm'
+  horaProgramadaSalida: string;
   horaEstimadaLlegada: string | null;
   observaciones: string;
 }
@@ -585,7 +552,6 @@ export interface ClienteForm {
   nacionalidad: string;
 }
 
-// La fecha fin y los cupos disponibles los calcula la BD (TRG_SALIDAS_VALIDAR)
 export interface SalidaForm {
   paqueteId: number;
   fechaInicio: string;
@@ -602,7 +568,6 @@ export interface PasajeroDraft {
   fechaNacimiento: string;
 }
 
-// Personal interno (usuarioId) o cliente del portal (clienteId), con el rol y sus permisos
 export interface Sesion {
   usuarioId: number | null;
   clienteId: number | null;
@@ -610,9 +575,7 @@ export interface Sesion {
   nombre: string;
   rol: Rol;
   estado: string;
-  // Acciones permitidas por PKG_SEGURIDAD_ROLES (VER_LOGISTICA, GESTIONAR_RESERVAS, ...)
   permisos: Permiso[];
-  // (v11) Sesión firmada por el backend: viaja como "Authorization: Bearer <token>"
   token: string;
 }
 
@@ -624,7 +587,6 @@ export type Permiso =
   | 'VER_PAQUETES_PROPIOS' | 'INFORMAR_PAGO'
   | 'VER_COTIZACIONES' | 'GESTIONAR_COTIZACIONES' | 'VER_ASIGNACIONES_PROPIAS';
 
-// ---------- Auditoría (solo ADMIN) ----------
 export type AccionAuditoria = 'CREAR' | 'ACTUALIZAR' | 'ELIMINAR' | 'REGISTRO' | 'LOGIN' | 'LOGOUT' | 'LOGIN_FALLIDO';
 
 export interface RegistroAuditoria {
@@ -660,7 +622,6 @@ export interface Pagina<T> {
   tamanio: number;
 }
 
-// ---------- Usuarios del sistema (solo ADMIN) ----------
 export type RolInterno = 'ADMIN' | 'VENTAS' | 'GUIA' | 'CONDUCTOR';
 export type EstadoUsuario = 'ACTIVO' | 'INACTIVO' | 'BLOQUEADO';
 
@@ -673,7 +634,7 @@ export interface UsuarioSistema {
   estado: EstadoUsuario;
   intentosFallidos: number;
   ultimoAcceso: string | null;
-  personalId: number | null;        // (v11) GUIA / CONDUCTOR: su ficha de personal
+  personalId: number | null;
   personalNombre: string | null;
 }
 
@@ -682,7 +643,6 @@ export interface UsuarioForm {
   nombreCompleto: string;
   email: string;
   rol: RolInterno;
-  // GUIA / CONDUCTOR: datos de su ficha de personal propio (se crea con la cuenta)
   numeroDocumento: string;
   telefono: string;
   numLicencia: string;
@@ -692,7 +652,6 @@ export interface UsuarioForm {
   confirmacion: string;
 }
 
-// Cambio de rol dentro del grupo; la licencia solo al pasar a CONDUCTOR
 export interface CambioRolForm {
   rol: RolInterno;
   numLicencia: string;
@@ -700,13 +659,10 @@ export interface CambioRolForm {
   vencLicencia: string;
 }
 
-// ---------- Cotizaciones (v11): visitante sin cuenta, cliente y personal ----------
-// Habitación elegida: precio por noche x noches del paquete (x pasajeros si es por persona)
 export interface HabitacionElegida {
   habitacionId: number; nombre: string; hotel: string; imagen: string | null;
   modalidad: ModalidadPrecio; precioNoche: number; noches: number; subtotal: number;
 }
-// Habitación de hotel que se elige en la sección 5 del cotizador
 export interface HabitacionCotizable {
   habitacionId: number; nombre: string; descripcion: string | null; hotel: string;
   imagen: string | null; modalidad: ModalidadPrecio; precioNoche: number;
@@ -715,7 +671,7 @@ export type EstadoCotizacion = 'GENERADA' | 'SOLICITADA' | 'RESERVADA' | 'RECHAZ
 
 export interface ServicioAdicional {
   servicioId: number;
-  paqueteId: number | null;       // null = para todos los paquetes
+  paqueteId: number | null;
   nombre: string;
   descripcion: string;
   precio: number;
@@ -725,13 +681,12 @@ export interface ServicioAdicional {
 
 export interface ServicioElegido { servicioId: number; cantidad: number; }
 
-// Lo que el visitante elige (los montos los calcula siempre el servidor)
 export interface DatosCotizacion {
   paqueteId: number;
   fecha: string;
   adultos: number;
   ninos: number;
-  habitacionId: number | null;       // habitación de hotel: obligatoria si el paquete tiene noches
+  habitacionId: number | null;
   servicios: ServicioElegido[];
   observaciones: string;
 }
@@ -761,7 +716,7 @@ export interface EventoCotizacion {
 }
 
 export interface Cotizacion {
-  cotizacionId: number | null;      // solo para el personal
+  cotizacionId: number | null;
   codigo: string;
   estado: EstadoCotizacion;
   origen: 'INVITADO' | 'CLIENTE';
@@ -788,20 +743,17 @@ export interface SolicitudReserva {
   email: string; telefono: string; observaciones: string;
 }
 
-// ---------- Mis asignaciones (v11: guía y conductor) ----------
 export interface MisAsignaciones {
   rol: 'GUIA' | 'CONDUCTOR';
   persona: { personalId: number; nombreCompleto: string; telefono: string | null; cargo: string; proveedor: string | null };
   salidas: {
     salidaId: number; paqueteId: number; paqueteNombre: string; dias: number; noches: number; horaInicio: string;
     fechaInicio: string; fechaFin: string; estado: EstadoSalida; pasajeros: number; traslados: number;
-    // Lo marca el guía: EN_CURSO, EN_ATRACTIVO, FINALIZADA
     estadoCampo: EstadoCampo | null; inicioReal: string | null; finReal: string | null; observacionCierre: string | null; atendidos: number;
   }[];
   traslados: TrasladoConductor[];
 }
 
-// ---------- Panel de campo (conductor y guía) ----------
 export type EstadoCampo = 'EN_CURSO' | 'EN_ATRACTIVO' | 'FINALIZADA';
 export type EstadoAsistencia = 'PRESENTE' | 'NO_SHOW' | 'REZAGO';
 export interface PasajeroAsistencia {
@@ -852,7 +804,6 @@ export type TipoIncidencia = 'TRAFICO' | 'RETRASO_VUELO' | 'FALLA_MECANICA' | 'N
 export interface Incidencia {
   incidenciaId: number; tipo: TipoIncidencia; descripcion: string; estado: 'ABIERTA' | 'ATENDIDA'; fechaReporte: string;
   respuesta: string | null; fechaAtencion: string | null; codigoOperacion: string | null;
-  // Solo en la vista de la agencia
   reportadoPor?: string; cargo?: string; telefono?: string | null; atendidaPor?: string | null; operacionId?: number | null;
 }
 export interface Disponibilidad {

@@ -1,4 +1,3 @@
-/* Pestañas de categorías: texto + cantidad de tours; la activa en blanco con subrayado lima */
 .categorias { display: flex; gap: .25rem; max-width: 100%; width: fit-content; overflow-x: auto; padding: .3rem; border-radius: 999px;
   background: var(--kp-bg-alt); border: 1px solid var(--kp-border); scrollbar-width: none; }
 .categoria { position: relative; display: inline-flex; flex-shrink: 0; align-items: center; gap: .5rem; height: 2.5rem; padding: 0 1.1rem;
@@ -10,7 +9,6 @@
   font-size: 11px; font-variant-numeric: tabular-nums; background: rgba(38, 46, 15, .07); }
 .categoria-activa .categoria-num { background: var(--kp-accent); color: #1A200A; }
 
-/* Carrusel: una fila con desplazamiento horizontal y ajuste a cada tarjeta (scroll-snap nativo) */
 .carrusel { display: grid; grid-auto-flow: column; grid-auto-columns: 84%; gap: 1.25rem; overflow-x: auto; scroll-snap-type: x mandatory;
   scroll-behavior: smooth; padding: .25rem .25rem .9rem; margin-left: -.25rem; margin-right: -.25rem; scrollbar-width: none; overscroll-behavior-x: contain; }
 .carrusel::-webkit-scrollbar { display: none; }
@@ -25,7 +23,6 @@
 .flecha:active:not(:disabled) { transform: scale(.94); }
 .flecha:disabled { opacity: .35; cursor: default; }
 
-/* Tarjeta de tour: entra con fundido (escalonado por animation-delay) y se eleva al pasar el cursor */
 .tour { display: flex; flex-direction: column; overflow: hidden; height: 100%; border-radius: 20px; background: #fff;
   border: 1px solid var(--kp-border); animation: tarjeta-entra .55s cubic-bezier(.16, 1, .3, 1) both;
   transition: transform .35s, box-shadow .35s, border-color .35s; }
@@ -46,11 +43,9 @@
 .tour-precio small { font-size: .75rem; font-weight: 500; opacity: .85; }
 .tour-credito { position: absolute; right: .7rem; bottom: .55rem; z-index: 1; max-width: 55%; overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; font-size: 10px; color: rgba(255, 255, 255, .85); opacity: 0; transition: opacity .3s; }
-/* El crédito de la foto aparece al pasar el cursor (para no competir con el precio) */
 .tour:hover .tour-credito, .tour-credito:focus-visible { opacity: 1; }
 @media (hover: none) { .tour-credito { opacity: .75; top: 3.2rem; bottom: auto; } }
 
-/* Datos de la próxima fecha: tres columnas pequeñas */
 .tour-datos { display: flex; gap: 1.25rem; margin-top: .85rem; padding-top: .8rem; border-top: 1px solid var(--kp-border); }
 .tour-datos dt { font-size: 11px; color: var(--kp-muted); }
 .tour-datos dd { margin-top: .1rem; font-size: 13px; font-weight: 600; color: var(--kp-text); font-variant-numeric: tabular-nums; }

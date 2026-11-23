@@ -12,15 +12,11 @@ public record SalidaProgramadaDTO(
         Integer cuposMaximos,
         Integer cuposDisponibles,
         Long guiaId,
-        // PROGRAMADA / GARANTIZADA / COMPLETADA / CANCELADA
         String estado,
-        // MANUAL (la abrió Ventas u Operaciones) o RESERVA (la creó la BD al reservar una fecha nueva)
         String origen,
         Integer minimoPasajeros,
         Integer faltanParaGarantizar,
-        // Operaciones de transporte vigentes de la salida
         Integer operaciones,
-        // null si el transporte asignado alcanza para los pasajeros vendidos (CapacidadTransporte)
         String faltanteTransporte
 ) {
     public static SalidaProgramadaDTO desde(SalidaProgramada s, Integer minimo, Integer operaciones, String faltante) {

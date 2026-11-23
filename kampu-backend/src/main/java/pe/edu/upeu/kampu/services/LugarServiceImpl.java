@@ -76,7 +76,6 @@ public class LugarServiceImpl implements ILugarService {
             throw new DuplicateResourceException("Ya existe el lugar " + nombre + " en " + ciudad + ".");
         }
         boolean oficina = "OFICINA".equals(dto.tipoLugar());
-        // La oficina es el punto de encuentro por defecto (chk_lug_oficina) y solo hay una (uq_lug_oficina)
         if (oficina) {
             for (Lugar otro : lugarRepository.findAll()) {
                 if ("OFICINA".equals(otro.getTipoLugar()) && !otro.getLugarId().equals(id)) {

@@ -23,7 +23,6 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 export class ClientesComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
-  // GESTIONAR_CLIENTES (Admin y Ventas)
   gestiona = inject(AuthService).puede('GESTIONAR_CLIENTES');
 
   tipos: TipoDocumentoCliente[] = ['DNI', 'CE', 'PASAPORTE', 'RUC'];
@@ -32,7 +31,6 @@ export class ClientesComponent {
   editId: number | null = null;
   form: ClienteForm = this.vacio();
   v = new FormValidacion(() => ({
-    // Con RUC el nombre es una razón social (admite números y signos)
     nombre: this.form.tipoDocumento === 'RUC'
       ? V.texto(this.form.nombreCompleto, 'La razón social', 150, true)
       : V.nombrePersona(this.form.nombreCompleto),
@@ -44,7 +42,6 @@ export class ClientesComponent {
         ? 'Ese teléfono ya está registrado para otro cliente.' : null)
   }));
 
-  // El número de documento no se repite entre clientes (sin importar el tipo)
   private documentoRepetido(): string | null {
     const n = this.form.numeroDocumento.trim().toUpperCase();
     const otro = this.store.clientes().find(c => c.clienteId !== this.editId && c.numeroDocumento.toUpperCase() === n);
@@ -62,7 +59,6 @@ export class ClientesComponent {
       .map(c => ({ cliente: c, reservas: this.store.reservas().filter(r => r.clienteId === c.clienteId).length }));
   });
 
-  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();
@@ -106,7 +102,6 @@ export class ClientesComponent {
   }
 
   async eliminar(id: number) {
-    // v10 no otorga DELETE sobre CLIENTES: su cuenta queda INACTIVA y se conservan sus reservas
     if (!(await this.alerts.confirm('Su cuenta quedará INACTIVA; sus reservas se conservan.', 'Desactivar cliente'))) return;
     this.store.eliminarCliente(id).subscribe({
       next: () => {

@@ -13,7 +13,6 @@ public class ConversorMoneda {
     private static final BigDecimal TASA_USD = new BigDecimal("3.75");
     private static final BigDecimal TASA_EUR = new BigDecimal("4.05");
 
-    // Soles por unidad de la moneda: se guarda en PAGOS.tipo_cambio
     public BigDecimal tasa(String moneda) {
         BigDecimal tasa;
         if ("PEN".equals(moneda)) {
