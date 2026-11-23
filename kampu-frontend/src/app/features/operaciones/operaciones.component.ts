@@ -4,7 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Observable, of, switchMap } from 'rxjs';
-import { EstadoOperacion, EstimacionDuracion, HistorialOperacion, Operacion, OperacionForm, RecursoCandidato } from '../../core/models';
+import { EstadoOperacion, EstimacionDuracion, HistorialOperacion, Operacion, OperacionForm, PaqueteTour, RecursoCandidato, SalidaProgramada } from '../../core/models';
 import { TourStore } from '../../core/services/tour-store.service';
 import { AlertService } from '../../core/services/alert.service';
 import { BadgeComponent } from '../../shared/badge.component';
@@ -19,6 +19,20 @@ type Grupo = '' | 'PENDIENTES' | 'EN_CURSO' | 'CERRADAS';
 type Ventana = 'form' | 'asignar' | 'estado' | 'historial' | null;
 
 const EN_CURSO: EstadoOperacion[] = ['ASIGNADO', 'EMBARQUE', 'EN_RUTA'];
+const CERRADO: EstadoOperacion[] = ['FINALIZADO', 'CANCELADO'];
+
+// Una fila por salida (paquete + fecha): sus traslados se despliegan debajo
+interface GrupoTraslados {
+  clave: string;
+  salidaId: number | null;
+  salida?: SalidaProgramada;
+  paquete?: PaqueteTour;
+  todos: Operacion[];        // todos los traslados de la salida, por hora
+  visibles: Operacion[];     // los que cumplen el filtro de la pestaña
+  primera?: Operacion;       // el primero (vehículo y conductor del inicio)
+  proxima?: Operacion;       // el más próximo que sigue abierto (tramo y estado)
+  pax: number;               // pasajeros de la salida
+}
 
 /**
  * Tráfico de transporte (OPERACIONES_TRANSPORTE). En v4 las reglas las aplica el backend:
@@ -88,29 +102,77 @@ export class OperacionesComponent {
 
   constructor() {
     const salida = Number(inject(ActivatedRoute).snapshot.queryParamMap.get('salida'));
-    if (salida) this.filtroSalida.set(salida);
+    if (salida) { this.filtroSalida.set(salida); this.abrirGrupo(salida); }
     this.store.cargar();
     // Las reservas cambian los pasajeros de los traslados (lo ajusta la BD): se piden de nuevo al entrar
     this.store.cargarOperaciones();
     this.store.cargarSalidas();
   }
 
-  // ---------- Tablero ----------
-  filas = computed(() => {
+  // ---------- Tablero: una fila por salida, con sus traslados desplegables ----------
+  private cumple(o: Operacion) {
     const g = this.grupo();
-    const s = this.filtroSalida();
-    return this.store.operaciones()
-      .filter(o => !s || o.salidaId === s)
-      .filter(o => {
-        if (g === 'PENDIENTES') return o.estadoActual === 'PROGRAMADO';
-        if (g === 'EN_CURSO') return EN_CURSO.includes(o.estadoActual);
-        if (g === 'CERRADAS') return o.estadoActual === 'FINALIZADO' || o.estadoActual === 'CANCELADO';
-        return true;
-      })
-      .map(o => ({ op: o, salida: this.store.getSalida(o.salidaId), paquete: this.store.getPaquete(this.store.getSalida(o.salidaId)?.paqueteId) }));
+    if (g === 'PENDIENTES') return o.estadoActual === 'PROGRAMADO';
+    if (g === 'EN_CURSO') return EN_CURSO.includes(o.estadoActual);
+    if (g === 'CERRADAS') return CERRADO.includes(o.estadoActual);
+    return true;
+  }
+
+  filas = computed<GrupoTraslados[]>(() => {
+    const filtro = this.filtroSalida();
+    const porSalida = new Map<string, Operacion[]>();
+    for (const o of this.store.operaciones()) {
+      if (filtro && o.salidaId !== filtro) continue;
+      const clave = o.salidaId ? 's' + o.salidaId : 'sueltos';
+      porSalida.set(clave, [...(porSalida.get(clave) ?? []), o]);
+    }
+    // Salidas abiertas con pasajeros y aún sin traslados: aparecen para añadirles el primero
+    if (this.grupo() === '') {
+      for (const s of this.salidasActivas()) {
+        if (filtro && s.salidaId !== filtro) continue;
+        if (s.fechaFin < hoy() || s.cuposMaximos - s.cuposDisponibles === 0) continue;
+        if (!porSalida.has('s' + s.salidaId)) porSalida.set('s' + s.salidaId, []);
+      }
+    }
+    const ahora = new Date().toISOString().slice(0, 16);
+    const grupos: GrupoTraslados[] = [];
+    for (const [clave, lista] of porSalida) {
+      const todos = [...lista].sort((a, b) => a.horaProgramadaSalida.localeCompare(b.horaProgramadaSalida));
+      const visibles = todos.filter(o => this.cumple(o));
+      if (todos.length && !visibles.length) continue;
+      const salidaId = clave === 'sueltos' ? null : Number(clave.slice(1));
+      const salida = salidaId ? this.store.getSalida(salidaId) : undefined;
+      const activos = todos.filter(o => o.estadoActual !== 'CANCELADO');
+      const abiertos = todos.filter(o => !CERRADO.includes(o.estadoActual));
+      grupos.push({
+        clave, salidaId, salida, paquete: this.store.getPaquete(salida?.paqueteId), todos, visibles,
+        primera: activos[0] ?? todos[0],
+        proxima: abiertos.find(o => o.horaProgramadaSalida.slice(0, 16) >= ahora) ?? abiertos[0] ?? todos[todos.length - 1],
+        pax: salida ? salida.cuposMaximos - salida.cuposDisponibles : todos.reduce((n, o) => n + o.paxProgramados, 0)
+      });
+    }
+    // Por la hora del primer traslado (o la fecha de la salida si aún no tiene)
+    const inicio = (g: GrupoTraslados) => g.todos[0]?.horaProgramadaSalida ?? (g.salida?.fechaInicio ?? '') + 'T99';
+    return grupos.sort((a, b) => inicio(a).localeCompare(inicio(b)));
   });
 
-  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
+  // Salidas desplegadas
+  abiertos = signal<Set<string>>(new Set());
+  alternarGrupo(clave: string) {
+    const s = new Set(this.abiertos());
+    if (s.has(clave)) s.delete(clave); else s.add(clave);
+    this.abiertos.set(s);
+  }
+  private abrirGrupo(salidaId: number | null) {
+    const s = new Set(this.abiertos());
+    s.add(salidaId ? 's' + salidaId : 'sueltos');
+    this.abiertos.set(s);
+  }
+  puedeAnadir(g: GrupoTraslados) {
+    return this.gestiona && (!g.salida || g.salida.estado === 'PROGRAMADA' || g.salida.estado === 'GARANTIZADA');
+  }
+
+  // Paginación de la tabla (10 salidas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();
@@ -194,6 +256,28 @@ export class OperacionesComponent {
     this.cambioSalida();
     this.v.reiniciar();
     this.ventana.set('form');
+  }
+
+  // Añadir un traslado a la salida: parte de donde termina el último (lugar, hora, vehículo y conductor),
+  // y todo se puede cambiar
+  nuevaPara(g: GrupoTraslados) {
+    this.nueva();
+    this.form.salidaId = g.salidaId;
+    const ultimo = [...g.todos].reverse().find(o => o.estadoActual !== 'CANCELADO');
+    if (ultimo) {
+      this.form.origenId = ultimo.destinoId;
+      this.form.horaProgramadaSalida = (ultimo.horaEstimadaLlegada ?? ultimo.horaProgramadaSalida).slice(0, 16);
+      if (ultimo.vehiculoId && ultimo.conductorId) {
+        this.proveedorSel = ultimo.proveedorId ?? 0;
+        this.form.vehiculoId = ultimo.vehiculoId;
+        this.form.conductorId = ultimo.conductorId;
+      }
+    } else {
+      this.form.horaProgramadaSalida = '';
+    }
+    this.form.paxProgramados = null;
+    this.cambioSalida();
+    this.abrirGrupo(g.salidaId);
   }
 
   editar(o: Operacion) {
