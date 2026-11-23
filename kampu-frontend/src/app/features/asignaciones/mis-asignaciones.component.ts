@@ -1,7 +1,12 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, signal } from '@angular/core';
-import { ActividadItinerario, MisAsignaciones } from '../../core/models';
+import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { ActividadItinerario, EstadoOperacion, MisAsignaciones, PasajeroTraslado, RecojoCampo, TrasladoConductor } from '../../core/models';
+import { AlertService } from '../../core/services/alert.service';
+import { CampoService } from '../../core/services/campo.service';
+import { enlaceLlamada, enlaceWhatsapp, rutaGoogle, rutaWaze } from '../../core/utils/mapas';
+import { LogoComponent } from '../../shared/logo.component';
 import { TourStore } from '../../core/services/tour-store.service';
 import { API, mensajeError } from '../../core/utils/api';
 import { etiqueta } from '../../core/utils/etiquetas';
@@ -10,17 +15,18 @@ import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
 interface Pasajero { codigoReserva: string; pasajero: string; tipoDocumento: string; numeroDocumento: string; nacionalidad: string | null; edadAlViajar: number | null; puntoRecojo: string | null; horaRecojo: string | null; }
-interface Recojo { horaRecojo: string; puntoRecojo: string; direccion: string | null; codigoReserva: string; cantidadPasajeros: number; pasajeros: string | null; }
 
 /**
  * (v11) Guía y conductor con cuenta: solo SUS asignaciones (lo filtra la base de datos).
- * Guía: sus salidas, itinerario, manifiesto y recojos. Conductor: sus traslados con vehículo, ruta y recojos.
- * Sin montos ni datos de contacto de los clientes.
+ * Guía: sus salidas, itinerario, manifiesto y recojos.
+ * Conductor: sus traslados con vehículo y ruta, y desde la tarjeta: avanzar el estado (en camino, a bordo,
+ * finalizado), abrir la ruta en Google Maps o Waze, llamar o escribir por WhatsApp al titular, al guía o a la
+ * agencia, marcar qué pasajeros abordaron y mostrar el cartel de recepción. Sin montos.
  */
 @Component({
   selector: 'app-mis-asignaciones',
   standalone: true,
-  imports: [DatePipe, BadgeComponent, IconComponent, PageHeaderComponent],
+  imports: [DatePipe, RouterLink, BadgeComponent, IconComponent, PageHeaderComponent, LogoComponent],
   template: `
   <app-page-header titulo="Mis asignaciones">
     @if (datos(); as d) { <p detalle class="page-sub">{{ d.persona.nombreCompleto }} · {{ d.persona.cargo }}@if (d.persona.proveedor) { · {{ d.persona.proveedor }} }</p> }
@@ -58,54 +64,248 @@ interface Recojo { horaRecojo: string; puntoRecojo: string; direccion: string | 
       </section>
     } @else {
       <section data-testid="traslados-conductor">
-        <h2 class="mb-3 font-semibold text-zinc-900">Traslados que conduces</h2>
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold text-zinc-900">Traslados que conduces</h2>
+          <a routerLink="/mis-novedades" class="btn-light btn-sm"><app-icon name="alert" size="w-4 h-4" /> Reportar novedad</a>
+        </div>
         @for (t of d.traslados; track t.operacionId) {
-          <article class="card mb-3 p-4">
+          <article class="card mb-3 p-4" [attr.data-testid]="'traslado-' + t.operacionId">
             <div class="flex flex-wrap items-start justify-between gap-3">
               <div><p class="font-mono text-xs text-zinc-500">{{ t.codigoOperacion }}</p>
                 <h3 class="font-semibold text-zinc-900">{{ t.origen }} → {{ t.destino }}</h3>
                 <p class="text-sm text-zinc-600">{{ t.horaSalida | date:'EEE d MMM, HH:mm' }} – {{ t.horaLlegada | date:'HH:mm' }} · {{ t.paxProgramados }} pax@if (t.paqueteNombre) { · {{ t.paqueteNombre }} }</p></div>
-              <app-badge [estado]="t.estado" />
+              <span class="inline-flex items-center gap-2 rounded-full border border-zinc-200 px-3 py-1 text-xs font-medium text-zinc-700"><app-badge [estado]="t.estado" /><span class="sr-only">{{ textoEstado(t.estado) }}</span></span>
             </div>
-            <p class="mt-2 text-sm text-zinc-700"><app-icon name="truck" size="w-4 h-4" /> {{ t.placa ?? 'Sin vehículo' }}@if (t.marcaModelo) { · {{ t.marcaModelo }} } @if (t.tipoVehiculo) { · {{ etiqueta(t.tipoVehiculo) }} } @if (t.capacidadPax) { · {{ t.capacidadPax }} asientos }</p>
-            @if (t.origenDireccion || t.destinoDireccion) { <p class="text-xs text-zinc-500">{{ t.origenDireccion }}@if (t.destinoDireccion) { → {{ t.destinoDireccion }} }</p> }
-            @if (t.observaciones) { <p class="mt-1 text-xs text-zinc-500">{{ t.observaciones }}</p> }
+
+            <!-- Avance del traslado -->
+            <ol class="mt-3 flex flex-wrap items-center gap-1 text-xs" aria-label="Avance del traslado">
+              @for (p of pasos; track p.estado; let i = $index) {
+                <li class="flex items-center gap-1">
+                  <span class="rounded-full px-2 py-0.5" [class]="indice(t.estado) >= i ? 'bg-brand-600 text-white' : 'bg-zinc-100 text-zinc-500'">{{ p.texto }}</span>
+                  @if (i < pasos.length - 1) { <span class="text-zinc-300">›</span> }
+                </li>
+              }
+            </ol>
+            @if (siguiente(t.estado); as s) {
+              <button type="button" class="btn-brand mt-3 w-full sm:w-auto" [disabled]="enviando() === t.operacionId" (click)="avanzar(t, s.estado)" [attr.data-testid]="'avanzar-' + t.operacionId">
+                <app-icon [name]="s.icono" size="w-4 h-4" /> {{ enviando() === t.operacionId ? 'Guardando…' : s.accion }}</button>
+            }
+            @if (t.inicioReal || t.finReal) {
+              <p class="mt-2 text-xs text-zinc-500">@if (t.inicioReal) { Inició {{ t.inicioReal | date:'HH:mm' }} } @if (t.finReal) { · terminó {{ t.finReal | date:'HH:mm' }} }</p>
+            }
+
+            <p class="mt-3 text-sm text-zinc-700"><app-icon name="truck" size="w-4 h-4" /> {{ t.placa ?? 'Sin vehículo' }}@if (t.marcaModelo) { · {{ t.marcaModelo }} } @if (t.tipoVehiculo) { · {{ etiqueta(t.tipoVehiculo) }} } @if (t.capacidadPax) { · {{ t.capacidadPax }} asientos }</p>
+
+            <!-- Ruta: abrir en Google Maps o Waze -->
+            <div class="mt-2 grid gap-2 sm:grid-cols-2">
+              <div class="rounded-lg border border-zinc-100 p-2.5 text-sm">
+                <p class="text-xs text-zinc-500">Origen</p><p class="font-medium text-zinc-900">{{ t.origen }}</p>
+                @if (t.origenDireccion) { <p class="text-xs text-zinc-500">{{ t.origenDireccion }}</p> }
+                <div class="mt-1.5 flex gap-2">
+                  <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="google(t.origenLatitud, t.origenLongitud, t.origen + ' ' + (t.origenDireccion ?? ''))"><app-icon name="map-pin" size="w-4 h-4" /> Maps</a>
+                  <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="waze(t.origenLatitud, t.origenLongitud, t.origen)">Waze</a>
+                </div>
+              </div>
+              <div class="rounded-lg border border-zinc-100 p-2.5 text-sm">
+                <p class="text-xs text-zinc-500">Destino</p><p class="font-medium text-zinc-900">{{ t.destino }}</p>
+                @if (t.destinoDireccion) { <p class="text-xs text-zinc-500">{{ t.destinoDireccion }}</p> }
+                <div class="mt-1.5 flex gap-2">
+                  <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="google(t.destinoLatitud, t.destinoLongitud, t.destino + ' ' + (t.destinoDireccion ?? ''))" [attr.data-testid]="'ruta-' + t.operacionId"><app-icon name="map-pin" size="w-4 h-4" /> Maps</a>
+                  <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="waze(t.destinoLatitud, t.destinoLongitud, t.destino)">Waze</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contacto rápido -->
+            <div class="mt-3 flex flex-wrap gap-2">
+              @if (t.guiaTelefono) {
+                <a class="btn-light btn-sm" [href]="llamar(t.guiaTelefono)"><app-icon name="phone" size="w-4 h-4" /> Guía {{ t.guiaNombre }}</a>
+                <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="whatsapp(t.guiaTelefono, 'Hola, soy el conductor del traslado ' + t.codigoOperacion)"><app-icon name="whatsapp" size="w-4 h-4" /> WhatsApp guía</a>
+              }
+              @if (agencia()) {
+                <a class="btn-light btn-sm" [href]="llamar(agencia())"><app-icon name="phone" size="w-4 h-4" /> Agencia</a>
+                <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="whatsapp(agencia(), 'Traslado ' + t.codigoOperacion + ': ')"><app-icon name="whatsapp" size="w-4 h-4" /> WhatsApp agencia</a>
+              }
+            </div>
+            @if (t.observaciones) { <p class="mt-2 text-xs text-zinc-500">{{ t.observaciones }}</p> }
+
             @if (t.salidaId) {
-              <button type="button" class="btn-light btn-sm mt-3" (click)="detalle(t.salidaId, null, t.operacionId)"><app-icon name="map-pin" size="w-4 h-4" /> Recojos</button>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <button type="button" class="btn-light btn-sm" (click)="detalle(t.salidaId, null, t.operacionId)" [attr.aria-expanded]="abiertoTraslado() === t.operacionId"><app-icon name="users" size="w-4 h-4" /> Recojos y pasajeros ({{ t.abordados }}/{{ t.paxProgramados }} a bordo)</button>
+                <button type="button" class="btn-light btn-sm" (click)="abrirCartel(t)"><app-icon name="id" size="w-4 h-4" /> Cartel de recepción</button>
+              </div>
               @if (abiertoTraslado() === t.operacionId) {
-                <ol class="mt-3 space-y-1 text-sm">@for (r of recojos(); track $index) { <li><b>{{ r.horaRecojo | date:'HH:mm' }}</b> {{ r.puntoRecojo }}@if (r.direccion) { ({{ r.direccion }}) } · {{ r.cantidadPasajeros }} pax</li> } @empty { <li class="text-zinc-500">{{ cargandoDetalle() ? 'Cargando…' : 'Sin recojos pendientes.' }}</li> }</ol>
+                <div class="mt-3 grid gap-4 lg:grid-cols-2">
+                  <div><h4 class="form-section-title">Recojos</h4>
+                    <ol class="mt-2 space-y-2 text-sm">
+                      @for (r of recojos(); track $index) {
+                        <li class="rounded-lg border border-zinc-100 p-2.5">
+                          <p><b>{{ r.horaRecojo ? (r.horaRecojo | date:'HH:mm') : '—' }}</b> {{ r.puntoRecojo }}@if (r.direccion) { <span class="text-zinc-500">({{ r.direccion }})</span> } · {{ r.cantidadPasajeros }} pax</p>
+                          <p class="text-xs text-zinc-500">{{ r.codigoReserva }} · {{ r.titular }}</p>
+                          <div class="mt-1.5 flex flex-wrap gap-2">
+                            @if (r.latitud !== null || r.direccion) { <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="google(r.latitud, r.longitud, r.puntoRecojo + ' ' + (r.direccion ?? ''))"><app-icon name="map-pin" size="w-4 h-4" /> Ruta</a> }
+                            @if (r.telefonoTitular) {
+                              <a class="btn-light btn-sm" [href]="llamar(r.telefonoTitular)"><app-icon name="phone" size="w-4 h-4" /> Llamar</a>
+                              <a class="btn-light btn-sm" target="_blank" rel="noopener" [href]="whatsapp(r.telefonoTitular, 'Hola ' + r.titular + ', soy el conductor de Kampu Tours para su recojo (' + r.codigoReserva + ').')"><app-icon name="whatsapp" size="w-4 h-4" /> WhatsApp</a>
+                            }
+                          </div>
+                        </li>
+                      } @empty { <li class="text-zinc-500">{{ cargandoDetalle() ? 'Cargando…' : 'Sin recojos pendientes.' }}</li> }
+                    </ol>
+                  </div>
+                  <div><h4 class="form-section-title">Check-in de pasajeros ({{ aBordo() }}/{{ abordaje().length }})</h4>
+                    <ul class="mt-2 space-y-1 text-sm" data-testid="checkin">
+                      @for (p of abordaje(); track p.pasajeroId) {
+                        <li>
+                          <label class="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-zinc-50" [class.opacity-60]="!puedeMarcar(t.estado)">
+                            <input type="checkbox" class="mt-0.5" [checked]="p.abordo === 1" [disabled]="!puedeMarcar(t.estado) || marcando() === p.pasajeroId" (change)="marcar(t, p, $any($event.target).checked)">
+                            <span><span class="text-zinc-900" [class.line-through]="p.abordo === 1">{{ p.pasajero }}</span>
+                              <span class="block text-xs text-zinc-500">{{ p.codigoReserva }}@if (p.puntoRecojo) { · {{ p.puntoRecojo }} }</span></span>
+                          </label>
+                        </li>
+                      } @empty { <li class="text-zinc-500">{{ cargandoDetalle() ? 'Cargando…' : 'Aún no hay pasajeros registrados.' }}</li> }
+                    </ul>
+                  </div>
+                </div>
               }
             }
           </article>
         } @empty { <div class="card p-6 text-sm text-zinc-500">No tienes traslados asignados por ahora.</div> }
       </section>
     }
-  } }`
+  } }
+
+  <!-- Cartel de recepción: pantalla completa para mostrar a la salida del aeropuerto o terminal -->
+  @if (cartel(); as c) {
+    <div class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-8 bg-white p-6 text-center" role="dialog" aria-label="Cartel de recepción" (click)="cerrarCartel()">
+      <app-logo variante="horizontal" [alto]="72" />
+      <div>
+        <p class="text-lg uppercase tracking-[0.3em] text-zinc-500">Bienvenidos</p>
+        @for (n of c.nombres; track n) { <p class="mt-3 font-semibold leading-tight text-zinc-900" [style.font-size]="c.nombres.length > 2 ? '2.75rem' : '4.5rem'">{{ n }}</p> }
+        @if (c.paquete) { <p class="mt-6 text-2xl text-brand-700">{{ c.paquete }}</p> }
+      </div>
+      <p class="text-sm text-zinc-400">Toca la pantalla para cerrar</p>
+    </div>
+  }`
 })
 export class MisAsignacionesComponent {
   private http = inject(HttpClient);
   private store = inject(TourStore);
+  private campo = inject(CampoService);
+  private alerts = inject(AlertService);
   etiqueta = etiqueta;
+  google = rutaGoogle;
+  waze = rutaWaze;
+  whatsapp = enlaceWhatsapp;
+  llamar = enlaceLlamada;
   datos = signal<MisAsignaciones | null>(null);
   error = signal('');
   abierta = signal<number | null>(null);
   abiertoTraslado = signal<number | null>(null);
   itinerario = signal<ActividadItinerario[]>([]);
   pasajeros = signal<Pasajero[]>([]);
-  recojos = signal<Recojo[]>([]);
+  recojos = signal<RecojoCampo[]>([]);
+  // Check-in del traslado abierto
+  abordaje = signal<PasajeroTraslado[]>([]);
+  aBordo = computed(() => this.abordaje().filter(p => p.abordo === 1).length);
+  marcando = signal<number | null>(null);
+  enviando = signal<number | null>(null);
+  // Teléfono de la agencia (para llamar o escribir desde la tarjeta)
+  agencia = signal('');
+  cartel = signal<{ nombres: string[]; paquete: string | null } | null>(null);
+
+  // Avance del traslado para el conductor
+  pasos: { estado: EstadoOperacion; texto: string }[] = [
+    { estado: 'ASIGNADO', texto: 'Asignado' }, { estado: 'EMBARQUE', texto: 'En camino al recojo' },
+    { estado: 'EN_RUTA', texto: 'Pasajeros a bordo' }, { estado: 'FINALIZADO', texto: 'Finalizado' }
+  ];
+  private acciones: { [e: string]: { estado: 'EMBARQUE' | 'EN_RUTA' | 'FINALIZADO'; accion: string; icono: string } } = {
+    ASIGNADO: { estado: 'EMBARQUE', accion: 'Iniciar traslado · en camino al recojo', icono: 'truck' },
+    EMBARQUE: { estado: 'EN_RUTA', accion: 'Pasajeros a bordo · salir', icono: 'users' },
+    EN_RUTA: { estado: 'FINALIZADO', accion: 'Finalizar traslado', icono: 'check' }
+  };
+  indice(e: string) { return this.pasos.findIndex(p => p.estado === e); }
+  siguiente(e: string) { return this.acciones[e] ?? null; }
+  textoEstado(e: string) { return this.pasos.find(p => p.estado === e)?.texto ?? etiqueta(e); }
+  puedeMarcar(e: string) { return e === 'ASIGNADO' || e === 'EMBARQUE' || e === 'EN_RUTA'; }
   // Mientras llegan el manifiesto y los recojos no se dice "no hay": se muestra "Cargando…"
   cargandoDetalle = signal(0);
 
   constructor() {
+    this.cargar();
+    this.campo.contacto().subscribe({ next: c => this.agencia.set(c.telefono ?? ''), error: () => undefined });
+  }
+
+  private cargar() {
     this.http.get<MisAsignaciones>(`${API}/mis-asignaciones`).subscribe({
       next: d => this.datos.set(d), error: e => this.error.set(mensajeError(e))
     });
+  }
+
+  // Reemplaza el traslado actualizado en la lista
+  private actualizar(t: TrasladoConductor) {
+    const d = this.datos();
+    if (d) this.datos.set({ ...d, traslados: d.traslados.map(x => x.operacionId === t.operacionId ? t : x) });
+  }
+
+  async avanzar(t: TrasladoConductor, estado: 'EMBARQUE' | 'EN_RUTA' | 'FINALIZADO') {
+    const textos = { EMBARQUE: 'Vas en camino al primer recojo.', EN_RUTA: 'Los pasajeros ya están a bordo y salen hacia el destino.', FINALIZADO: 'El traslado llegó a su destino.' };
+    if (estado === 'EN_RUTA' && this.abiertoTraslado() === t.operacionId && this.aBordo() < this.abordaje().length) {
+      textos.EN_RUTA = `Solo ${this.aBordo()} de ${this.abordaje().length} pasajeros están marcados a bordo. ¿Salir igual?`;
+    }
+    if (!(await this.alerts.confirm(textos[estado], t.codigoOperacion, 'Confirmar'))) return;
+    this.enviando.set(t.operacionId);
+    this.campo.avanzar(t.operacionId, estado).subscribe({
+      next: n => { this.enviando.set(null); this.actualizar(n); this.alerts.toast(this.textoEstado(n.estado)); },
+      error: e => { this.enviando.set(null); this.alerts.error(mensajeError(e)); }
+    });
+  }
+
+  marcar(t: TrasladoConductor, p: PasajeroTraslado, abordo: boolean) {
+    this.marcando.set(p.pasajeroId);
+    this.campo.abordaje(t.operacionId, p.pasajeroId, abordo).subscribe({
+      next: n => {
+        this.marcando.set(null);
+        this.abordaje.set(this.abordaje().map(x => x.pasajeroId === p.pasajeroId ? { ...x, abordo: abordo ? 1 : 0 } : x));
+        this.actualizar(n);
+      },
+      error: e => {
+        this.marcando.set(null);
+        this.abordaje.set([...this.abordaje()]);
+        this.alerts.error(mensajeError(e));
+      }
+    });
+  }
+
+  // Nombres de los titulares (o de los pasajeros) del traslado, en grande
+  abrirCartel(t: TrasladoConductor) {
+    const mostrar = (nombres: string[]) => {
+      this.cartel.set({ nombres: nombres.length ? nombres : ['Kampu Tours'], paquete: t.paqueteNombre });
+      try { document.documentElement.requestFullscreen?.().catch(() => undefined); } catch { /* sin pantalla completa */ }
+    };
+    if (this.abiertoTraslado() === t.operacionId && this.recojos().length) {
+      mostrar([...new Set(this.recojos().map(r => r.titular))].slice(0, 6));
+      return;
+    }
+    this.http.get<RecojoCampo[]>(`${API}/mis-asignaciones/salidas/${t.salidaId}/recojos`).subscribe({
+      next: r => mostrar([...new Set(r.map(x => x.titular))].slice(0, 6)),
+      error: () => mostrar([])
+    });
+  }
+  cerrarCartel() {
+    this.cartel.set(null);
+    try { if (document.fullscreenElement) document.exitFullscreen().catch(() => undefined); } catch { /* nada */ }
   }
 
   detalle(salidaId: number, paqueteId: number | null, operacionId: number | null = null) {
     if (operacionId !== null) {
       if (this.abiertoTraslado() === operacionId) { this.abiertoTraslado.set(null); return; }
       this.abiertoTraslado.set(operacionId);
+      this.abordaje.set([]);
+      this.cargandoDetalle.update(n => n + 1);
+      this.campo.pasajeros(operacionId).subscribe({
+        next: p => this.abordaje.set(p), error: () => { this.abordaje.set([]); this.cargandoDetalle.update(n => n - 1); },
+        complete: () => this.cargandoDetalle.update(n => n - 1) });
     } else {
       if (this.abierta() === salidaId) { this.abierta.set(null); return; }
       this.abierta.set(salidaId);
@@ -114,11 +314,12 @@ export class MisAsignacionesComponent {
       if (paqueteId) this.store.itinerario(paqueteId).subscribe({ next: i => this.itinerario.set(i), error: () => this.itinerario.set([]) });
       this.cargandoDetalle.update(n => n + 1);
       this.http.get<Pasajero[]>(`${API}/mis-asignaciones/salidas/${salidaId}/pasajeros`).subscribe({
-        next: p => this.pasajeros.set(p), error: () => this.pasajeros.set([]), complete: () => this.cargandoDetalle.update(n => n - 1) });
+        next: p => this.pasajeros.set(p), error: () => { this.pasajeros.set([]); this.cargandoDetalle.update(n => n - 1); },
+        complete: () => this.cargandoDetalle.update(n => n - 1) });
     }
     this.recojos.set([]);
     this.cargandoDetalle.update(n => n + 1);
-    this.http.get<Recojo[]>(`${API}/mis-asignaciones/salidas/${salidaId}/recojos`).subscribe({
+    this.http.get<RecojoCampo[]>(`${API}/mis-asignaciones/salidas/${salidaId}/recojos`).subscribe({
       next: r => this.recojos.set(r), error: () => { this.recojos.set([]); this.cargandoDetalle.update(n => n - 1); },
       complete: () => this.cargandoDetalle.update(n => n - 1) });
   }

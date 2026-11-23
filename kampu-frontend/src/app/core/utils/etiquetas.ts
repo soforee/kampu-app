@@ -25,7 +25,10 @@ export const ETIQUETAS: { [codigo: string]: string } = {
   ADMIN: 'Administrador', VENTAS: 'Ventas', CLIENTE: 'Cliente', INVITADO: 'Visitante',
   // (v11) Cotizaciones y servicios adicionales
   GENERADA: 'Generada', SOLICITADA: 'Solicitud pendiente', RESERVADA: 'Reservada', VENCIDA: 'Vencida',
-  POR_PERSONA: 'Por persona', POR_GRUPO: 'Por grupo'
+  POR_PERSONA: 'Por persona', POR_GRUPO: 'Por grupo',
+  // Novedades en ruta del personal de campo
+  TRAFICO: 'Tráfico pesado', RETRASO_VUELO: 'Retraso de vuelo', FALLA_MECANICA: 'Falla mecánica',
+  NO_SHOW: 'Pasajero no se presentó', ACCIDENTE: 'Accidente', ABIERTA: 'Abierta', ATENDIDA: 'Atendida'
 };
 
 export function etiqueta(codigo?: string | null): string {

@@ -31,6 +31,12 @@ export const routes: Routes = [
       { path: 'cotizaciones', loadComponent: () => import('./features/cotizaciones/cotizaciones.component').then(m => m.CotizacionesComponent), data: permiso('VER_COTIZACIONES') },
       { path: 'servicios-adicionales', loadComponent: () => import('./features/servicios/servicios.component').then(m => m.ServiciosComponent), data: permiso('GESTIONAR_CATALOGO') },
       { path: 'mis-asignaciones', loadComponent: () => import('./features/asignaciones/mis-asignaciones.component').then(m => m.MisAsignacionesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      // Panel de campo: historial y vehículo (conductor); novedades y disponibilidad (guía y conductor)
+      { path: 'historial-viajes', loadComponent: () => import('./features/campo/historial.component').then(m => m.HistorialViajesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      { path: 'mi-vehiculo', loadComponent: () => import('./features/campo/mi-vehiculo.component').then(m => m.MiVehiculoComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      { path: 'mis-novedades', loadComponent: () => import('./features/campo/novedades.component').then(m => m.MisNovedadesComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      { path: 'disponibilidad', loadComponent: () => import('./features/campo/disponibilidad.component').then(m => m.DisponibilidadComponent), data: permiso('VER_ASIGNACIONES_PROPIAS') },
+      { path: 'novedades', loadComponent: () => import('./features/incidencias/incidencias.component').then(m => m.IncidenciasComponent), data: permiso('VER_OPERACIONES') },
       { path: 'reservas', loadComponent: () => import('./features/reservas/reservas.component').then(m => m.ReservasComponent), data: permiso('VER_RESERVAS') },
       { path: 'reservas/nueva', loadComponent: () => import('./features/reservas/reserva-nueva.component').then(m => m.ReservaNuevaComponent), data: permiso('GESTIONAR_RESERVAS') },
       { path: 'reservas/:id', loadComponent: () => import('./features/reservas/reserva-detalle.component').then(m => m.ReservaDetalleComponent), data: permiso('VER_RESERVAS') },
