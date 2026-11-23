@@ -34,9 +34,11 @@ import java.util.Map;
 @Permiso("VER_ASIGNACIONES_PROPIAS")
 public class MisAsignacionesController {
     private final JdbcTemplate jdbc;
+    private final pe.edu.upeu.kampu.services.ManifiestoPdfService manifiestoPdf;
 
-    public MisAsignacionesController(JdbcTemplate jdbc) {
+    public MisAsignacionesController(JdbcTemplate jdbc, pe.edu.upeu.kampu.services.ManifiestoPdfService manifiestoPdf) {
         this.jdbc = jdbc;
+        this.manifiestoPdf = manifiestoPdf;
     }
 
     @GetMapping
@@ -254,6 +256,119 @@ public class MisAsignacionesController {
     @Transactional
     public void desbloquear(@PathVariable Long bloqueoId) {
         llamar("{call PKG_CAMPO.quitar_bloqueo(?)}", bloqueoId);
+    }
+
+    // ===================================================================== guía: salida en campo
+
+    // Traslados de la salida con su conductor y vehículo (para coordinar los recojos)
+    @GetMapping("/salidas/{salidaId}/transporte")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> transporte(@PathVariable Long salidaId) {
+        exigirPropia(salidaId);
+        return jdbc.queryForList("SELECT o.operacion_id, o.codigo_operacion, o.hora_salida, o.hora_llegada, o.estado, "
+                + "o.pax_programados, lo.nombre AS origen, ld.nombre AS destino, v.placa, v.marca_modelo, v.tipo_vehiculo, "
+                + "c.nombre_completo AS conductor, c.telefono AS conductor_telefono FROM OPERACIONES_TRANSPORTE o "
+                + "JOIN LUGARES lo ON lo.lugar_id = o.origen_id JOIN LUGARES ld ON ld.lugar_id = o.destino_id "
+                + "LEFT JOIN VEHICULOS v ON v.vehiculo_id = o.vehiculo_id LEFT JOIN PERSONAL c ON c.personal_id = o.conductor_id "
+                + "WHERE o.salida_id = ? AND o.estado <> 'CANCELADO' ORDER BY o.hora_salida", salidaId)
+                .stream().map(MisAsignacionesController::minusculas).toList();
+    }
+
+    // Manifiesto con la asistencia por día y el titular de cada reserva (WhatsApp para coordinar)
+    @GetMapping("/salidas/{salidaId}/asistencia")
+    @Transactional(readOnly = true)
+    public Map<String, Object> asistencia(@PathVariable Long salidaId) {
+        exigirPropia(salidaId);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("pasajeros", jdbc.queryForList("SELECT m.pasajero_id, m.pasajero, m.tipo_documento, m.numero_documento, "
+                + "m.nacionalidad, m.edad_al_viajar, m.codigo_reserva, m.punto_recojo, m.hora_recojo, "
+                + "c.nombre_completo AS titular, c.telefono AS telefono_titular "
+                + "FROM VW_MANIFIESTO_SALIDA m JOIN RESERVAS r ON r.codigo_reserva = m.codigo_reserva "
+                + "JOIN CLIENTES c ON c.cliente_id = r.cliente_id WHERE m.salida_id = ? "
+                + "ORDER BY m.codigo_reserva, m.pasajero", salidaId).stream().map(MisAsignacionesController::minusculas).toList());
+        r.put("marcas", jdbc.queryForList("SELECT pasajero_id, dia, estado FROM ASISTENCIAS WHERE salida_id = ?", salidaId)
+                .stream().map(MisAsignacionesController::minusculas).toList());
+        return r;
+    }
+
+    public record AsistenciaRequest(Long pasajeroId, Integer dia, String estado) {
+    }
+
+    @PutMapping("/salidas/{salidaId}/asistencia")
+    @Transactional
+    public void marcarAsistencia(@PathVariable Long salidaId, @RequestBody AsistenciaRequest b) {
+        if (b == null || b.pasajeroId() == null || b.dia() == null) throw new BusinessException("Indica el pasajero y el día.");
+        llamar("{call PKG_CAMPO.marcar_asistencia(?, ?, ?, ?)}", salidaId, b.pasajeroId(), b.dia(), vacio(b.estado()));
+    }
+
+    public record EstadoSalidaRequest(String estado, String observacion) {
+    }
+
+    // En curso -> en atractivo <-> en curso -> finalizada (al finalizar, una salida garantizada se cierra)
+    @PostMapping("/salidas/{salidaId}/estado")
+    @Transactional
+    public Map<String, Object> estadoSalida(@PathVariable Long salidaId, @RequestBody EstadoSalidaRequest b) {
+        if (b == null || b.estado() == null) throw new BusinessException("Indica el nuevo estado.");
+        llamar("{call PKG_CAMPO.estado_salida(?, ?, ?)}", salidaId, b.estado(), vacio(b.observacion()));
+        List<Map<String, Object>> s = jdbc.queryForList("SELECT * FROM VW_MIS_SALIDAS_GUIA WHERE salida_id = ?", salidaId);
+        return s.isEmpty() ? Map.of() : minusculas(s.get(0));
+    }
+
+    // Manifiesto oficial en PDF (para controles sin cobertura)
+    @GetMapping(value = "/salidas/{salidaId}/manifiesto.pdf", produces = org.springframework.http.MediaType.APPLICATION_PDF_VALUE)
+    @Transactional(readOnly = true)
+    public org.springframework.http.ResponseEntity<byte[]> manifiestoPdf(@PathVariable Long salidaId) {
+        exigirPropia(salidaId);
+        Map<String, Object> cab = minusculas(jdbc.queryForMap("SELECT p.nombre AS paquete, s.fecha_inicio, s.fecha_fin, "
+                + "g.nombre_completo AS guia FROM SALIDAS_PROGRAMADAS s JOIN PAQUETES_TOUR p ON p.paquete_id = s.paquete_id "
+                + "LEFT JOIN PERSONAL g ON g.personal_id = s.guia_id WHERE s.salida_id = ?", salidaId));
+        List<String> unidades = jdbc.queryForList("SELECT DISTINCT v.placa || NVL2(c.nombre_completo, ' (' || c.nombre_completo || ')', '') "
+                + "FROM OPERACIONES_TRANSPORTE o JOIN VEHICULOS v ON v.vehiculo_id = o.vehiculo_id "
+                + "LEFT JOIN PERSONAL c ON c.personal_id = o.conductor_id WHERE o.salida_id = ? AND o.estado <> 'CANCELADO'",
+                String.class, salidaId);
+        if (!unidades.isEmpty()) cab.put("transporte", String.join(", ", unidades));
+        List<Map<String, Object>> pax = jdbc.queryForList("SELECT pasajero, tipo_documento, numero_documento, nacionalidad, "
+                + "edad_al_viajar, codigo_reserva, punto_recojo, hora_recojo FROM VW_MANIFIESTO_SALIDA WHERE salida_id = ? "
+                + "ORDER BY hora_recojo, codigo_reserva, pasajero", salidaId).stream().map(MisAsignacionesController::minusculas).toList();
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition
+                        .attachment().filename("manifiesto-salida-" + salidaId + ".pdf").build().toString())
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(manifiestoPdf.generar(cab, pax));
+    }
+
+    // Salidas que guió y ya terminaron (o que él finalizó), con los pasajeros atendidos y su cierre
+    @GetMapping("/historial-tours")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> historialTours(@RequestParam(required = false) LocalDate desde,
+                                                    @RequestParam(required = false) LocalDate hasta) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM VW_MIS_SALIDAS_GUIA WHERE (estado = 'COMPLETADA' "
+                + "OR estado_campo = 'FINALIZADA' OR fecha_fin < TRUNC(SYSDATE))");
+        List<Object> p = new ArrayList<>();
+        if (desde != null) { sql.append(" AND fecha_inicio >= ?"); p.add(java.sql.Date.valueOf(desde)); }
+        if (hasta != null) { sql.append(" AND fecha_inicio <= ?"); p.add(java.sql.Date.valueOf(hasta)); }
+        sql.append(" ORDER BY fecha_inicio DESC");
+        return jdbc.queryForList(sql.toString(), p.toArray()).stream().map(MisAsignacionesController::minusculas).toList();
+    }
+
+    // Certificaciones del guía (carné DIRCETUR / MINCETUR e idiomas)
+    @GetMapping("/certificaciones")
+    @Transactional(readOnly = true)
+    public Map<String, Object> certificaciones() {
+        return minusculas(jdbc.queryForMap("SELECT carne_guia, TO_CHAR(venc_carne, 'YYYY-MM-DD') AS venc_carne, idiomas "
+                + "FROM PERSONAL WHERE personal_id = PKG_SEGURIDAD_ROLES.personal_id_actual"));
+    }
+
+    public record CertificacionesRequest(String carneGuia, LocalDate vencCarne, String idiomas) {
+    }
+
+    @PutMapping("/certificaciones")
+    @Transactional
+    public Map<String, Object> guardarCertificaciones(@RequestBody CertificacionesRequest b) {
+        if (b == null) throw new BusinessException("Completa los datos.");
+        llamar("{call PKG_CAMPO.actualizar_certificaciones(?, ?, ?)}", vacio(b.carneGuia()),
+                b.vencCarne() == null ? null : java.sql.Date.valueOf(b.vencCarne()), vacio(b.idiomas()));
+        return certificaciones();
     }
 
     // ---------------------------------------------------------------------
