@@ -6,7 +6,6 @@ import java.math.BigDecimal;
 
 public record ServicioAdicionalDTO(
         Long servicioId,
-        // null = disponible para todos los paquetes
         Long paqueteId,
         String nombre,
         String descripcion,

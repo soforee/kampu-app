@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// CLIENTES (v10): el trigger TRG_CLIENTES_NORMALIZAR guarda correo en minusculas y documento en mayusculas.
-// password_hash lo escribe SP_REGISTRAR_CLIENTE_EXTERNO (BCrypt); NULL = cliente sin cuenta web.
 @Entity
 @DynamicUpdate
 @Table(name = "CLIENTES")

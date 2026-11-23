@@ -12,8 +12,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
 
 interface Dia { fecha: string; delMes: boolean; trabajo: string[]; bloqueado: boolean; }
 
-// Guía y conductor: calendario del mes con su trabajo asignado, días libres y bloqueos de horario.
-// Un bloqueo impide que la agencia le asigne algo en ese horario (lo valida la BD).
 @Component({
   selector: 'app-disponibilidad',
   standalone: true,
@@ -105,7 +103,6 @@ export class DisponibilidadComponent {
   cert = { carneGuia: '', vencCarne: '', idiomas: '' };
   guardandoCert = signal(false);
   private vencGuardado = signal<string | null>(null);
-  // Vigencia del carné: vencido o por vencer en 30 días
   aviso = computed(() => {
     const v = this.vencGuardado();
     if (!v) return null;
@@ -124,7 +121,6 @@ export class DisponibilidadComponent {
   horaFin = '13:00';
   motivo = '';
 
-  // Semanas completas (de lunes a domingo) que cubren el mes
   private rango = computed(() => {
     const primero = this.mes() + '-01';
     const dow = (new Date(primero + 'T00:00:00').getDay() + 6) % 7;
@@ -160,7 +156,6 @@ export class DisponibilidadComponent {
     };
   });
 
-  // El bloqueo toca el día f (un bloqueo "todo el día" termina a las 00:00 del día siguiente)
   private cubre(b: { inicio: string; fin: string }, f: string) {
     return b.inicio < addDays(f, 1) + 'T00:00' && b.fin > f + 'T00:00';
   }

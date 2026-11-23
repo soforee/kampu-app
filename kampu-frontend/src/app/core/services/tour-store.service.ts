@@ -11,8 +11,6 @@ import { redondear } from '../utils/moneda';
 import { API, mensajeError } from '../utils/api';
 import { AuthService } from './auth.service';
 
-// Permiso que exige cada lista (mismo mapeo que SeguridadInterceptor en el backend).
-// null = catálogo público. Los permisos de la sesión vienen de PKG_SEGURIDAD_ROLES.permisos.
 const LISTAS: { [lista: string]: Permiso | null } = {
   paquetes: null,
   salidas: null,
@@ -38,33 +36,26 @@ export class TourStore {
   private auth = inject(AuthService);
 
   paquetes = signal<PaqueteTour[]>([]);
-  // Proveedores (Kampu Tours propio + terceros), su personal y su flota
   proveedores = signal<Proveedor[]>([]);
   personal = signal<Personal[]>([]);
   vehiculos = signal<Vehiculo[]>([]);
   lugares = signal<Lugar[]>([]);
   habitaciones = signal<Habitacion[]>([]);
-  // Tráfico
   operaciones = signal<Operacion[]>([]);
   estadosOperacion = signal<EstadoOperacionInfo[]>([]);
-  // Comercial
   clientes = signal<Cliente[]>([]);
   salidas = signal<SalidaProgramada[]>([]);
   reservas = signal<Reserva[]>([]);
   pasajeros = signal<PasajeroReserva[]>([]);
   pagos = signal<Pago[]>([]);
-  // Vista VW_RESUMEN_PAQUETES_POR_ROL
   resumen = signal<ResumenPaquete[]>([]);
-  // v10: catálogo de cargos y solicitudes de anulación del portal
   cargos = signal<Cargo[]>([]);
   solicitudes = signal<SolicitudAnulacion[]>([]);
 
-  // Personal que puede guiar o conducir: lo define la función de su cargo (CARGOS)
   guias = computed(() => this.personal().filter(p => p.funcion === 'GUIADO'));
   conductores = computed(() => this.personal().filter(p => p.funcion === 'TRANSPORTE'));
 
   ocupado = signal(false);
-  // Último registro creado o editado ('cliente-12'): su fila se resalta un momento en la lista
   resaltado = signal<string | null>(null);
   private temporizador?: ReturnType<typeof setTimeout>;
   resaltar(clave: string) {
@@ -83,7 +74,6 @@ export class TourStore {
     return mensajeError(e);
   }
 
-  // ¿La sesión puede leer esta lista?
   puede(lista: string): boolean {
     if (!(lista in LISTAS)) return false;
     const permiso = LISTAS[lista];
@@ -113,7 +103,6 @@ export class TourStore {
     for (const [url, destino] of permitidas) this.cargarLista(url, destino, true);
   }
 
-  // lista: cuál falló, para que el aviso diga qué datos no se cargaron
   private terminoTabla(e?: unknown, lista?: string) {
     if (e !== undefined && !this.errorCarga) this.errorCarga = (lista ? `No se cargó "${lista}": ` : '') + this.error(e);
     this.pendientes--;
@@ -173,7 +162,6 @@ export class TourStore {
   getSalida(id?: number | null) { return this.salidas().find(s => s.salidaId === id); }
   getReserva(id?: number | null) { return this.reservas().find(r => r.reservaId === id); }
   operacionesDe(salidaId: number) { return this.operaciones().filter(o => o.salidaId === salidaId); }
-  // v10: proveedorId null = recurso propio de Kampu Tours
   nombreProveedor(id?: number | null): string {
     return id == null ? 'Kampu Tours (propio)' : this.getProveedor(id)?.nombreComercial ?? '—';
   }
@@ -187,7 +175,6 @@ export class TourStore {
   pagosDe(reservaId: number) { return this.pagos().filter(p => p.reservaId === reservaId); }
   salidasDe(paqueteId: number) { return this.salidas().filter(s => s.paqueteId === paqueteId); }
 
-  // Código de negocio que genera la BD (KR-AAAA-NNNNNN)
   codigoReserva(id: number) {
     return this.getReserva(id)?.codigoReserva ?? 'R-' + String(id).padStart(4, '0');
   }
@@ -202,23 +189,19 @@ export class TourStore {
   guardarPaquete(d: PaqueteForm, id: number | null) { return this.guardarEn<PaqueteTour>('paquetes', d, id); }
   eliminarPaquete(id: number) { return this.http.delete<void>(`${API}/paquetes/${id}`); }
 
-  // ---------- Proveedores, personal, flota y lugares ----------
   guardarProveedor(d: ProveedorForm, id: number | null) { return this.guardarEn<Proveedor>('proveedores', d, id); }
   eliminarProveedor(id: number) { return this.http.delete<void>(`${API}/proveedores/${id}`); }
   guardarPersonal(d: PersonalForm, id: number | null) { return this.guardarEn<Personal>('personal', d, id); }
   eliminarPersonal(id: number) { return this.http.delete<void>(`${API}/personal/${id}`); }
-  // Personal propio: solo se activa o desactiva (su cuenta de acceso sigue el mismo estado)
   cambiarEstadoPersonal(id: number, activo: boolean) { return this.http.patch<Personal>(`${API}/personal/${id}/estado`, { activo }); }
   guardarVehiculo(d: VehiculoForm, id: number | null) { return this.guardarEn<Vehiculo>('vehiculos', d, id); }
   eliminarVehiculo(id: number) { return this.http.delete<void>(`${API}/vehiculos/${id}`); }
   guardarLugar(d: LugarForm, id: number | null) { return this.guardarEn<Lugar>('lugares', d, id); }
   eliminarLugar(id: number) { return this.http.delete<void>(`${API}/lugares/${id}`); }
-  // Buscador de OpenStreetMap (por el backend) para autocompletar un lugar
   buscarLugares(texto: string) { return this.http.get<LugarSugerido[]>(`${API}/lugares/buscar`, { params: { q: texto } }); }
   guardarHabitacion(d: HabitacionForm, id: number | null) { return this.guardarEn<Habitacion>('habitaciones', d, id); }
   eliminarHabitacion(id: number) { return this.http.delete<void>(`${API}/habitaciones/${id}`); }
 
-  // ---------- Tráfico ----------
   guardarOperacion(d: OperacionForm, id: number | null) { return this.guardarEn<Operacion>('operaciones', d, id); }
   cambiarEstadoOperacion(id: number, estado: EstadoOperacion, observacion: string): Observable<Operacion> {
     return this.http.patch<Operacion>(`${API}/operaciones/${id}/estado`, { estado: estado, observacion: observacion });
@@ -235,13 +218,11 @@ export class TourStore {
   historialOperacion(id: number): Observable<HistorialOperacion[]> {
     return this.http.get<HistorialOperacion[]>(`${API}/operaciones/${id}/historial`);
   }
-  // Duración con datos reales (OSRM / coordenadas de los lugares)
   estimarDuracion(origenId: number, destinoId: number): Observable<EstimacionDuracion> {
     return this.http.get<EstimacionDuracion>(`${API}/operaciones/estimar-duracion`,
       { params: { origenId: origenId, destinoId: destinoId } });
   }
 
-  // Autocompletado: busca por nombre, DNI/pasaporte o correo (mínimo 2 caracteres)
   buscarClientes(texto: string): Observable<Cliente[]> {
     return this.http.get<Cliente[]>(`${API}/clientes/buscar`, { params: { q: texto } });
   }
@@ -249,23 +230,19 @@ export class TourStore {
   eliminarCliente(id: number) { return this.http.delete<void>(`${API}/clientes/${id}`); }
 
   guardarSalida(d: SalidaForm, id: number | null) { return this.guardarEn<SalidaProgramada>('salidas', d, id); }
-  // v10: una salida no se borra; se cancela con PKG_RESERVAS.cancelar_salida (anula y reembolsa sus reservas)
   cancelarSalida(id: number, motivo: string, formaReembolso: FormaReembolso | null): Observable<SalidaProgramada> {
     return this.http.patch<SalidaProgramada>(`${API}/salidas/${id}/cancelar`, { motivo: motivo, formaReembolso: formaReembolso });
   }
-  // Ciclo de la salida: GARANTIZADA (llegó al mínimo) o COMPLETADA (sus reservas confirmadas pasan a COMPLETADA)
   marcarEjecucion(id: number, estado: 'GARANTIZADA' | 'COMPLETADA'): Observable<SalidaProgramada> {
     return this.http.patch<SalidaProgramada>(`${API}/salidas/${id}/ejecucion`, { estado: estado });
   }
 
-  // ---------- Catálogo de un paquete (v10) ----------
   calendario(paqueteId: number, desde: string, dias = 60): Observable<CalendarioDia[]> {
     return this.http.get<CalendarioDia[]>(`${API}/paquetes/${paqueteId}/calendario`, { params: { desde: desde, dias: dias } });
   }
   puntosRecojo(paqueteId: number): Observable<PuntoRecojo[]> {
     return this.http.get<PuntoRecojo[]>(`${API}/paquetes/${paqueteId}/puntos-recojo`);
   }
-  // (v11) Un paquete del catálogo público (cotizador)
   paquete(paqueteId: number): Observable<PaqueteTour> {
     return this.http.get<PaqueteTour>(`${API}/paquetes/${paqueteId}`);
   }
@@ -280,14 +257,10 @@ export class TourStore {
     return this.http.delete<void>(`${API}/paquetes/${paqueteId}/itinerario/${id}`);
   }
 
-  // Lista de pasajeros de la salida (para el guía y el conductor)
   manifiesto(salidaId: number): Observable<Manifiesto> {
     return this.http.get<Manifiesto>(`${API}/salidas/${salidaId}/manifiesto`);
   }
 
-  // v10 (PKG_RESERVAS.reservar): paquete + fecha + cantidad. La BD busca o crea la salida de ese día.
-  // Se envía clienteId (cliente registrado) o contacto (invitado sin cuenta web), nunca ambos.
-  // Los pasajeros son opcionales (hasta la cantidad): se pueden registrar después.
   crearReserva(datos: {
     clienteId: number | null; contacto: ContactoReserva | null; paqueteId: number; fecha: string; cantidad: number;
     canal: 'PRESENCIAL' | 'TELEFONO' | 'WHATSAPP'; descuento: number; lugarRecojoId: number | null; observaciones: string;
@@ -316,12 +289,9 @@ export class TourStore {
   enviarBoleta(id: number): Observable<{ destinatario: string; enviadaEn: string }> {
     return this.http.post<{ destinatario: string; enviadaEn: string }>(`${API}/reservas/${id}/boleta`, {});
   }
-  // v10: la reserva se confirma sola con el primer pago aprobado y se completa sola con su salida.
-  // Anular (PKG_RESERVAS.anular) exige motivo y, si hay pagos aprobados, la forma de reembolso.
   anularReserva(id: number, motivo: string, formaReembolso: FormaReembolso | null): Observable<Reserva> {
     return this.http.patch<Reserva>(`${API}/reservas/${id}/anular`, { motivo: motivo, formaReembolso: formaReembolso });
   }
-  // Solicitudes de anulación del portal: aprobar (anula y reembolsa) o rechazar (con respuesta)
   atenderSolicitud(id: number, aprobar: boolean, formaReembolso: FormaReembolso | null, respuesta: string): Observable<SolicitudAnulacion> {
     return this.http.patch<SolicitudAnulacion>(`${API}/solicitudes-anulacion/${id}`,
       { aprobar: aprobar, formaReembolso: formaReembolso, respuesta: respuesta });

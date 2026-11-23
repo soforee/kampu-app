@@ -1,4 +1,4 @@
-<div class="contenedor">
+<div class="contenedor" (document:mousedown)="alHacerClic($event)">
   <div class="grupo" [class.grupo-invalido]="invalido" [class.grupo-abierto]="abierto()">
     <button type="button" class="pais" (click)="alternar()" (keydown.arrowdown)="$event.preventDefault(); abierto() || alternar()"
             [title]="pais.nombre + ' (+' + pais.codigo + ')'"

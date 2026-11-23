@@ -1,4 +1,3 @@
-/* La columna "Firma" y el encabezado con logo existen solo en la hoja impresa */
 .solo-impresion, .solo-impresion-celda { display: none; }
 
 @media print {

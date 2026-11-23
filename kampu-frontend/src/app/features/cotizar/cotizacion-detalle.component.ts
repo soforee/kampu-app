@@ -17,11 +17,6 @@ import { PortalHeaderComponent } from '../portal/portal-header.component';
 
 interface Paso { titulo: string; detalle: string; estado: 'hecho' | 'actual' | 'pendiente' | 'cortado'; }
 
-/**
- * (v11) Una cotización guardada: estado y seguimiento, desglose, historial y acciones.
- * Acceso: clave recordada en este navegador, la recién creada (estado de la navegación), la que escribe
- * el visitante o, para un cliente con sesión, su cuenta. Sin clave no se muestra nada.
- */
 @Component({
   selector: 'app-cotizacion-detalle',
   standalone: true,
@@ -50,7 +45,6 @@ export class CotizacionDetalleComponent {
   pedirClave = signal(false);
   ocupado = signal(false);
 
-  // Solicitud de reserva (sin cuenta)
   solicitando = signal(false);
   tipos: TipoDocumento[] = ['DNI', 'CE', 'PASAPORTE'];
   sol: SolicitudReserva = { nombreCompleto: '', tipoDocumento: 'DNI', numeroDocumento: '', email: '', telefono: '', observaciones: '' };
@@ -107,7 +101,6 @@ export class CotizacionDetalleComponent {
     navigator.clipboard?.writeText(texto).then(() => this.alerts.toast('Copiado'), () => undefined);
   }
 
-  // Seguimiento: cotización -> solicitud -> confirmada por la agencia -> reserva pagada
   pasos = computed<Paso[]>(() => {
     const c = this.cot();
     if (!c) return [];
@@ -142,7 +135,6 @@ export class CotizacionDetalleComponent {
   modificar() {
     const c = this.cot();
     if (!c) return;
-    // El cotizador necesita la clave para guardar: si este navegador no la recuerda, se recuerda ahora
     if (this.clave() && !this.recordada()) this.recordar();
     this.router.navigate(['/cotizar', c.paqueteId], { queryParams: { editar: c.codigo } });
   }

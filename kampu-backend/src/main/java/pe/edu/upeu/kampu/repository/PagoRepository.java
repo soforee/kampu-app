@@ -16,7 +16,6 @@ public interface PagoRepository extends JpaRepository<Pago, Long> {
 
     List<Pago> findAllByOrderByPagoIdAsc();
 
-    // Suma en soles (columna virtual monto_pen) de los pagos aprobados
     @Query("select coalesce(sum(p.montoPen), 0) from Pago p where p.reservaId = :reservaId and p.estadoTransaccion = 'APROBADO'")
     BigDecimal sumarAprobadosEnSoles(@Param("reservaId") Long reservaId);
 }

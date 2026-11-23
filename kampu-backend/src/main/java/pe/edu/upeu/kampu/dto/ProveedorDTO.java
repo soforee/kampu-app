@@ -2,7 +2,6 @@ package pe.edu.upeu.kampu.dto;
 
 import pe.edu.upeu.kampu.entity.Proveedor;
 
-// PROVEEDORES (v10): solo terceros, con los soportes que brindan
 public record ProveedorDTO(
         Long proveedorId,
         String nombreComercial,
@@ -13,7 +12,6 @@ public record ProveedorDTO(
         boolean ofreceGuiado,
         boolean ofreceHospedaje,
         String estado,
-        // Calculados: flota y personal del proveedor
         int vehiculos,
         int capacidadOperativa,
         int conductores,

@@ -21,24 +21,18 @@ type Ventana = 'form' | 'asignar' | 'estado' | 'historial' | null;
 const EN_CURSO: EstadoOperacion[] = ['ASIGNADO', 'EMBARQUE', 'EN_RUTA'];
 const CERRADO: EstadoOperacion[] = ['FINALIZADO', 'CANCELADO'];
 
-// Una fila por salida (paquete + fecha): sus traslados se despliegan debajo
 interface GrupoTraslados {
   clave: string;
   salidaId: number | null;
   salida?: SalidaProgramada;
   paquete?: PaqueteTour;
-  todos: Operacion[];        // todos los traslados de la salida, por hora
-  visibles: Operacion[];     // los que cumplen el filtro de la pestaña
-  primera?: Operacion;       // el primero (vehículo y conductor del inicio)
-  proxima?: Operacion;       // el más próximo que sigue abierto (tramo y estado)
-  pax: number;               // pasajeros de la salida
+  todos: Operacion[];
+  visibles: Operacion[];
+  primera?: Operacion;
+  proxima?: Operacion;
+  pax: number;
 }
 
-/**
- * Tráfico de transporte (OPERACIONES_TRANSPORTE). En v4 las reglas las aplica el backend:
- * transiciones de estado, cruces de horario, horas del conductor, mantenimiento, capacidad
- * de la salida, asignación automática (flota propia primero) e historial.
- */
 import { PageHeaderComponent } from '../../shared/page-header.component';
 import { PaginacionComponent } from '../../shared/paginacion.component';
 import { TarjetaDatoComponent } from '../../shared/tarjeta-dato.component';
@@ -51,7 +45,6 @@ import { TarjetaDatoComponent } from '../../shared/tarjeta-dato.component';
 export class OperacionesComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
-  // GESTIONAR_OPERACIONES: solo Admin. Ventas solo consulta el tráfico (VER_OPERACIONES)
   gestiona = inject(AuthService).puede('GESTIONAR_OPERACIONES');
   etiqueta = etiqueta;
   iconoLugar = iconoLugar;
@@ -65,7 +58,6 @@ export class OperacionesComponent {
   ventana = signal<Ventana>(null);
   actual = signal<Operacion | null>(null);
 
-  // Formulario de operación
   editId: number | null = null;
   form: OperacionForm = this.vacio();
   v = new FormValidacion(() => {
@@ -82,19 +74,16 @@ export class OperacionesComponent {
     };
   });
 
-  // Asignación
   candidatos = signal<RecursoCandidato[]>([]);
   cargandoCandidatos = signal(false);
   vehiculoSel: number | null = null;
   conductorSel: number | null = null;
-  // Guía de la salida del traslado: se asigna en la misma ventana
   guiaSel: number | null = null;
   guiasDisponibles = computed(() => this.store.guias().filter(g => g.estado !== 'INACTIVO'));
   salidaDe(o: Operacion) { return o.salidaId ? this.store.getSalida(o.salidaId) : undefined; }
   private guiaCambio(o: Operacion) { return !!o.salidaId && this.guiaSel !== (this.salidaDe(o)?.guiaId ?? null); }
   puedeAsignar(o: Operacion) { return (!!this.vehiculoSel && !!this.conductorSel) || this.guiaCambio(o); }
 
-  // Cambio de estado
   nuevoEstado: EstadoOperacion | null = null;
   observacion = '';
 
@@ -104,12 +93,10 @@ export class OperacionesComponent {
     const salida = Number(inject(ActivatedRoute).snapshot.queryParamMap.get('salida'));
     if (salida) { this.filtroSalida.set(salida); this.abrirGrupo(salida); }
     this.store.cargar();
-    // Las reservas cambian los pasajeros de los traslados (lo ajusta la BD): se piden de nuevo al entrar
     this.store.cargarOperaciones();
     this.store.cargarSalidas();
   }
 
-  // ---------- Tablero: una fila por salida, con sus traslados desplegables ----------
   private cumple(o: Operacion) {
     const g = this.grupo();
     if (g === 'PENDIENTES') return o.estadoActual === 'PROGRAMADO';
@@ -126,7 +113,6 @@ export class OperacionesComponent {
       const clave = o.salidaId ? 's' + o.salidaId : 'sueltos';
       porSalida.set(clave, [...(porSalida.get(clave) ?? []), o]);
     }
-    // Salidas abiertas con pasajeros y aún sin traslados: aparecen para añadirles el primero
     if (this.grupo() === '') {
       for (const s of this.salidasActivas()) {
         if (filtro && s.salidaId !== filtro) continue;
@@ -151,12 +137,10 @@ export class OperacionesComponent {
         pax: salida ? salida.cuposMaximos - salida.cuposDisponibles : todos.reduce((n, o) => n + o.paxProgramados, 0)
       });
     }
-    // Por la hora del primer traslado (o la fecha de la salida si aún no tiene)
     const inicio = (g: GrupoTraslados) => g.todos[0]?.horaProgramadaSalida ?? (g.salida?.fechaInicio ?? '') + 'T99';
     return grupos.sort((a, b) => inicio(a).localeCompare(inicio(b)));
   });
 
-  // Salidas desplegadas
   abiertos = signal<Set<string>>(new Set());
   alternarGrupo(clave: string) {
     const s = new Set(this.abiertos());
@@ -172,7 +156,6 @@ export class OperacionesComponent {
     return this.gestiona && (!g.salida || g.salida.estado === 'PROGRAMADA' || g.salida.estado === 'GARANTIZADA');
   }
 
-  // Paginación de la tabla (10 salidas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();
@@ -185,7 +168,6 @@ export class OperacionesComponent {
     return {
       porAsignar: ops.filter(o => o.estadoActual === 'PROGRAMADO').length,
       enCurso: ops.filter(o => EN_CURSO.includes(o.estadoActual)).length,
-      // Salió más de 15 min tarde, o ya debió salir y sigue sin partir
       retrasadas: ops.filter(o => (o.minRetrasoSalida ?? 0) > 15
         || (['PROGRAMADO', 'ASIGNADO', 'EMBARQUE'].includes(o.estadoActual) && new Date(o.horaProgramadaSalida) < new Date())).length,
       hoy: ops.filter(o => o.horaProgramadaSalida.startsWith(hoy())).length
@@ -205,14 +187,11 @@ export class OperacionesComponent {
   esFinal(o: Operacion) { return !!this.store.getEstadoOperacion(o.estadoActual)?.esFinal; }
   siguientes(o: Operacion) { return this.store.getEstadoOperacion(o.estadoActual)?.siguientes ?? []; }
 
-  // ---------- Crear / editar ----------
   private vacio(): OperacionForm {
     return { salidaId: this.filtroSalida(), origenId: null, destinoId: null, vehiculoId: null, conductorId: null,
       paxProgramados: null, horaProgramadaSalida: '', horaEstimadaLlegada: null, observaciones: '' };
   }
 
-  // Recursos del proveedor elegido (Kampu Tours u otro): vehículo y conductor deben ser del mismo
-  // 0 = flota propia de Kampu Tours (v10: proveedor_id NULL); null = sin elegir
   proveedorSel: number | null = null;
   estimacion = signal<EstimacionDuracion | null>(null);
   get vehiculosProveedor() { return this.store.vehiculos().filter(x => (x.proveedorId ?? 0) === this.proveedorSel); }
@@ -225,7 +204,6 @@ export class OperacionesComponent {
     this.form.conductorId = null;
   }
 
-  // Duración estimada con las coordenadas de los lugares: propone la llegada
   calcularLlegada() {
     const f = this.form;
     if (!f.origenId || !f.destinoId || f.origenId === f.destinoId) { this.alerts.toast('Elige origen y destino', 'info'); return; }
@@ -250,7 +228,7 @@ export class OperacionesComponent {
 
   nueva() {
     this.editId = null;
-    this.proveedorSel = 0;   // flota propia primero
+    this.proveedorSel = 0;
     this.estimacion.set(null);
     this.form = this.vacio();
     this.cambioSalida();
@@ -258,8 +236,6 @@ export class OperacionesComponent {
     this.ventana.set('form');
   }
 
-  // Añadir un traslado a la salida: parte de donde termina el último (lugar, hora, vehículo y conductor),
-  // y todo se puede cambiar
   nuevaPara(g: GrupoTraslados) {
     this.nueva();
     this.form.salidaId = g.salidaId;
@@ -302,7 +278,6 @@ export class OperacionesComponent {
     this.ejecutar(this.store.guardarOperacion(datos, this.editId), editando ? 'Operación actualizada' : 'Operación creada');
   }
 
-  // ---------- Asignación ----------
   abrirAsignar(o: Operacion) {
     this.actual.set(o);
     this.vehiculoSel = null;
@@ -343,7 +318,6 @@ export class OperacionesComponent {
     this.ejecutar(this.conGuia(o, peticion), recursos ? 'Recursos asignados' : 'Guía asignado');
   }
 
-  // Si cambió el guía, se guarda en la salida después de asignar vehículo y conductor
   private conGuia(o: Operacion, peticion: Observable<unknown>): Observable<unknown> {
     const s = this.salidaDe(o);
     if (!s || !this.guiaCambio(o)) return peticion;
@@ -351,7 +325,6 @@ export class OperacionesComponent {
       cuposMaximos: s.cuposMaximos, guiaId: this.guiaSel, estado: s.estado }, s.salidaId)));
   }
 
-  // ---------- Estados ----------
   abrirEstado(o: Operacion, estado?: EstadoOperacion) {
     this.actual.set(o);
     this.nuevoEstado = estado ?? this.siguientes(o)[0] ?? null;
@@ -376,7 +349,6 @@ export class OperacionesComponent {
     });
   }
 
-  // Tras cualquier cambio: el tablero y el faltante de transporte de las salidas
   private ejecutar(peticion: Observable<unknown>, mensaje: string) {
     if (this.store.ocupado()) return;
     this.store.ocupado.set(true);

@@ -2,12 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* =====================================================================
-   Kampu · Tour Manager — sistema visual (tema claro, minimalista)
-   Colores del logotipo: verde oliva #4B5B1D (brand-600, principal), lima #C4BD45 (leaf-400, acento)
-   y neutros cálidos derivados del crema #FDF8E6. Ver tailwind.config.js.
-   ===================================================================== */
-
 @layer base {
   html { -webkit-tap-highlight-color: transparent; }
   body { @apply min-h-screen bg-zinc-50 font-sans text-[14px] text-zinc-800 antialiased; font-feature-settings: 'cv11', 'ss01'; }
@@ -17,7 +11,6 @@
 }
 
 @layer components {
-  /* ---------- Formularios ---------- */
   .field { @apply h-9 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm text-zinc-900 outline-none transition-colors
            placeholder:text-zinc-400 hover:border-zinc-300 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15
            disabled:cursor-not-allowed disabled:bg-zinc-50 disabled:text-zinc-400; }
@@ -33,9 +26,7 @@
   .form-section-title { @apply flex items-center gap-2 text-[13px] font-semibold uppercase tracking-wide text-zinc-500; }
   .form-section-title svg { @apply text-zinc-400; }
   .form-actions { @apply mt-5 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-100 pt-4; }
-  /* Dentro de un modal los botones quedan fijos abajo, siempre a la vista */
   app-modal .form-actions { @apply sticky -bottom-5 z-10 -mx-6 -mb-5 mt-5 bg-white/95 px-6 pb-4 backdrop-blur; }
-  /* Campo con ícono a la izquierda (como el buscador) */
   .con-icono { @apply relative; }
   .con-icono > .ico-campo { @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400; }
   .con-icono > .field { @apply pl-9; }
@@ -43,37 +34,29 @@
   .search > .search-icon { @apply pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400; }
   .search > .field { @apply pl-9; }
 
-  /* ---------- Botones: principal oscuro, secundario blanco, peligro en rojo suave ---------- */
   .btn { @apply inline-flex h-9 select-none items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 text-sm font-medium
          outline-none transition-[background-color,box-shadow,border-color,transform] duration-150 active:scale-[.97] focus-visible:ring-2 focus-visible:ring-offset-1
          disabled:pointer-events-none disabled:opacity-50; }
-  /* Principal: oliva del logo con sombra suave (como el botón oscuro de la plantilla) */
   .btn-dark { @apply btn bg-brand-600 text-white shadow-[0_1px_2px_rgba(38,46,15,.25),0_6px_14px_-6px_rgba(38,46,15,.55)] hover:bg-brand-700 focus-visible:ring-brand-600/30; }
-  .btn-brand { @apply btn-dark; }   /* misma acción principal en todo el sistema */
-  /* Secundario: blanco con borde fino y sombra mínima */
+  .btn-brand { @apply btn-dark; }
   .btn-light { @apply btn border border-zinc-200 bg-white text-zinc-800 shadow-soft hover:border-zinc-300 hover:bg-zinc-50 focus-visible:ring-zinc-400/30; }
   .btn-danger { @apply btn border border-rose-200 bg-white text-rose-600 shadow-soft hover:bg-rose-50 focus-visible:ring-rose-500/25; }
   .btn-sm { @apply h-8 gap-1.5 rounded-lg px-3 text-[13px]; }
-  /* Botón cuadrado solo con ícono (con borde, como campana y filtros de la plantilla) */
   .icon-btn-box { @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 shadow-soft outline-none
                   transition-[background-color,color,transform] hover:bg-zinc-50 hover:text-zinc-900 active:scale-95 focus-visible:ring-2 focus-visible:ring-brand-600/30; }
-  /* Ícono de acción dentro de tablas (sin borde) */
   .icon-btn { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 outline-none transition-[background-color,color,transform]
               active:scale-90 hover:bg-zinc-100 hover:text-zinc-800 focus-visible:ring-2 focus-visible:ring-zinc-400/30; }
   .icon-btn-danger { @apply icon-btn hover:bg-rose-50 hover:text-rose-600; }
   .icon-btn-success { @apply icon-btn text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700; }
-  /* Ícono en cuadro gris redondeado (listas y títulos, como "Home views" de la plantilla) */
   .ico-tile { @apply grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-zinc-200/70 bg-zinc-100 text-zinc-600; }
   .ico-tile-lg { @apply ico-tile h-11 w-11; }
   .actions { @apply inline-flex items-center gap-0.5; }
   .link { @apply inline-flex items-center gap-1 font-medium text-brand-700 underline decoration-brand-200 underline-offset-4 transition-colors hover:decoration-brand-600; }
 
-  /* Pestañas segmentadas */
   .seg { @apply inline-flex max-w-full gap-0.5 overflow-x-auto rounded-xl bg-zinc-100 p-1 text-[13px]; }
   .seg-btn { @apply whitespace-nowrap rounded-lg px-3 py-1.5 font-medium text-zinc-500 outline-none transition-colors hover:text-zinc-900 focus-visible:ring-2 focus-visible:ring-brand-500/30; }
   .seg-btn.on { @apply bg-white text-brand-700 shadow-soft; }
 
-  /* ---------- Tarjetas y tablas ---------- */
   .card { @apply rounded-xl border border-zinc-200/80 bg-white shadow-card; }
   .card-hover { @apply transition-colors hover:border-zinc-300; }
   .card-header { @apply flex items-center justify-between gap-3 border-b border-zinc-100 px-5 py-3.5; }
@@ -92,14 +75,12 @@
   .progress > div { @apply h-full rounded-full bg-brand-600 transition-[width] duration-500; }
   .chip { @apply inline-flex items-center gap-1 rounded-md bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600; }
 
-  /* ---------- Avisos ---------- */
   .alert { @apply flex items-start gap-3 rounded-lg border px-4 py-3 text-sm leading-relaxed; }
   .alert svg { @apply mt-0.5 shrink-0; }
   .alert-error { @apply alert border-rose-200 bg-rose-50 text-rose-700; }
   .alert-warn { @apply alert border-amber-200 bg-amber-50 text-amber-800; }
   .alert-info { @apply alert border-brand-100 bg-brand-50 text-brand-800; }
 
-  /* ---------- Encabezados de página ---------- */
   .h1 { @apply text-2xl font-semibold tracking-tight text-zinc-900; }
   .eyebrow { @apply text-xs font-medium text-zinc-500; }
   .page-header { @apply mb-6 flex flex-wrap items-end justify-between gap-4; }
@@ -108,7 +89,6 @@
   .font-wordmark { font-weight: 800; letter-spacing: -0.02em; line-height: 1; }
 }
 
-/* ---------- Controles nativos ---------- */
 select.field {
   appearance: none;
   -webkit-appearance: none;
@@ -129,12 +109,9 @@ input[type='search']::-webkit-search-cancel-button {
 
 * { scrollbar-width: thin; scrollbar-color: #D3D0C3 transparent; }
 
-/* Transición suave al cambiar de pantalla */
-/* Sin 'both': al terminar no deja una capa propia, así los modales quedan sobre la barra superior y el menú */
 main router-outlet + * { display: block; animation: fade-in .2s ease-out; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
-/* ---------- SweetAlert2 (confirmaciones y avisos) ---------- */
 .swal2-container.swal2-backdrop-show { background: rgba(38, 46, 15, .30) !important; }
 .swal2-popup {
   font-family: inherit; border-radius: 14px !important; background: #fff; color: #22231B;
@@ -165,13 +142,10 @@ body.swal2-toast-shown .swal2-container,
 .swal2-toast .swal2-title { font-size: .875rem !important; font-weight: 500 !important; padding: 0 !important; margin: 0 .5rem !important; }
 .swal2-toast .swal2-icon { transform: none; margin: 0 !important; }
 
-/* ---------- Tablas ---------- */
-/* La columna de acciones queda fija a la derecha cuando la tabla se desplaza */
 @media (min-width: 768px) {
   .tbl .col-acciones { position: sticky; right: 0; z-index: 1; background: #fff; }
   .tbl tbody tr:hover .col-acciones { background: #FCFCF9; }
 }
-/* En celular cada fila es una tarjeta: etiqueta a la izquierda (data-label) y valor a la derecha */
 @media (max-width: 767px) {
   .tbl-tarjetas thead { display: none; }
   .tbl-tarjetas, .tbl-tarjetas tbody { display: block; }
@@ -188,11 +162,9 @@ body.swal2-toast-shown .swal2-container,
   .tbl-tarjetas td[colspan] { display: block; }
   .tbl-tarjetas tbody tr:has(> td[colspan]) { border: 0; margin: 0; padding: 0; }
 }
-/* Registro recién guardado: se resalta un momento */
 .fila-nueva { animation: fila-nueva 2.4s ease-out; }
 @keyframes fila-nueva { 0%, 40% { background-color: #F4F6E4; } 100% { background-color: transparent; } }
 
-/* Impresión (manifiesto de pasajeros): solo el contenido */
 @media print {
   @page { margin: 14mm; }
   html, body { background: #fff !important; }
@@ -203,7 +175,6 @@ body.swal2-toast-shown .swal2-container,
   * { animation: none !important; transition: none !important; }
 }
 
-/* Botones redondeados (página principal, cotizador y pantallas del visitante) */
 .boton-pill { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; height: 3rem; padding: 0 1.4rem; border-radius: 999px;
   background: #4B5B1D; color: #fff; font-size: 15px; font-weight: 600; box-shadow: 0 12px 28px -14px rgba(75, 91, 29, .8);
   transition: background-color .2s, transform .15s; }
@@ -215,12 +186,10 @@ body.swal2-toast-shown .swal2-container,
   border: 1px solid #E6E4DA; background: #fff; font-size: 15px; font-weight: 600; color: #4B5B1D; transition: background-color .2s, border-color .2s; }
 .boton-pill-claro:hover { background: #F4F6E4; border-color: #4B5B1D; }
 
-/* Entrada escalonada de textos al abrir una pantalla (aparece, aparece-1 … aparece-3) */
 .aparece { animation: aparece .8s cubic-bezier(.16, 1, .3, 1) both; }
 .aparece-1 { animation-delay: .1s; } .aparece-2 { animation-delay: .2s; } .aparece-3 { animation-delay: .3s; }
 @keyframes aparece { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 
-/* Tooltip de los botones solo con ícono: data-tip="Editar" (el botón lleva además su aria-label) */
 [data-tip] { position: relative; }
 [data-tip]::after {
   content: attr(data-tip); position: absolute; bottom: calc(100% + 6px); left: 50%; z-index: 60;
@@ -229,31 +198,21 @@ body.swal2-toast-shown .swal2-container,
   box-shadow: 0 6px 16px -6px rgba(38, 46, 15, .4); transition: opacity .15s ease-out, transform .15s ease-out;
 }
 [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translate(-50%, 0); transition-delay: .25s; }
-/* En la última columna de las tablas el tooltip se alinea a la derecha para no salirse de la tarjeta */
 .actions [data-tip]::after { left: auto; right: 0; transform: translateY(3px); }
 .actions [data-tip]:hover::after, .actions [data-tip]:focus-visible::after { transform: none; }
 @media (hover: none) { [data-tip]::after { display: none; } }
-/* Botón de cerrar de las ventanas: el tooltip va debajo, alineado a la derecha */
 [data-cerrar][data-tip]::after { bottom: auto; top: calc(100% + 6px); left: auto; right: 0; transform: translateY(-3px); }
 [data-cerrar][data-tip]:hover::after, [data-cerrar][data-tip]:focus-visible::after { transform: none; }
 
-/* Cierre de ventanas modales */
 .modal-saliendo { animation: modal-salir .16s ease-in forwards !important; }
 @keyframes modal-salir { to { opacity: 0; transform: translateY(8px) scale(.98); } }
 
-/* Página principal a pantalla completa (full-viewport): cada sección ocupa el alto de la ventana y el contenido
-   queda centrado; el desplazamiento se detiene al inicio de cada sección (scroll-snap, CSS nativo) */
 .pantalla { position: relative; display: flex; min-height: 100vh; min-height: 100svh; flex-direction: column; justify-content: center;
             padding-top: 6.5rem; padding-bottom: 4rem; scroll-snap-align: start; }
 html.secciones { scroll-snap-type: y proximity; }
 
-/* Desplazamiento por páginas completas (escritorio): lo controla landing.component.ts */
 html.paginas { scroll-behavior: auto; scrollbar-width: none; }
 html.paginas::-webkit-scrollbar { display: none; }
-/* Transición entre páginas (escritorio):
-   - [data-entra] (con --i para el orden): el texto entra desde la dirección del movimiento, escalonado;
-   - [data-foto="izq" | "der"]: las fotos se descubren con un barrido;
-   - la página que se va se aleja y se desvanece. */
 html .pagina-entra [data-entra] { animation: entra-abajo .9s calc(.18s + var(--i, 0) * 90ms) cubic-bezier(.16, 1, .3, 1) both; }
 html .pagina-entra.desde-arriba [data-entra] { animation-name: entra-arriba; }
 html .pagina-entra [data-foto] { animation: foto-der 1.15s .05s cubic-bezier(.77, 0, .175, 1) both; }
@@ -265,7 +224,6 @@ html .pagina-entra [data-foto="izq"] { animation-name: foto-izq; }
 html .pagina-sale [data-entra] { opacity: 0; transform: translateY(-40px); transition: opacity .45s ease, transform .8s cubic-bezier(.65, 0, .35, 1); }
 html .pagina-sale [data-foto] { transform: scale(1.06); filter: brightness(.6); transition: transform .9s cubic-bezier(.65, 0, .35, 1), filter .9s ease; }
 
-/* Encabezado común de las secciones: número, nombre y título grande (mismo lenguaje que la portada) */
 .diapo-num { display: inline-flex; align-items: center; gap: .75rem; font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: #4B5B1D; }
 .diapo-num b { font-weight: 600; color: #8C8A2E; font-variant-numeric: tabular-nums; }
 .diapo-num::before { content: ''; height: 1px; width: 2rem; background: #C4BD45; order: 1; }
@@ -277,7 +235,6 @@ html .pagina-sale [data-foto] { transform: scale(1.06); filter: brightness(.6); 
 @media (min-width: 1280px) { .diapo-titulo { font-size: 3.5rem; } }
 .diapo-oscura .diapo-titulo { color: #fff; }
 
-/* Aparición al entrar en pantalla (directiva appRevelar) */
 .revelar { opacity: 0; transform: translateY(22px); transition: opacity .8s cubic-bezier(.16, 1, .3, 1), transform .8s cubic-bezier(.16, 1, .3, 1); }
 .revelar.revelado { opacity: 1; transform: none; }
 
@@ -292,5 +249,4 @@ html { scroll-behavior: smooth; }
   .revelar { opacity: 1; transform: none; }
 }
 
-/* Primera letra en mayúscula (fechas como "miércoles 18 de noviembre") */
 .capitalize-first::first-letter { text-transform: uppercase; }

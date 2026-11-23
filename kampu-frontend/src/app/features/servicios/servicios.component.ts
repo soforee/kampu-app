@@ -14,8 +14,6 @@ import { PageHeaderComponent } from '../../shared/page-header.component';
 
 type Form = Omit<ServicioAdicional, 'servicioId'>;
 
-// (v11) Servicios adicionales que el visitante puede sumar al cotizar (GESTIONAR_CATALOGO).
-// No se borran (las cotizaciones guardan su precio): se desactivan.
 @Component({
   selector: 'app-servicios',
   standalone: true,

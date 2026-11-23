@@ -11,8 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import pe.edu.upeu.kampu.dto.CotizacionDtos.*;
 import pe.edu.upeu.kampu.dto.MotivoRequestDTO;
 import pe.edu.upeu.kampu.seguridad.LimiteSolicitudes;
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 import pe.edu.upeu.kampu.services.CotizacionPdfService;
 import pe.edu.upeu.kampu.services.CotizacionService;
 import pe.edu.upeu.kampu.services.PortalClienteService;
@@ -23,14 +22,6 @@ import pe.edu.upeu.kampu.dto.PortalPaqueteDTO;
 import java.time.Duration;
 import java.util.List;
 
-/**
- * (v11) Cotizaciones.
- *  - Visitante (sin cuenta): calcula, guarda, abre/modifica/solicita/cancela/descarga con código + clave.
- *    La clave viaja siempre en el cuerpo (POST/PUT), nunca en la URL. Límite de intentos por IP.
- *  - Invitado con la cotización ya RESERVADA: gestiona esa reserva como un cliente (pasajeros, pagos y
- *    anulación) con el mismo código + clave, sin crear cuenta.
- *  - Personal (VER_/GESTIONAR_COTIZACIONES): lista, detalle, confirmar (crea la reserva) o rechazar.
- */
 @RestController
 @RequestMapping("/api/v1/cotizaciones")
 public class CotizacionController {
@@ -47,72 +38,59 @@ public class CotizacionController {
         this.limite = limite;
     }
 
-    // ------------------------------------------------------------ visitante
-    // Habitaciones de hotel que se eligen en la cotización (sección 5)
-    @Publico
     @GetMapping("/habitaciones")
     public List<HabitacionCotizable> habitaciones() {
         return servicio.habitaciones();
     }
 
-    @Publico
     @PostMapping("/calcular")
     public Calculo calcular(@Valid @RequestBody Datos datos, HttpServletRequest req) {
         limite.verificar("calcular", req.getRemoteAddr(), 240, Duration.ofMinutes(10));
         return servicio.calcular(datos);
     }
 
-    @Publico
     @PostMapping
     public ResponseEntity<Creada> crear(@Valid @RequestBody Datos datos, HttpServletRequest req) {
         limite.verificar("crear", req.getRemoteAddr(), 30, Duration.ofHours(1));
         return new ResponseEntity<>(servicio.crear(datos), HttpStatus.CREATED);
     }
 
-    @Publico
     @PostMapping("/acceso")
     public Cotizacion abrir(@Valid @RequestBody Acceso acceso, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return servicio.abrir(acceso.codigo(), acceso.clave());
     }
 
-    @Publico
     @PutMapping("/{codigo}")
     public Cotizacion modificar(@PathVariable String codigo, @Valid @RequestBody Modificar m, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return servicio.modificar(codigo, m);
     }
 
-    @Publico
     @PostMapping("/{codigo}/solicitud")
     public Cotizacion solicitar(@PathVariable String codigo, @Valid @RequestBody Solicitud s, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return servicio.solicitar(codigo, s);
     }
 
-    @Publico
     @PostMapping("/{codigo}/cancelacion")
     public Cotizacion cancelar(@PathVariable String codigo, @Valid @RequestBody Clave c, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return servicio.cancelar(codigo, c.clave());
     }
 
-    @Publico
     @PostMapping(value = "/{codigo}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> descargar(@PathVariable String codigo, @Valid @RequestBody Clave c, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return archivo(servicio.paraPdf(codigo, c.clave()));
     }
 
-    // ------------------------------------------------------------ invitado con su reserva
-    @Publico
     @PostMapping("/{codigo}/reserva")
     public PortalDetalleDTO reserva(@PathVariable String codigo, @Valid @RequestBody Clave c, HttpServletRequest req) {
         limite.verificar("acceso", req.getRemoteAddr(), 40, Duration.ofMinutes(10));
         return portal.detalleInvitado(codigo, c.clave());
     }
 
-    @Publico
     @PostMapping("/{codigo}/reserva/pasajeros")
     public ResponseEntity<PortalDetalleDTO.PortalPasajeroDTO> registrarPasajero(@PathVariable String codigo,
                                                                                 @Valid @RequestBody PasajeroInvitado p,
@@ -121,7 +99,6 @@ public class CotizacionController {
         return new ResponseEntity<>(portal.registrarPasajeroInvitado(codigo, p.clave(), p.pasajero()), HttpStatus.CREATED);
     }
 
-    @Publico
     @PostMapping("/{codigo}/reserva/pasajeros/{pasajeroId}/eliminar")
     public ResponseEntity<Void> eliminarPasajero(@PathVariable String codigo, @PathVariable Long pasajeroId,
                                                  @Valid @RequestBody Clave c, HttpServletRequest req) {
@@ -130,7 +107,6 @@ public class CotizacionController {
         return ResponseEntity.noContent().build();
     }
 
-    @Publico
     @PostMapping("/{codigo}/reserva/pagos")
     public ResponseEntity<PagoDTO> informarPago(@PathVariable String codigo, @Valid @RequestBody PagoInvitado p,
                                                 HttpServletRequest req) {
@@ -138,8 +114,6 @@ public class CotizacionController {
         return new ResponseEntity<>(portal.informarPagoInvitado(codigo, p.clave(), p.pago()), HttpStatus.CREATED);
     }
 
-    // Respuesta: {"resultado": "ANULADA"} o {"resultado": "SOLICITUD_REGISTRADA"}
-    @Publico
     @PostMapping("/{codigo}/reserva/anulacion")
     public java.util.Map<String, String> solicitarAnulacion(@PathVariable String codigo, @Valid @RequestBody AnulacionInvitado a,
                                                             HttpServletRequest req) {
@@ -147,39 +121,37 @@ public class CotizacionController {
         return java.util.Map.of("resultado", portal.solicitarAnulacionInvitado(codigo, a.clave(), a.motivo()));
     }
 
-    // ------------------------------------------------------------ cliente con cuenta
-    @Permiso("VER_PAQUETES_PROPIOS")
+    @PreAuthorize("hasAuthority('VER_PAQUETES_PROPIOS')")
     @GetMapping("/mias")
     public List<Cotizacion> mias() {
         return servicio.delCliente();
     }
 
-    // ------------------------------------------------------------ personal
-    @Permiso("VER_COTIZACIONES")
+    @PreAuthorize("hasAuthority('VER_COTIZACIONES')")
     @GetMapping
     public List<Cotizacion> listar(@RequestParam(required = false) String estado) {
         return servicio.listar(estado);
     }
 
-    @Permiso("VER_COTIZACIONES")
+    @PreAuthorize("hasAuthority('VER_COTIZACIONES')")
     @GetMapping("/gestion/{id}")
     public Cotizacion detalle(@PathVariable Long id) {
         return servicio.detallePersonal(id);
     }
 
-    @Permiso("VER_COTIZACIONES")
+    @PreAuthorize("hasAuthority('VER_COTIZACIONES')")
     @GetMapping(value = "/gestion/{id}/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> pdfPersonal(@PathVariable Long id) {
         return archivo(servicio.detallePersonal(id));
     }
 
-    @Permiso("GESTIONAR_COTIZACIONES")
+    @PreAuthorize("hasAuthority('GESTIONAR_COTIZACIONES')")
     @PostMapping("/gestion/{id}/confirmar")
     public Cotizacion confirmar(@PathVariable Long id) {
         return servicio.confirmar(id);
     }
 
-    @Permiso("GESTIONAR_COTIZACIONES")
+    @PreAuthorize("hasAuthority('GESTIONAR_COTIZACIONES')")
     @PostMapping("/gestion/{id}/rechazar")
     public Cotizacion rechazar(@PathVariable Long id, @Valid @RequestBody MotivoRequestDTO dto) {
         return servicio.rechazar(id, dto.motivo());

@@ -16,10 +16,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * Manifiesto oficial de pasajeros de una salida (OpenPDF): nombre, documento, nacionalidad, edad y recojo.
- * Lo descarga el guía para controles turísticos o embarcaderos sin cobertura.
- */
 @Service
 public class ManifiestoPdfService {
     private static final Locale PE = Locale.forLanguageTag("es-PE");
@@ -28,7 +24,6 @@ public class ManifiestoPdfService {
     private static final Color OLIVA = new Color(0x4B, 0x5B, 0x1D);
     private static final Color GRIS = new Color(0x6B, 0x6B, 0x6B);
 
-    /** cabecera: paquete, fecha_inicio, fecha_fin, guia, transporte (texto). pasajeros: filas de VW_MANIFIESTO_SALIDA. */
     public byte[] generar(Map<String, Object> cabecera, List<Map<String, Object>> pasajeros) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         Document doc = new Document(PageSize.A4.rotate(), 36, 36, 36, 36);
@@ -94,7 +89,7 @@ public class ManifiestoPdfService {
             celda(tabla, texto(f.get("edadAlViajar")), normal);
             celda(tabla, texto(f.get("codigoReserva")), normal);
             Object hora = f.get("horaRecojo");
-            celda(tabla, texto(f.get("puntoRecojo")) + (hora instanceof LocalDateTime h ? " · " + h.format(HORA) : ""), normal);
+            celda(tabla, texto(f.get("puntoRecojo")) + (hora instanceof LocalDateTime ? " · " + ((LocalDateTime) hora).format(HORA) : ""), normal);
         }
         if (pasajeros.isEmpty()) {
             PdfPCell c = new PdfPCell(new Phrase("Aún no hay pasajeros registrados.", tenue));
@@ -121,8 +116,8 @@ public class ManifiestoPdfService {
     }
 
     private static String fecha(Object o) {
-        if (o instanceof LocalDateTime d) return d.format(FECHA);
-        if (o instanceof java.time.LocalDate d) return d.format(FECHA);
+        if (o instanceof LocalDateTime) return ((LocalDateTime) o).format(FECHA);
+        if (o instanceof java.time.LocalDate) return ((java.time.LocalDate) o).format(FECHA);
         return texto(o);
     }
 }

@@ -12,12 +12,10 @@ import pe.edu.upeu.kampu.exception.BusinessException;
 import pe.edu.upeu.kampu.exception.ResourceNotFoundException;
 import pe.edu.upeu.kampu.repository.PaqueteTourRepository;
 import pe.edu.upeu.kampu.repository.ServicioAdicionalRepository;
-import pe.edu.upeu.kampu.seguridad.Permiso;
-import pe.edu.upeu.kampu.seguridad.Publico;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 
-// (v11) Servicios adicionales: el catálogo de un paquete es público; su gestión es de quien gestiona el catálogo
 @RestController
 @RequestMapping("/api/v1/servicios-adicionales")
 public class ServicioAdicionalController {
@@ -29,29 +27,27 @@ public class ServicioAdicionalController {
         this.paquetes = paquetes;
     }
 
-    // Lo que un visitante puede sumar al paquete que cotiza (solo activos)
-    @Publico
     @GetMapping("/paquete/{paqueteId}")
     @Transactional(readOnly = true)
     public List<ServicioAdicionalDTO> disponibles(@PathVariable Long paqueteId) {
         return repo.disponiblesPara(paqueteId).stream().map(ServicioAdicionalDTO::desde).toList();
     }
 
-    @Permiso("GESTIONAR_CATALOGO")
+    @PreAuthorize("hasAuthority('GESTIONAR_CATALOGO')")
     @GetMapping
     @Transactional(readOnly = true)
     public List<ServicioAdicionalDTO> listar() {
         return repo.findAllByOrderByPaqueteIdAscNombreAsc().stream().map(ServicioAdicionalDTO::desde).toList();
     }
 
-    @Permiso("GESTIONAR_CATALOGO")
+    @PreAuthorize("hasAuthority('GESTIONAR_CATALOGO')")
     @PostMapping
     @Transactional
     public ResponseEntity<ServicioAdicionalDTO> crear(@Valid @RequestBody ServicioAdicionalRequestDTO dto) {
         return new ResponseEntity<>(guardar(new ServicioAdicional(), dto), HttpStatus.CREATED);
     }
 
-    @Permiso("GESTIONAR_CATALOGO")
+    @PreAuthorize("hasAuthority('GESTIONAR_CATALOGO')")
     @PutMapping("/{id}")
     @Transactional
     public ServicioAdicionalDTO actualizar(@PathVariable Long id, @Valid @RequestBody ServicioAdicionalRequestDTO dto) {
@@ -60,7 +56,6 @@ public class ServicioAdicionalController {
         return guardar(s, dto);
     }
 
-    // Un servicio ya cotizado no se borra (las cotizaciones guardan su precio): se desactiva con estado INACTIVO
     private ServicioAdicionalDTO guardar(ServicioAdicional s, ServicioAdicionalRequestDTO dto) {
         if (dto.paqueteId() != null && !paquetes.existsById(dto.paqueteId())) {
             throw new BusinessException("El paquete elegido no existe.");

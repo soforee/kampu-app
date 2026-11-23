@@ -4,7 +4,6 @@ import { IconComponent } from './icon.component';
 
 export interface Miga { texto: string; ruta?: string; }
 
-// Migas de pan: dónde está el usuario (Reservas › R-0009). El último elemento es la página actual.
 @Component({
   selector: 'app-migas',
   standalone: true,

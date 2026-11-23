@@ -11,7 +11,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-// Conductor: ficha del vehículo que conduce hoy (o en su próximo traslado) y la jornada del día
 @Component({
   selector: 'app-mi-vehiculo',
   standalone: true,
@@ -90,13 +89,11 @@ export class MiVehiculoComponent {
       this.j = { kmInicial: hoyJ.kmInicial, combustibleInicial: hoyJ.combustibleInicial, kmFinal: hoyJ.kmFinal,
         combustibleFinal: hoyJ.combustibleFinal ?? '', observaciones: hoyJ.observaciones ?? '' };
     } else {
-      // Se parte del kilometraje con que terminó la última jornada
       const ult = d.jornadas?.[0];
       this.j.kmInicial = ult ? (ult.kmFinal ?? ult.kmInicial) : null;
     }
   }
 
-  // Mantenimiento, SOAT y revisión técnica: vencido (rojo), por vencer en 30 días (ámbar)
   documentos(v: NonNullable<MiVehiculo['vehiculo']>) {
     const pronto = addDays(hoy(), 30);
     return [

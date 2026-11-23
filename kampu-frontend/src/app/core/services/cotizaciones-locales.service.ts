@@ -11,11 +11,6 @@ export interface CotizacionLocal {
 
 const KEY = 'kampu.cotizaciones';
 
-/**
- * "Guardar temporalmente": las cotizaciones del visitante quedan en ESTE navegador (código + clave) para
- * reabrirlas sin escribir la clave. Viven en el servidor; aquí solo se recuerda cómo entrar. Se pueden olvidar.
- * Sin almacenamiento disponible (modo privado), el visitante usa el código y la clave que anotó.
- */
 @Injectable({ providedIn: 'root' })
 export class CotizacionesLocales {
   lista = signal<CotizacionLocal[]>(this.leer());
@@ -38,7 +33,7 @@ export class CotizacionesLocales {
 
   private guardar(l: CotizacionLocal[]) {
     this.lista.set(l);
-    try { localStorage.setItem(KEY, JSON.stringify(l)); } catch { /* sin almacenamiento: queda solo en memoria */ }
+    try { localStorage.setItem(KEY, JSON.stringify(l)); } catch {  }
   }
 
   private leer(): CotizacionLocal[] {

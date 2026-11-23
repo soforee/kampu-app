@@ -3,8 +3,6 @@ package pe.edu.upeu.kampu.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import pe.edu.upeu.kampu.seguridad.UsuarioActualInterceptor;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -14,18 +12,6 @@ import java.nio.file.Paths;
 public class WebConfig implements WebMvcConfigurer {
     @Value("${storage.location}")
     private String storageLocation;
-
-    private final UsuarioActualInterceptor usuarioActual;
-
-    public WebConfig(UsuarioActualInterceptor usuarioActual) {
-        this.usuarioActual = usuarioActual;
-    }
-
-    // Identifica al usuario de cada petición (bitácora, portal del cliente y sesión de Oracle)
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(usuarioActual).addPathPatterns("/api/**");
-    }
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {

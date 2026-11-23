@@ -21,11 +21,9 @@ import { PaginacionComponent } from '../../shared/paginacion.component';
 export class PagosComponent {
   store = inject(TourStore);
   private alerts = inject(AlertService);
-  // REGISTRAR_PAGO: registrar y validar pagos (Admin y Ventas)
   gestiona = inject(AuthService).puede('REGISTRAR_PAGO');
 
   texto = signal('');
-  // ?estado=PENDIENTE: llega desde el aviso "pagos por validar" del panel
   estado = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('estado') ?? '');
   estados = [{ valor: '', texto: 'Todos' }, { valor: 'APROBADO', texto: 'Aprobados' }, { valor: 'PENDIENTE', texto: 'Pendientes' },
              { valor: 'RECHAZADO', texto: 'Rechazados' }, { valor: 'REEMBOLSADO', texto: 'Reembolsados' }];
@@ -38,7 +36,7 @@ export class PagosComponent {
         pago: p,
         codigo: this.store.codigoReserva(p.reservaId),
         cliente: this.store.nombreCliente(this.store.getReserva(p.reservaId)) || '—',
-        pen: p.montoPen ?? aPEN(p.monto, p.moneda)   // PAGOS.monto_pen (columna virtual)
+        pen: p.montoPen ?? aPEN(p.monto, p.moneda)
       }))
       .filter(f => !e || f.pago.estadoTransaccion === e)
       .filter(f => !t || f.codigo.toLowerCase().includes(t) || f.cliente.toLowerCase().includes(t)
@@ -46,7 +44,6 @@ export class PagosComponent {
       .sort((a, b) => b.pago.fechaPago.localeCompare(a.pago.fechaPago));
   });
 
-  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();
@@ -59,7 +56,6 @@ export class PagosComponent {
 
   async resolver(id: number, estado: 'APROBADO' | 'RECHAZADO') {
     if (this.store.ocupado()) return;
-    // Rechazar es una acción que no se deshace: se pide confirmación antes de enviarla
     if (estado === 'RECHAZADO' && !(await this.alerts.confirm('El pago quedará rechazado y no se descontará del saldo de la reserva.', 'Rechazar pago', 'Sí, rechazar'))) return;
     this.store.ocupado.set(true);
     this.store.resolverPago(id, estado).subscribe({

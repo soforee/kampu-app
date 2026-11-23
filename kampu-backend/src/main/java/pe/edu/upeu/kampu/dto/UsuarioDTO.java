@@ -13,7 +13,6 @@ public record UsuarioDTO(
         String estado,
         Integer intentosFallidos,
         LocalDateTime ultimoAcceso,
-        // (v11) GUIA / CONDUCTOR: ficha de personal a la que está ligada la cuenta
         Long personalId,
         String personalNombre
 ) {

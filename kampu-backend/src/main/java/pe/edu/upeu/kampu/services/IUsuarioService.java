@@ -6,7 +6,6 @@ import pe.edu.upeu.kampu.dto.UsuarioRequestDTO;
 
 import java.util.List;
 
-// Módulo de usuarios del sistema: solo el administrador (GESTIONAR_USUARIOS)
 public interface IUsuarioService {
     List<UsuarioDTO> listarTodo();
 

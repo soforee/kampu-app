@@ -15,7 +15,6 @@ export function addDays(iso: string, days: number): string {
   return toIsoDate(new Date(y, m - 1, d + days));
 }
 
-// Días desde hoy hasta la fecha (negativo si ya pasó). Acepta 'yyyy-MM-dd' o fecha con hora.
 export function diasHasta(iso: string): number {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   const hoyDia = new Date();
@@ -23,7 +22,6 @@ export function diasHasta(iso: string): number {
   return Math.round((new Date(y, m - 1, d).getTime() - inicio) / 86400000);
 }
 
-// "hoy", "mañana", "en 5 días", "hace 3 días"
 export function cuando(dias: number): string {
   if (dias === 0) return 'hoy';
   if (dias === 1) return 'mañana';

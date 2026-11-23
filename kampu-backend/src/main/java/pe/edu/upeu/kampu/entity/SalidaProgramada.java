@@ -4,8 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import org.hibernate.annotations.DynamicUpdate;
 
-// SALIDAS_PROGRAMADAS (v10): PROGRAMADA -> GARANTIZADA -> COMPLETADA | CANCELADA.
-// fecha_fin y cupos_disponibles los calcula TRG_SALIDAS_VALIDAR (solo lectura en JPA).
 @Entity
 @DynamicUpdate
 @Table(name = "SALIDAS_PROGRAMADAS")

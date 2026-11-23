@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.Immutable;
 
-// Bitácora AUDITORIA (solo lectura desde JPA). La escriben:
-//   origen BD : TRG_AUDITORIA_ESTADO_PAQUETE y SP_REGISTRAR_CLIENTE_EXTERNO
-//   origen APP: auditoria.AuditoriaHibernateListener y auditoria.AuditoriaService
-// Las longitudes deben coincidir con la tabla: rol_usuario es clave de partición (ORA-14060 si Hibernate intenta cambiarla).
 @Entity
 @Immutable
 @Table(name = "AUDITORIA")

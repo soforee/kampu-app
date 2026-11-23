@@ -5,8 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// Cliente nuevo que reserva sin estar registrado: en v4 toda reserva tiene cliente, así que
-// se crea en CLIENTES (sin cuenta web; luego puede activarla con "Registrarse").
 public record ContactoReservaDTO(
         @NotBlank(message = "Ingresa el nombre del cliente.")
         @Size(max = 150, message = "El nombre admite máximo 150 caracteres.")

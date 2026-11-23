@@ -1,4 +1,3 @@
-/* Cada beneficio: fila con ícono y texto, separadas por líneas finas */
 .beneficio { display: flex; gap: 1.1rem; align-items: flex-start; padding: 1.25rem 0; border-color: var(--kp-border); }
 .beneficio-icono {
   display: grid; place-items: center; flex-shrink: 0; width: 2.75rem; height: 2.75rem; border-radius: 999px;

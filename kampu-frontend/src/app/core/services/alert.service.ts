@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import Swal from 'sweetalert2';
 
-const BRAND = '#4B5B1D';   // verde oliva del logo (igual que btn-dark)
+const BRAND = '#4B5B1D';
 const DANGER = '#B4533F';
 const CANCEL = '#FFFFFF';
 
@@ -36,7 +36,6 @@ export class AlertService {
     return result.isConfirmed ? (result.value as string) : null;
   }
 
-  // Texto libre obligatorio (motivo, respuesta al cliente...). null si se cancela.
   async texto(title: string, text: string, placeholder: string, confirmText: string, peligro = false): Promise<string | null> {
     const result = await Swal.fire({
       title, text, input: 'textarea', inputPlaceholder: placeholder, inputAttributes: { maxlength: '300' },
@@ -47,8 +46,6 @@ export class AlertService {
     return result.isConfirmed ? (result.value as string).trim() : null;
   }
 
-  // Anulación (v10, PKG_RESERVAS.anular / cancelar_salida): motivo obligatorio y, si hay dinero cobrado,
-  // la forma de reembolso. formas: [código, texto]. null si se cancela.
   async anulacion(title: string, text: string, formas: [string, string][] | null, confirmText: string):
     Promise<{ motivo: string; formaReembolso: string | null } | null> {
     const opciones = formas ? formas.map(([c, t]) => `<option value="${c}">${t}</option>`).join('') : '';

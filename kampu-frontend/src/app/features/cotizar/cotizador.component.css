@@ -1,7 +1,5 @@
-/* Cotizador: mismo lenguaje de la página principal (foto a sangre, oliva y lima, bordes redondeados) */
 .cotizador { background: #FDFCF6; }
 
-/* Portada */
 .portada { position: relative; display: flex; flex-direction: column; justify-content: flex-end; min-height: 460px; height: 58vh; overflow: hidden; background: #262E0F; padding-bottom: 5.5rem; }
 .portada-cargando { height: 46vh; min-height: 360px; }
 .portada-foto { position: absolute; inset: 0; height: 100%; width: 100%; object-fit: cover; animation: acercar 12s ease-out both; }
@@ -26,7 +24,6 @@
 .dato-precio small { font-weight: 500; opacity: .75; }
 .dato-modo { background: rgba(26, 32, 10, .35); }
 
-/* Bloques y pasos */
 .bloque { border-radius: 24px; background: #fff; border: 1px solid #E6E4DA; padding: 1.5rem; box-shadow: 0 1px 2px rgba(38, 46, 15, .04); }
 @media (min-width: 640px) { .bloque { padding: 1.75rem 2rem; } }
 .paso-titulo { display: flex; align-items: baseline; gap: .75rem; font-size: 1.25rem; font-weight: 600; letter-spacing: -.01em; color: #22231B; }
@@ -34,14 +31,12 @@
 .sub { margin-top: 1.5rem; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #7A7668; }
 .incluye-check { display: grid; flex-shrink: 0; place-items: center; width: 1.35rem; height: 1.35rem; border-radius: 999px; background: #F4F6E4; color: #4B5B1D; }
 
-/* Itinerario: línea de tiempo por día */
 .linea-tiempo { position: relative; display: grid; gap: 1.1rem; padding-left: 1.25rem; }
 .linea-tiempo::before { content: ''; position: absolute; left: .3rem; top: .4rem; bottom: .4rem; width: 2px; border-radius: 2px; background: #E7ECC9; }
 .linea-tiempo > li { position: relative; }
 .linea-tiempo > li::before { content: ''; position: absolute; left: -1.25rem; top: .3rem; width: .75rem; height: .75rem; border-radius: 999px; background: #fff; box-shadow: inset 0 0 0 2.5px #4B5B1D; }
 .linea-dia { display: block; margin-bottom: .35rem; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #4B5B1D; }
 
-/* Calendario de mes */
 .calendario { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .4rem; }
 .cal-dia-semana { padding-bottom: .25rem; text-align: center; font-size: 11px; font-weight: 600; color: #A5A193; }
 .cal-dia { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; height: 3.4rem; border-radius: 14px;
@@ -60,7 +55,6 @@ button.cal-dia:focus-visible { outline: 2px solid #C4BD45; outline-offset: 2px; 
 .mes-flecha:hover:not(:disabled) { background: #F4F6E4; }
 .mes-flecha:disabled { opacity: .35; }
 
-/* Pasajeros */
 .contador { display: flex; align-items: center; gap: .85rem; border-radius: 18px; border: 1px solid #E6E4DA; padding: .9rem 1rem; }
 .contador-icono { display: grid; flex-shrink: 0; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: 999px; background: #F4F6E4; color: #4B5B1D; }
 .contador-btn { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 999px; border: 1px solid #E6E4DA; background: #fff;
@@ -68,18 +62,15 @@ button.cal-dia:focus-visible { outline: 2px solid #C4BD45; outline-offset: 2px; 
 .contador-btn:hover { border-color: #4B5B1D; background: #F4F6E4; }
 .contador-btn:active { transform: scale(.92); }
 
-/* Adicionales */
 .extra { border-radius: 18px; border: 1px solid #E6E4DA; background: #fff; padding: 1rem; transition: border-color .2s, background-color .2s, box-shadow .2s; }
 .extra:hover { border-color: #C9C6B8; }
 .extra-elegido { border-color: #4B5B1D; background: #FAFBF2; box-shadow: 0 10px 24px -18px rgba(75, 91, 29, .7); }
 .extra-check { margin-top: .15rem; width: 1.1rem; height: 1.1rem; flex-shrink: 0; accent-color: #4B5B1D; cursor: pointer; }
 
-/* Resumen */
 .resumen { overflow: hidden; border-radius: 24px; background: #fff; border: 1px solid #E6E4DA; box-shadow: 0 24px 48px -32px rgba(38, 46, 15, .45); }
 .resumen-cabecera { background: #262E0F; padding: 1.25rem 1.25rem 1.1rem; color: #fff;
   background-image: radial-gradient(120% 140% at 100% 0%, rgba(196, 189, 69, .22), transparent 55%); }
 
-/* Barra fija del celular */
 .barra-movil { position: fixed; inset: auto 0 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   padding: .75rem 1.25rem calc(.75rem + env(safe-area-inset-bottom)); background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px);
   border-top: 1px solid #E6E4DA; box-shadow: 0 -10px 30px -20px rgba(38, 46, 15, .5); }

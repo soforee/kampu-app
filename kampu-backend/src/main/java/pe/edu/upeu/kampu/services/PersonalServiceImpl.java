@@ -21,8 +21,6 @@ import pe.edu.upeu.kampu.repository.SalidaProgramadaRepository;
 import java.util.List;
 import java.util.Optional;
 
-// Guías y conductores. El personal PROPIO (proveedor_id NULL) nace en Usuarios junto con su cuenta y aquí solo
-// se activa o desactiva; el de los proveedores se registra y edita completo.
 @Service
 public class PersonalServiceImpl implements IPersonalService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PersonalServiceImpl.class);
@@ -84,7 +82,6 @@ public class PersonalServiceImpl implements IPersonalService {
             throw new BusinessException("Del personal propio solo se cambia el estado (activo o inactivo) en la sección Personal.");
         }
         exigirProveedor(dto);
-        // Cambio de cargo con trabajo pendiente: lo valida TRG_PERSONAL_VALIDAR (ORA-20525)
         copiar(dto, p, id);
         Personal guardado = personalRepository.saveAndFlush(p);
         operaciones.verificarAsignacionesPendientes(null, id, null);
@@ -94,7 +91,6 @@ public class PersonalServiceImpl implements IPersonalService {
     @Override
     @Transactional
     public void eliminar(Long id) {
-        // kampu_bd.sql no otorga DELETE sobre PERSONAL: la baja es lógica (estado INACTIVO)
         Personal p = obtener(id);
         if ("INACTIVO".equals(p.getEstado())) throw new BusinessException("La persona ya está INACTIVA.");
         if (p.getProveedorId() == null) {
@@ -125,7 +121,6 @@ public class PersonalServiceImpl implements IPersonalService {
         Long usuarioId = cuenta.isEmpty() ? null : ((Number) cuenta.get(0).get("USUARIO_ID")).longValue();
         String estadoCuenta = cuenta.isEmpty() ? null : (String) cuenta.get(0).get("ESTADO");
         if (activo) {
-            // La persona primero (TRG_USUARIOS_PERSONAL no deja activar la cuenta de alguien INACTIVO), luego su cuenta
             if ("INACTIVO".equals(p.getEstado())) {
                 p.setEstado("DISPONIBLE");
                 personalRepository.saveAndFlush(p);
@@ -134,7 +129,6 @@ public class PersonalServiceImpl implements IPersonalService {
                 jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.restablecer_acceso(?); END;", usuarioId);
             }
         } else {
-            // La cuenta primero (TRG_PERSONAL_CUENTA no deja dar de baja a quien tiene cuenta activa), luego la persona
             if (usuarioId != null && !"INACTIVO".equals(estadoCuenta)) {
                 jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.revocar_acceso(?); END;", usuarioId);
             }
@@ -147,7 +141,6 @@ public class PersonalServiceImpl implements IPersonalService {
         return dto(obtener(id));
     }
 
-    // El personal de proveedores se registra con su proveedor; el propio nace en Usuarios
     private void exigirProveedor(PersonalRequestDTO dto) {
         if (dto.proveedorId() == null) {
             throw new BusinessException("Elige el proveedor. El personal propio se registra en Usuarios, al crear la cuenta del guía o conductor.");
@@ -156,8 +149,6 @@ public class PersonalServiceImpl implements IPersonalService {
 
     @Override
     public java.util.List<pe.edu.upeu.kampu.dto.CargoDTO> cargos() {
-        // Si la tabla CARGOS quedó sin GUIA o CONDUCTOR, se crean (sin transacción propia: si el rol
-        // de la sesión no puede insertar, como Ventas, solo se listan los que haya)
         for (String codigo : new String[]{"GUIA", "CONDUCTOR"}) {
             if (cargoRepository.existsById(codigo)) continue;
             try {
@@ -180,8 +171,6 @@ public class PersonalServiceImpl implements IPersonalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Personal no encontrado con Id: " + id));
     }
 
-    // GUIA y CONDUCTOR son los cargos base (los usa Usuarios al crear la cuenta de campo):
-    // si la tabla CARGOS no los tiene (base sin los datos iniciales), se crean aquí.
     private Cargo cargoPorDefecto(String codigo) {
         boolean guia = "GUIA".equals(codigo);
         if (!guia && !"CONDUCTOR".equals(codigo)) throw new BusinessException("El cargo " + codigo + " no existe.");
@@ -195,7 +184,6 @@ public class PersonalServiceImpl implements IPersonalService {
     }
 
     private void copiar(PersonalRequestDTO dto, Personal p, Long id) {
-        // proveedorId null = personal propio. El proveedor debe brindar el soporte del cargo (TRG_PERSONAL_VALIDAR)
         if (dto.proveedorId() != null && !proveedorRepository.existsById(dto.proveedorId())) {
             throw new BusinessException("El proveedor seleccionado no existe.");
         }
@@ -227,7 +215,6 @@ public class PersonalServiceImpl implements IPersonalService {
         p.setCatLicencia(licencia == null ? null : categoria);
         p.setVencLicencia(licencia == null ? null : dto.vencLicencia());
         p.setEstado(dto.estado());
-        // Carné de guía: número y vencimiento van juntos
         String carne = dto.carneGuia() == null || dto.carneGuia().isBlank() ? null : dto.carneGuia().trim().toUpperCase();
         if ((carne == null) != (dto.vencCarne() == null)) throw new BusinessException("Indica el carné de guía y su vencimiento juntos.");
         p.setCarneGuia(carne);

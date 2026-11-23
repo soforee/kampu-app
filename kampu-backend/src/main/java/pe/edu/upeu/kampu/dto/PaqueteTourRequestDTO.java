@@ -27,8 +27,6 @@ public record PaqueteTourRequestDTO(
         String imagen,
         @Pattern(regexp = "ACTIVO|INACTIVO", message = "El estado debe ser ACTIVO o INACTIVO.")
         String estado,
-        // (v10) reglas de venta: cupos de una salida creada al reservar, mínimo para GARANTIZAR,
-        // días que opera (L M M J V S D), anticipación para la web y hora de inicio del día 1
         @Min(value = 1, message = "El cupo por defecto debe estar entre 1 y 999.")
         @Max(value = 999, message = "El cupo por defecto debe estar entre 1 y 999.")
         Integer cupoPorDefecto,
@@ -42,7 +40,6 @@ public record PaqueteTourRequestDTO(
         Integer anticipacionMinHoras,
         @Pattern(regexp = "^([01][0-9]|2[0-3]):[0-5][0-9]$", message = "La hora de inicio tiene el formato HH:MM.")
         String horaInicio,
-        // (v11) lo que incluye el paquete, uno por línea
         @Size(max = 1000, message = "Lo que incluye el paquete admite máximo 1000 caracteres.")
         String serviciosIncluidos
 ) {

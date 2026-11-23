@@ -12,7 +12,6 @@ import { BadgeComponent } from '../../shared/badge.component';
 import { IconComponent } from '../../shared/icon.component';
 import { PageHeaderComponent } from '../../shared/page-header.component';
 
-// Agencia (Admin y Ventas): novedades en ruta del personal de campo; se responden y la respuesta le llega
 @Component({
   selector: 'app-incidencias',
   standalone: true,

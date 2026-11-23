@@ -54,7 +54,6 @@ export class ReservasComponent {
       .sort((a, b) => b.reserva.reservaId - a.reserva.reservaId);
   });
 
-  // Paginación de la tabla (10 filas por página); si un filtro deja menos páginas, se queda en la última
   pagina = signal(0);
   visibles = computed(() => {
     const filas = this.filas();

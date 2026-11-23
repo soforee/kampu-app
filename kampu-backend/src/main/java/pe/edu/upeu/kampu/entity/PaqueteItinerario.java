@@ -3,7 +3,6 @@ package pe.edu.upeu.kampu.entity;
 import jakarta.persistence.*;
 import org.hibernate.annotations.DynamicUpdate;
 
-// PAQUETE_ITINERARIO (v10): actividades por dia del paquete (TRG_ITINERARIO_VALIDAR: el dia existe en la duracion)
 @Entity
 @DynamicUpdate
 @Table(name = "PAQUETE_ITINERARIO")

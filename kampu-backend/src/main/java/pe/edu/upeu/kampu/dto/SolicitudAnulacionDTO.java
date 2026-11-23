@@ -3,7 +3,6 @@ package pe.edu.upeu.kampu.dto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-// SOLICITUDES_ANULACION (v10): pedidos del portal para anular una reserva con pagos
 public record SolicitudAnulacionDTO(
         Long solicitudId,
         Long reservaId,

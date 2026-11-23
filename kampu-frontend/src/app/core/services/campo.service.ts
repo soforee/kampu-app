@@ -4,13 +4,11 @@ import { Observable } from 'rxjs';
 import { AsistenciaSalida, Disponibilidad, EstadoAsistencia, EstadoCampo, Incidencia, MisAsignaciones, TransporteSalida, MiVehiculo, Notificacion, PasajeroTraslado, TipoIncidencia, TrasladoConductor } from '../models';
 import { API } from '../utils/api';
 
-// Panel de campo (guía y conductor): todo pasa por PKG_CAMPO, que solo actúa sobre lo asignado a la sesión
 @Injectable({ providedIn: 'root' })
 export class CampoService {
   private http = inject(HttpClient);
   private url = `${API}/mis-asignaciones`;
 
-  // En camino (EMBARQUE) -> pasajeros a bordo (EN_RUTA) -> finalizado
   avanzar(operacionId: number, estado: 'EMBARQUE' | 'EN_RUTA' | 'FINALIZADO'): Observable<TrasladoConductor> {
     return this.http.post<TrasladoConductor>(`${this.url}/traslados/${operacionId}/estado`, { estado });
   }
@@ -21,7 +19,6 @@ export class CampoService {
     return this.http.put<TrasladoConductor>(`${this.url}/traslados/${operacionId}/pasajeros/${pasajeroId}`, { abordo });
   }
 
-  // Guía: salida en campo
   transporte(salidaId: number): Observable<TransporteSalida[]> {
     return this.http.get<TransporteSalida[]>(`${this.url}/salidas/${salidaId}/transporte`);
   }
@@ -74,13 +71,11 @@ export class CampoService {
   }
   desbloquear(bloqueoId: number): Observable<void> { return this.http.delete<void>(`${this.url}/bloqueos/${bloqueoId}`); }
 
-  // Agencia: novedades del personal de campo
   incidencias(): Observable<Incidencia[]> { return this.http.get<Incidencia[]>(`${API}/incidencias`); }
   atender(incidenciaId: number, respuesta: string): Observable<void> {
     return this.http.post<void>(`${API}/incidencias/${incidenciaId}/atender`, { respuesta });
   }
 
-  // Campana: avisos del usuario
   notificaciones(): Observable<Notificacion[]> { return this.http.get<Notificacion[]>(`${API}/notificaciones`); }
   marcarLeidas(): Observable<void> { return this.http.post<void>(`${API}/notificaciones/leidas`, {}); }
   contacto(): Observable<{ telefono: string; email: string }> { return this.http.get<{ telefono: string; email: string }>(`${API}/contacto`); }

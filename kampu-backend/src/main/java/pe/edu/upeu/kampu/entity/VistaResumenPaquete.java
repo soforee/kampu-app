@@ -5,7 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.hibernate.annotations.Immutable;
 
-// VW_RESUMEN_PAQUETES_POR_ROL (v10): filas y montos segun el rol de la sesion
 @Entity
 @Immutable
 @Table(name = "VW_RESUMEN_PAQUETES_POR_ROL")

@@ -23,12 +23,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Catálogo público de un paquete (kampu_bd.sql):
- *  - Calendario de fechas: PKG_RESERVAS.calendario (días que opera, cupos, si se garantiza, si se reserva por la web).
- *  - Puntos de recojo y hora: PKG_GESTION_PAQUETES_CLIENTE.puntos_recojo.
- *  - Itinerario por días: PAQUETE_ITINERARIO (TRG_ITINERARIO_VALIDAR).
- */
 @Service
 public class CatalogoService {
     private final JdbcTemplate jdbc;
@@ -113,7 +107,7 @@ public class CatalogoService {
         i.setTitulo(dto.titulo().trim());
         i.setDescripcion(dto.descripcion() == null || dto.descripcion().isBlank() ? null : dto.descripcion().trim());
         i.setHoraInicio(dto.horaInicio() == null || dto.horaInicio().isBlank() ? null : dto.horaInicio());
-        PaqueteItinerario guardado = itinerarioRepository.saveAndFlush(i);   // TRG_ITINERARIO_VALIDAR: el día existe en el paquete
+        PaqueteItinerario guardado = itinerarioRepository.saveAndFlush(i);
         String lugar = guardado.getLugarId() == null ? null : lugarRepository.findById(guardado.getLugarId()).map(Lugar::getNombre).orElse(null);
         return ItinerarioDTO.desde(guardado, lugar);
     }

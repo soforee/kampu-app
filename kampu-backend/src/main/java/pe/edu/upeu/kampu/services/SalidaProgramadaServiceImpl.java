@@ -19,15 +19,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Salidas programadas según kampu_bd.sql (TRG_SALIDAS_VALIDAR y PKG_RESERVAS):
- *  - Una salida es un paquete en una fecha. La crea la BD al reservar una fecha nueva (origen RESERVA)
- *    o Ventas/Operaciones a mano (origen MANUAL). fecha_fin y cupos_disponibles los calcula la BD.
- *  - Estados: PROGRAMADA -> GARANTIZADA (llegó al mínimo de pasajeros; la BD lo hace sola al reservar)
- *    -> COMPLETADA (sus reservas confirmadas pasan solas a COMPLETADA), o CANCELADA.
- *  - Cancelar: PKG_RESERVAS.cancelar_salida anula y reembolsa sus reservas y cancela sus traslados.
- *  - El guía es personal con cargo de función GUIADO, sin otra salida cruzada.
- */
 @Service
 public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
     private static final String PROGRAMADA = "PROGRAMADA";
@@ -103,8 +94,8 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
         s.setGuiaId(dto.guiaId());
         s.setEstado(estado);
         s.setOrigen("MANUAL");
-        SalidaProgramada guardada = salidaRepository.saveAndFlush(s);   // uq_sal_paquete_fecha: una salida por paquete y fecha
-        em.refresh(guardada);   // fecha_fin y cupos_disponibles los calcula la BD
+        SalidaProgramada guardada = salidaRepository.saveAndFlush(s);
+        em.refresh(guardada);
         return dto(guardada);
     }
 
@@ -119,8 +110,6 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
             throw new BusinessException("No se puede reprogramar la salida a una fecha anterior a hoy.");
         }
         validarGuia(dto.guiaId());
-        // TRG_SALIDAS_VALIDAR: no cambia de paquete con reservas, cupo no menor a lo vendido,
-        // no cambia de fecha con traslados programados, guía sin salidas cruzadas
         s.setPaqueteId(dto.paqueteId());
         s.setFechaInicio(dto.fechaInicio());
         s.setCuposMaximos(dto.cuposMaximos());
@@ -146,8 +135,6 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
                 throw new BusinessException("Hay " + abiertas + " traslado(s) sin cerrar: finalízalos o cancélalos en Tráfico antes de completar la salida.");
             }
         }
-        // TRG_SALIDAS_VALIDAR: PROGRAMADA -> GARANTIZADA -> COMPLETADA; al completarse, sus reservas
-        // CONFIRMADAS pasan a COMPLETADA
         s.setEstado(estado);
         salidaRepository.saveAndFlush(s);
         em.clear();
@@ -192,8 +179,6 @@ public class SalidaProgramadaServiceImpl implements ISalidaProgramadaService {
                 guia == null ? null : guia.getNombreCompleto(), guia == null ? null : guia.getTelefono(),
                 s.getCuposMaximos(), confirmados, pendientes, pasajeros);
     }
-
-    // ---------- Apoyo ----------
 
     private void validarGuia(Long guiaId) {
         if (guiaId == null) return;

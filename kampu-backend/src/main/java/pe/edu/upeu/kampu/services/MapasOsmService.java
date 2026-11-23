@@ -18,22 +18,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Servicios de OpenStreetMap (gratis, sin clave), configurados en application.yaml (kampu.mapas):
- *  - Photon: buscador de lugares para autocompletar el formulario de Lugares.
- *  - OSRM: duración y distancia por carretera entre dos coordenadas.
- * Si no responden (sin internet, servidor caído), el sistema sigue funcionando: el lugar se llena
- * a mano y la duración se estima con la distancia en línea recta.
- */
 @Service
 public class MapasOsmService {
     private static final Logger log = LoggerFactory.getLogger(MapasOsmService.class);
-    // Perú (oeste, sur, este, norte): las sugerencias se limitan al país
     private static final String BBOX_PERU = "-81.41,-18.35,-68.65,-0.03";
 
     private final RestClient buscador;
     private final RestClient osrm;
-    // Las rutas no cambian: se guardan para no repetir la consulta (OSRM público pide un uso moderado)
     private final Map<String, Ruta> rutas = new ConcurrentHashMap<>();
 
     public record Ruta(double segundos, double metros) {
@@ -44,14 +35,12 @@ public class MapasOsmService {
         SimpleClientHttpRequestFactory tiempos = new SimpleClientHttpRequestFactory();
         tiempos.setConnectTimeout(4000);
         tiempos.setReadTimeout(6000);
-        // Los servidores públicos de OpenStreetMap piden identificar la aplicación
         this.buscador = RestClient.builder().baseUrl(buscadorUrl).requestFactory(tiempos)
                 .defaultHeader("User-Agent", "KampuTourManager/1.0").build();
         this.osrm = RestClient.builder().baseUrl(osrmUrl).requestFactory(tiempos)
                 .defaultHeader("User-Agent", "KampuTourManager/1.0").build();
     }
 
-    /** Sugerencias para el texto escrito (vacío si el buscador no responde). */
     public List<LugarSugeridoDTO> buscar(String texto) {
         String q = texto == null ? "" : texto.trim();
         if (q.length() < 3) return List.of();
@@ -83,7 +72,6 @@ public class MapasOsmService {
         }
     }
 
-    /** Ruta por carretera, o null si OSRM no responde o no encuentra camino. */
     public Ruta ruta(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
         String puntos = lon1.toPlainString() + "," + lat1.toPlainString() + ";" + lon2.toPlainString() + "," + lat2.toPlainString();
         Ruta guardada = rutas.get(puntos);
@@ -101,7 +89,6 @@ public class MapasOsmService {
         }
     }
 
-    // Tipo de lugar del sistema según la categoría de OpenStreetMap
     private static final Set<String> HOSPEDAJE = Set.of("hotel", "hostel", "guest_house", "motel", "apartment", "chalet", "camp_site");
     private static final Set<String> ATRACTIVOS = Set.of("attraction", "viewpoint", "museum", "zoo", "theme_park", "artwork",
             "nature_reserve", "park", "waterfall", "peak", "beach", "spring", "cave_entrance", "lake", "ruins", "archaeological_site");

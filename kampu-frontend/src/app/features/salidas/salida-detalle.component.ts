@@ -14,8 +14,6 @@ import { LogoComponent } from '../../shared/logo.component';
 
 interface Paso { ok: boolean; titulo: string; detalle: string; }
 
-// Ficha de una salida: todo lo que el tour manager revisa antes de que el grupo salga
-// (lista de verificación), el manifiesto de pasajeros para imprimir y los traslados.
 import { PageHeaderComponent } from '../../shared/page-header.component';
 @Component({
   selector: 'app-salida-detalle',
@@ -52,7 +50,6 @@ export class SalidaDetalleComponent {
   vendidos = computed(() => { const s = this.salida(); return s ? s.cuposMaximos - s.cuposDisponibles : 0; });
   ocupacion = computed(() => { const s = this.salida(); return s ? Math.round(this.vendidos() * 100 / s.cuposMaximos) : 0; });
   conMontos = computed(() => (this.manifiesto()?.pasajeros ?? []).some(p => p.estadoPago !== null));
-  // Saldo por cobrar: una vez por reserva (el manifiesto lo repite en cada pasajero)
   porCobrar = computed(() => {
     const vistos = new Set<number>();
     let total = 0;
@@ -86,7 +83,6 @@ export class SalidaDetalleComponent {
     return 'El viaje terminó ' + cuando(fin);
   });
 
-  // Lista de verificación: lo mismo que exige el backend para confirmar la salida
   pasos = computed<Paso[]>(() => {
     const s = this.salida();
     const m = this.manifiesto();
@@ -120,7 +116,6 @@ export class SalidaDetalleComponent {
   });
   listos = computed(() => this.pasos().filter(p => p.ok).length);
 
-  // Ciclo v10 (TRG_SALIDAS_VALIDAR): PROGRAMADA -> GARANTIZADA -> COMPLETADA. No se vuelve atrás.
   puedeConfirmar = computed(() => this.ejecuta && this.salida()?.estado === 'PROGRAMADA');
   puedeTerminar = computed(() => {
     const s = this.salida();
@@ -170,7 +165,6 @@ export class SalidaDetalleComponent {
     });
   }
 
-  // Cancelar (PKG_RESERVAS.cancelar_salida): anula y reembolsa sus reservas activas y cancela sus traslados
   async cambiar(estado: EstadoSalida) {
     const s = this.salida();
     if (!s || estado !== 'CANCELADA') return;

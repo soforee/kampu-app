@@ -3,7 +3,6 @@ import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
 import { FOTOS_DESTINOS } from '../landing.models';
 
-// Presentación de la agencia con cifras reales del catálogo (paquetes activos, salidas abiertas y cupos libres)
 @Component({
   selector: 'app-landing-presentacion',
   standalone: true,

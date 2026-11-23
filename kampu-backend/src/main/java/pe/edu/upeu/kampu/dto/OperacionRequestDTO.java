@@ -8,13 +8,11 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDateTime;
 
 public record OperacionRequestDTO(
-        // Salida/tour al que atiende (opcional: traslado suelto)
         Long salidaId,
         @NotNull(message = "Selecciona el origen.")
         Long origenId,
         @NotNull(message = "Selecciona el destino.")
         Long destinoId,
-        // Opcionales (van juntos): sin ellos la operación queda PROGRAMADA
         Long vehiculoId,
         Long conductorId,
         @NotNull(message = "Indica los pasajeros programados.")
@@ -23,7 +21,6 @@ public record OperacionRequestDTO(
         Integer paxProgramados,
         @NotNull(message = "La hora de salida es obligatoria.")
         LocalDateTime horaProgramadaSalida,
-        // Vacía: el backend la calcula con las coordenadas de los lugares
         LocalDateTime horaEstimadaLlegada,
         @Size(max = 200, message = "Las observaciones admiten máximo 200 caracteres.")
         String observaciones

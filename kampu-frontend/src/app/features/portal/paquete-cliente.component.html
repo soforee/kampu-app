@@ -30,7 +30,6 @@
           }
         </div>
 
-        <!-- Línea de tiempo del viaje -->
         @if (p.estadoPago !== 'ANULADO') {
           <ol class="flex items-start gap-1 overflow-x-auto border-b border-zinc-100 px-5 py-4 sm:px-6" aria-label="Estado de tu viaje" data-testid="linea-viaje">
             @for (paso of linea(); track paso.texto; let ultimo = $last) {

@@ -5,7 +5,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// "Registrarse": autoregistro de un cliente externo (SP_REGISTRAR_CLIENTE_EXTERNO)
 public record RegistroRequestDTO(
         @NotBlank(message = "Ingresa tu nombre completo.")
         @Size(max = 150, message = "El nombre admite máximo 150 caracteres.")

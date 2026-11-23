@@ -1,6 +1,6 @@
 <app-landing-navbar [fondoOscuro]="fondoOscuro()" />
 
-<main>
+<main (window:resize)="evaluarModo()" (window:keydown)="tecla($event)" (window:touchstart)="toqueInicio($event)" (window:touchend)="toqueFin($event)" (document:click)="enlace($event)">
   <app-landing-hero [totalTours]="totalActivos()" [totalSalidas]="totalSalidas()" />
 
   <app-landing-tours [tours]="tours()" [cargando]="cargando()" [hayFiltro]="hayFiltro()" [contacto]="contacto()"
@@ -20,7 +20,6 @@
   <app-landing-cta [whatsapp]="whatsapp()" />
 </main>
 
-<!-- Puntos de navegación por secciones (escritorio) -->
 <nav class="puntos" [class.puntos-claros]="fondoOscuro()" aria-label="Secciones de la página">
   <span class="puntos-num" aria-hidden="true">{{ (indiceActivo() + 1).toString().padStart(2, '0') }}</span>
   @for (s of secciones; track s.id) {
@@ -31,7 +30,6 @@
   }
 </nav>
 
-<!-- WhatsApp: botón flotante para escribir a la agencia -->
 @if (whatsapp()) {
 <a [href]="'https://wa.me/' + whatsapp()" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" title="Escríbenos por WhatsApp" data-testid="whatsapp"
    class="group fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-brand-600 py-3 pl-3 pr-3 text-white shadow-lifted transition-all duration-300 hover:-translate-y-0.5 hover:bg-brand-700 hover:pr-5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-600/30">
@@ -41,4 +39,3 @@
 }
 
 <app-landing-footer [contacto]="contacto()" />
-

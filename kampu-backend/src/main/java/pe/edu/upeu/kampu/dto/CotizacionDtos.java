@@ -8,10 +8,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/**
- * (v11) Cotización sin cuenta: lo que viaja entre el navegador y el backend.
- * Los montos SIEMPRE los calcula la base de datos (PKG_COTIZACIONES): el navegador solo elige.
- */
 public final class CotizacionDtos {
     private CotizacionDtos() {
     }
@@ -23,7 +19,6 @@ public final class CotizacionDtos {
             @Max(value = 99, message = "La cantidad de un servicio va de 1 a 99.") Integer cantidad) {
     }
 
-    // Lo que el visitante elige para cotizar
     public record Datos(
             @NotNull(message = "Selecciona un paquete.") Long paqueteId,
             @NotNull(message = "Elige la fecha del viaje.") LocalDate fecha,
@@ -32,7 +27,6 @@ public final class CotizacionDtos {
             @Max(value = 99, message = "Como máximo 99 pasajeros.") Integer adultos,
             @Min(value = 0, message = "Los niños no pueden ser negativos.")
             @Max(value = 98, message = "Como máximo 99 pasajeros.") Integer ninos,
-            // Habitación de hotel (obligatoria si el paquete tiene noches; el recojo lo define la agencia)
             Long habitacionId,
             @Valid @Size(max = 20, message = "Como máximo 20 servicios adicionales.") List<ServicioElegido> servicios,
             @Size(max = 500, message = "Los comentarios admiten máximo 500 caracteres.") String observaciones) {
@@ -49,7 +43,6 @@ public final class CotizacionDtos {
     public record Clave(@Size(max = 40) String clave) {
     }
 
-    // Invitado que gestiona la reserva de su cotización: la clave viaja junto con cada operación
     public record PasajeroInvitado(@Size(max = 40) String clave,
                                    @NotNull(message = "Faltan los datos del pasajero.") @Valid PasajeroRequestDTO pasajero) {
     }
@@ -86,7 +79,6 @@ public final class CotizacionDtos {
                         BigDecimal precioUnitario, BigDecimal subtotal) {
     }
 
-    // Vista previa (no se guarda nada)
     public record Calculo(
             Long paqueteId, String paquete, Integer dias, Integer noches,
             LocalDate fechaInicio, LocalDate fechaFin, String horaInicio,
@@ -94,16 +86,13 @@ public final class CotizacionDtos {
             BigDecimal precioUnitario, BigDecimal montoPaquete, BigDecimal montoAdicionales, BigDecimal total,
             Integer cuposDisponibles, String estadoSalida, Integer faltanParaGarantizar,
             boolean reservableWeb, Integer anticipacionMinHoras,
-            // montoAdicionales: solo servicios; montoHospedaje: la habitación de hotel; total = paquete + ambos
             BigDecimal montoHospedaje, HabitacionElegida habitacion, List<Linea> servicios) {
     }
 
-    // Habitación elegida en la cotización: precio por noche x noches del paquete (x pasajeros si es por persona)
     public record HabitacionElegida(Long habitacionId, String nombre, String hotel, String imagen, String modalidad,
                                     BigDecimal precioNoche, Integer noches, BigDecimal subtotal) {
     }
 
-    // Habitación de hotel que el visitante puede elegir (sección 5 del cotizador)
     public record HabitacionCotizable(Long habitacionId, String nombre, String descripcion, String hotel,
                                       String imagen, String modalidad, BigDecimal precioNoche) {
     }
@@ -111,12 +100,9 @@ public final class CotizacionDtos {
     public record Evento(LocalDateTime fecha, String campo, String anterior, String nuevo, String detalle, String actor) {
     }
 
-    // Cotización guardada. Para el visitante, cotizacionId y atendidaPor van vacíos.
     public record Cotizacion(
             Long cotizacionId, String codigo,
-            // GENERADA, SOLICITADA, RESERVADA, RECHAZADA, CANCELADA, VENCIDA
             String estado,
-            // INVITADO (sin cuenta) o CLIENTE (con cuenta)
             String origen,
             Long paqueteId, String paquete, Integer dias, Integer noches, String imagen,
             LocalDate fechaViaje, LocalDate fechaFin, String horaInicio,
@@ -127,13 +113,11 @@ public final class CotizacionDtos {
             String nombreContacto, String tipoDocumento, String numeroDocumento, String email, String telefono,
             LocalDateTime fechaCreacion, LocalDateTime fechaSolicitud, LocalDateTime fechaAtencion,
             String atendidaPor, String motivoRechazo,
-            // Reserva creada al confirmarla: su estado es el estado comercial desde ahí
             Long reservaId, String codigoReserva, String estadoReserva, String estadoPago,
             BigDecimal totalReserva, BigDecimal montoPagado,
             List<Evento> historial) {
     }
 
-    // Respuesta al guardar: la clave se muestra UNA sola vez (la base solo guarda su hash)
     public record Creada(String codigo, String clave, Cotizacion cotizacion) {
     }
 }

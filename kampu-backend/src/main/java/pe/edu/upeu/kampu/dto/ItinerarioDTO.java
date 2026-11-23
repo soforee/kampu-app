@@ -2,7 +2,6 @@ package pe.edu.upeu.kampu.dto;
 
 import pe.edu.upeu.kampu.entity.PaqueteItinerario;
 
-// PAQUETE_ITINERARIO (v10)
 public record ItinerarioDTO(
         Long itinerarioId,
         Long paqueteId,

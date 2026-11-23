@@ -16,15 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Portal del cliente (kampu_bd.sql). Todo pasa por PKG_GESTION_PAQUETES_CLIENTE (ROL_CLIENTE), con la
- * identidad fijada por PKG_GESTION_PAQUETES_CLIENTE.iniciar_sesion_cliente:
- *  - VW_PAQUETES_CLIENTE: la vista ya devuelve solo las reservas del cliente de la sesión.
- *  - PKG_GESTION_PAQUETES_CLIENTE: reservar, detalle_paquete, iniciar_pago, registrar_pasajero,
- *    eliminar_pasajero y solicitar_anulacion (el punto de recojo lo define la agencia) (cada uno exige que la reserva sea suya).
- * Los pagos y el guía se leen por la conexión interna, después de comprobar en la vista que la reserva es del cliente.
- * El invitado sin cuenta usa las mismas operaciones con el código + clave de su cotización ya RESERVADA.
- */
 @Service
 public class PortalClienteService {
     private static final String COLUMNAS = "reserva_id, codigo_reserva, salida_id, paquete_id, paquete_nombre, imagen, dias, noches, "
@@ -55,21 +46,16 @@ public class PortalClienteService {
 
     public List<PortalPaqueteDTO> misPaquetes() {
         clienteActual();
-        // Las reservas anuladas ya no se muestran al cliente (quedan en el historial de la agencia)
         return portal.jdbc().query("SELECT " + COLUMNAS + " FROM VW_PAQUETES_CLIENTE WHERE estado_reserva <> 'ANULADA' "
                         + "ORDER BY fecha_inicio DESC",
                 (rs, i) -> fila(rs));
     }
-
-    // ================= Cliente con cuenta (sesión fijada por PortalSesionDataSource) =================
 
     public PortalDetalleDTO detalle(Long reservaId) {
         Long clienteId = clienteActual();
         return portal.ejecutar(con -> detalle(con, clienteId, reservaId));
     }
 
-    // El cliente elige paquete + fecha + cantidad y, si el paquete tiene noches, la habitación de hotel
-    // (canal WEB): PKG_GESTION_PAQUETES_CLIENTE.reservar
     public PortalPaqueteDTO reservar(PortalReservaRequestDTO dto) {
         Long clienteId = clienteActual();
         Long reservaId = portal.ejecutar(con -> {
@@ -79,7 +65,7 @@ public class PortalClienteService {
                 cs.setDate(3, Date.valueOf(dto.fecha()));
                 cs.setInt(4, dto.cantidad());
                 cs.registerOutParameter(5, Types.NUMERIC);
-                cs.setNull(6, Types.NUMERIC);   // el punto de recojo lo define la agencia (queda por definir)
+                cs.setNull(6, Types.NUMERIC);
                 if (dto.habitacionId() == null) cs.setNull(7, Types.NUMERIC);
                 else cs.setLong(7, dto.habitacionId());
                 cs.execute();
@@ -104,15 +90,10 @@ public class PortalClienteService {
         portal.ejecutar(con -> eliminarPasajero(con, clienteId, pasajeroId));
     }
 
-    // Sin pagos aprobados se anula al instante (ANULADA); con pagos queda una solicitud para Ventas (SOLICITUD_REGISTRADA)
     public String solicitarAnulacion(Long reservaId, String motivo) {
         Long clienteId = clienteActual();
         return portal.ejecutar(con -> solicitarAnulacion(con, clienteId, reservaId, motivo));
     }
-
-    // ================= Invitado sin cuenta: código + clave de su cotización ya RESERVADA =================
-    // PKG_COTIZACIONES.iniciar_sesion_reserva valida la clave (cuenta los intentos) y deja la conexión como el
-    // CLIENTE de esa reserva; todo ocurre en esa misma conexión y solo sobre la reserva de la cotización.
 
     public PortalDetalleDTO detalleInvitado(String codigo, String clave) {
         return comoInvitado(codigo, clave, (con, clienteId, reservaId) -> detalle(con, clienteId, reservaId));
@@ -128,7 +109,6 @@ public class PortalClienteService {
 
     public void eliminarPasajeroInvitado(String codigo, String clave, Long pasajeroId) {
         comoInvitado(codigo, clave, (con, clienteId, reservaId) -> {
-            // Solo pasajeros de la reserva de esta cotización
             try (PreparedStatement ps = con.prepareStatement("SELECT reserva_id FROM PASAJEROS_RESERVA WHERE pasajero_id = ?")) {
                 ps.setLong(1, pasajeroId);
                 try (ResultSet rs = ps.executeQuery()) {
@@ -182,10 +162,11 @@ public class PortalClienteService {
         } catch (DataAccessException e) {
             Throwable t = e;
             while (t != null && !(t instanceof SQLException)) t = t.getCause();
-            if (t instanceof SQLException sql && sql.getErrorCode() == 20512) {
+            int codigoError = t instanceof SQLException ? ((SQLException) t).getErrorCode() : 0;
+            if (codigoError == 20512) {
                 throw new AccesoDenegadoException("El código o la clave de la cotización no son correctos.");
             }
-            if (t instanceof SQLException sql && sql.getErrorCode() == 20513) {
+            if (codigoError == 20513) {
                 throw new DemasiadasSolicitudesException("Demasiados intentos fallidos con este código: espera 30 minutos "
                         + "o pide ayuda a la agencia.");
             }
@@ -193,11 +174,8 @@ public class PortalClienteService {
         }
     }
 
-    // ================= Operaciones sobre una conexión con la sesión del cliente ya fijada =================
-
     private PortalDetalleDTO detalle(Connection con, Long clienteId, Long reservaId) throws SQLException {
         PortalPaqueteDTO v = propia(con, reservaId);
-        // PKG_GESTION_PAQUETES_CLIENTE.detalle_paquete: ORA-20080 si la reserva no es del cliente
         List<PortalDetalleDTO.PortalPasajeroDTO> pasajeros = new ArrayList<>();
         try (CallableStatement cs = con.prepareCall("{call PKG_GESTION_PAQUETES_CLIENTE.detalle_paquete(?, ?, ?)}")) {
             cs.setLong(1, clienteId);
@@ -225,7 +203,6 @@ public class PortalClienteService {
     }
 
     private PagoDTO informarPago(Connection con, Long clienteId, Long reservaId, InformarPagoRequestDTO dto) throws SQLException {
-        // PKG_GESTION_PAQUETES_CLIENTE.iniciar_pago: valida dueño, estado y saldo; queda PENDIENTE (lo audita la BD)
         long pagoId;
         try (CallableStatement cs = con.prepareCall("{call PKG_GESTION_PAQUETES_CLIENTE.iniciar_pago(?, ?, ?, ?, ?, ?)}")) {
             cs.setLong(1, clienteId);
@@ -282,9 +259,6 @@ public class PortalClienteService {
         }
     }
 
-    // ---------- Apoyo ----------
-
-    // La vista VW_PAQUETES_CLIENTE solo devuelve reservas del cliente de la sesión
     private PortalPaqueteDTO propia(Connection con, Long reservaId) throws SQLException {
         try (PreparedStatement ps = con.prepareStatement("SELECT " + COLUMNAS + " FROM VW_PAQUETES_CLIENTE WHERE reserva_id = ?")) {
             ps.setLong(1, reservaId);

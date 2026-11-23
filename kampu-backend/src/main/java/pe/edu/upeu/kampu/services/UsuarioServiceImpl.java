@@ -1,6 +1,7 @@
 package pe.edu.upeu.kampu.services;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upeu.kampu.dto.CambioClaveRequestDTO;
@@ -20,13 +21,6 @@ import pe.edu.upeu.kampu.seguridad.SesionActual;
 
 import java.util.List;
 
-/**
- * Usuarios internos (USUARIOS_SISTEMA). Todo el módulo es solo para el administrador:
- *  - aquí se comprueba GESTIONAR_USUARIOS con PKG_SEGURIDAD_ROLES.puede (403 si no lo tiene);
- *  - el cambio de rol y de acceso usa PKG_SEGURIDAD_ROLES.asignar_rol / cambiar_rol_campo / revocar_acceso / restablecer_acceso,
- *    que vuelven a exigir el permiso en Oracle e impiden dejar el sistema sin administradores;
- *  - TRG_USUARIOS_AUDITORIA deja en la bitácora el alta y cada cambio de rol o de estado.
- */
 @Service
 public class UsuarioServiceImpl implements IUsuarioService {
     private final UsuarioSistemaRepository usuarioRepository;
@@ -34,10 +28,13 @@ public class UsuarioServiceImpl implements IUsuarioService {
     private final PkgSeguridadRepository seguridad;
     private final JdbcTemplate jdbc;
     private final IPersonalService personal;
+    private final PasswordEncoder passwordEncoder;
 
     public UsuarioServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
-                              PkgSeguridadRepository seguridad, JdbcTemplate jdbc, IPersonalService personal) {
+                              PkgSeguridadRepository seguridad, JdbcTemplate jdbc, IPersonalService personal,
+                              PasswordEncoder passwordEncoder) {
         this.personal = personal;
+        this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.seguridad = seguridad;
@@ -79,12 +76,10 @@ public class UsuarioServiceImpl implements IUsuarioService {
         if (usuarioRepository.existsByEmailIgnoreCase(email)) {
             throw new DuplicateResourceException("Ese correo ya está registrado para otro usuario.");
         }
-        // El login busca primero en USUARIOS_SISTEMA: un usuario igual al documento de un cliente le quitaría el acceso
         if (clienteRepository.findFirstByNumeroDocumentoIgnoreCase(username).isPresent()) {
             throw new DuplicateResourceException("Ese nombre de usuario coincide con el documento de un cliente. Elige otro.");
         }
 
-        // Guía o conductor: su ficha en el personal propio nace con la cuenta (cargo = rol)
         Long personalId = null;
         String personalNombre = null;
         if (esRolCampo(dto.rol())) {
@@ -104,13 +99,12 @@ public class UsuarioServiceImpl implements IUsuarioService {
         u.setNombreCompleto(nombre);
         u.setEmail(email);
         u.setRol(dto.rol());
-        u.setPasswordHash(Claves.cifrar(dto.password()));   // BCrypt (chk_usu_hash)
+        u.setPasswordHash(passwordEncoder.encode(dto.password()));
         u.setEstado("ACTIVO");
         u.setIntentosFallidos(0);
         return UsuarioDTO.desde(usuarioRepository.saveAndFlush(u), personalNombre);
     }
 
-    // Solo dentro del grupo: ADMIN <-> VENTAS, o GUIA <-> CONDUCTOR (cambia también el cargo de su ficha)
     @Override
     @Transactional
     public UsuarioDTO cambiarRol(Long usuarioId, CambioRolRequestDTO dto) {
@@ -140,7 +134,6 @@ public class UsuarioServiceImpl implements IUsuarioService {
                     + "AND personal_id <> NVL(?, -1)", Long.class, licencia, u.getPersonalId());
             if (!otro.isEmpty()) throw new DuplicateResourceException("Ya existe una persona con la licencia " + licencia + ".");
         }
-        // Cambia cargo y rol juntos; TRG_PERSONAL_VALIDAR impide dejar asignaciones pendientes del cargo anterior
         jdbc.update("BEGIN PKG_SEGURIDAD_ROLES.cambiar_rol_campo(?, ?, ?, ?, ?); END;", usuarioId, rol, licencia,
                 texto(dto.catLicencia()), dto.vencLicencia() == null ? null : java.sql.Date.valueOf(dto.vencLicencia()));
         return recargar(usuarioId);
@@ -155,7 +148,6 @@ public class UsuarioServiceImpl implements IUsuarioService {
         }
         UsuarioSistema u = buscar(usuarioId);
         if (u.getPersonalId() != null) {
-            // Guía o conductor: la cuenta y su ficha de personal se activan o desactivan juntas
             personal.cambiarEstado(u.getPersonalId(), activo);
             return recargar(usuarioId);
         }
@@ -171,13 +163,12 @@ public class UsuarioServiceImpl implements IUsuarioService {
         if (!dto.password().equals(dto.confirmacion())) throw new BusinessException("Las contraseñas no coinciden.");
         if (dto.password().trim().length() < 8) throw new BusinessException("La contraseña debe tener al menos 8 caracteres.");
         UsuarioSistema u = buscar(usuarioId);
-        u.setPasswordHash(Claves.cifrar(dto.password()));
+        u.setPasswordHash(passwordEncoder.encode(dto.password()));
         u.setIntentosFallidos(0);
         usuarioRepository.saveAndFlush(u);
         return recargar(usuarioId);
     }
 
-    // Solo el administrador: misma matriz de permisos que usa Oracle (PKG_SEGURIDAD_ROLES)
     private void exigirAdmin() {
         if (SesionActual.get() == null || SesionActual.get().usuarioId() == null
                 || !seguridad.puede(SesionActual.rol(), "GESTIONAR_USUARIOS")) {
@@ -190,7 +181,6 @@ public class UsuarioServiceImpl implements IUsuarioService {
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado con Id: " + usuarioId));
     }
 
-    // Los procedimientos actualizan la fila por JDBC: se relee sin la copia en caché de JPA
     private UsuarioDTO recargar(Long usuarioId) {
         return jdbc.queryForObject(
                 "SELECT u.usuario_id, u.username, u.nombre_completo, u.email, u.rol, u.estado, u.intentos_fallidos, "

@@ -5,8 +5,6 @@ import jakarta.validation.constraints.Pattern;
 
 import java.time.LocalDate;
 
-// Cambio de rol dentro del mismo grupo: ADMIN <-> VENTAS (asignar_rol) o GUIA <-> CONDUCTOR (cambiar_rol_campo).
-// La licencia solo se pide al pasar a CONDUCTOR.
 public record CambioRolRequestDTO(
         @NotBlank(message = "Elige el rol del usuario.")
         @Pattern(regexp = "ADMIN|VENTAS|GUIA|CONDUCTOR",

@@ -4,7 +4,6 @@ import { AuthService } from '../../../core/services/auth.service';
 import { IconComponent } from '../../../shared/icon.component';
 import { RevelarDirective } from '../../../shared/revelar.directive';
 
-// Llamada a la acción final: crear la cuenta (o ir a su sección) y escribir por WhatsApp
 @Component({
   selector: 'app-landing-cta',
   standalone: true,

@@ -39,7 +39,6 @@
       </tr></thead>
       <tbody>
         @for (g of visibles(); track g.clave) {
-          <!-- Salida: resumen de sus traslados -->
           <tr class="border-t border-zinc-100 first:border-t-0" [class.bg-brand-50]="abiertos().has(g.clave)">
             <td data-label="Traslado" class="td">
               <button type="button" class="flex items-start gap-2 text-left" (click)="alternarGrupo(g.clave)" [attr.aria-expanded]="abiertos().has(g.clave)" [attr.data-testid]="'grupo-' + g.clave">

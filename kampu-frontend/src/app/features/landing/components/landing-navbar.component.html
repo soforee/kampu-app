@@ -1,4 +1,4 @@
-<header class="navbar" [class.navbar-solida]="vistaSolida()">
+<header class="navbar" [class.navbar-solida]="vistaSolida()" (window:scroll)="alHacerScroll()" (window:resize)="alCambiarTamano()">
   <nav class="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-5 sm:px-8" aria-label="Principal">
     <a routerLink="/" class="shrink-0" aria-label="Kampu, inicio" (click)="cerrarMenu()">
       <app-logo variante="horizontal" [alto]="28" [oscuro]="!(vistaSolida())"

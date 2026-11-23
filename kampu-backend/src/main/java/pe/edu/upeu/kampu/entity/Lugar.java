@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import org.hibernate.annotations.DynamicUpdate;
 
-// LUGARES (v10): origenes, destinos y puntos de recojo. La OFICINA es el punto de encuentro por defecto.
 @Entity
 @DynamicUpdate
 @Table(name = "LUGARES")

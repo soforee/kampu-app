@@ -5,7 +5,6 @@ import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
 public record VehiculoRequestDTO(
-        // null = flota propia de Kampu Tours
         Long proveedorId,
         @NotBlank(message = "La placa es obligatoria.")
         @Pattern(regexp = Reglas.PLACA, message = "La placa solo admite letras, números y guion (3 a 10 caracteres).")
@@ -24,7 +23,6 @@ public record VehiculoRequestDTO(
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "OPERATIVO|MANTENIMIENTO|INACTIVO", message = "El estado debe ser OPERATIVO, MANTENIMIENTO o INACTIVO.")
         String estado,
-        // Opcionales: vencimiento del SOAT y de la revisión técnica
         LocalDate vencSoat,
         LocalDate vencRevision
 ) {

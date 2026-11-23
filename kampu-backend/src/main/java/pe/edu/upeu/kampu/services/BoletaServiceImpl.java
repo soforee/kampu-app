@@ -34,11 +34,9 @@ public class BoletaServiceImpl implements IBoletaService {
     private static final DateTimeFormatter DIA_SEMANA = DateTimeFormatter.ofPattern("EEEE", ES);
     private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-    // Logo (PNG, porque Gmail y Outlook no muestran SVG). En el correo va como imagen en línea (cid).
     private static final String LOGO = "boleta/logo-kampu.png";
     private static final String LOGO_CID = "logoKampu";
 
-    // Datos de contacto de la agencia (los mismos que muestra la página principal: KAMPU_CONTACTO_*)
     @Value("${KAMPU_CONTACTO_EMAIL:reservas@kampu.pe}")
     private String agenciaEmail;
     @Value("${KAMPU_CONTACTO_TELEFONO:+51 984 000 000}")
@@ -81,7 +79,6 @@ public class BoletaServiceImpl implements IBoletaService {
         return remitente != null && !remitente.isBlank();
     }
 
-    // Vista previa en el navegador: logo incrustado y botón para imprimir / guardar como PDF
     @Override
     @Transactional(readOnly = true)
     public String generarHtml(Long reservaId) {
@@ -100,13 +97,12 @@ public class BoletaServiceImpl implements IBoletaService {
         }
         try {
             MimeMessage mensaje = mailSender.createMimeMessage();
-            // multipart = true: texto plano + HTML + logo en línea
             MimeMessageHelper helper = new MimeMessageHelper(mensaje, true, "UTF-8");
             helper.setFrom(remitente, "Kampu Tour Manager");
             helper.setTo(d.email);
             helper.setSubject("Tu reserva " + codigo(d.reserva) + " · " + d.paquete.getNombre());
             helper.setText(textoPlano(d), construirHtml(d, "cid:" + LOGO_CID, false));
-            helper.addInline(LOGO_CID, new ClassPathResource(LOGO)); // logo-kampu.png, image/png
+            helper.addInline(LOGO_CID, new ClassPathResource(LOGO));
             mailSender.send(mensaje);
         } catch (MessagingException | UnsupportedEncodingException e) {
             throw new MailSendException("No se pudo armar el correo: " + e.getMessage(), e);
@@ -127,8 +123,6 @@ public class BoletaServiceImpl implements IBoletaService {
         return logoBase64;
     }
 
-    // ---------- Datos de la boleta ----------
-
     private static class Datos {
         Reserva reserva;
         String nombre;
@@ -141,21 +135,19 @@ public class BoletaServiceImpl implements IBoletaService {
         Personal guia;
         List<PasajeroReserva> pasajeros;
         List<Pago> pagos;
-        Lugar recojo;          // punto de recojo elegido o, si no eligió, la oficina de la agencia
+        Lugar recojo;
     }
 
     private Datos datos(Long reservaId) {
         Datos d = new Datos();
         d.reserva = reservaRepository.findById(reservaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reserva no encontrada con Id: " + reservaId));
-        // v4: toda reserva tiene cliente
         Cliente c = clienteRepository.findById(d.reserva.getClienteId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente no encontrado."));
         d.nombre = c.getNombreCompleto();
         d.documento = c.getTipoDocumento() + " " + c.getNumeroDocumento();
         d.email = c.getEmail();
         d.telefono = c.getTelefono();
-        // v10: una reserva = un paquete en una fecha (salida_id y cantidad_pasajeros en RESERVAS)
         d.viajeros = d.reserva.getCantidadPasajeros();
         d.salida = salidaRepository.findById(d.reserva.getSalidaId())
                 .orElseThrow(() -> new ResourceNotFoundException("Salida no encontrada."));
@@ -164,22 +156,17 @@ public class BoletaServiceImpl implements IBoletaService {
         d.guia = d.salida.getGuiaId() == null ? null : guiaRepository.findById(d.salida.getGuiaId()).orElse(null);
         d.pasajeros = pasajeroRepository.findByReservaIdOrderByPasajeroIdAsc(reservaId);
         d.pagos = pagoRepository.findByReservaIdAndEstadoTransaccion(reservaId, "APROBADO");
-        // v10: sin punto elegido, se cita en la oficina (tipo OFICINA)
         d.recojo = d.reserva.getLugarRecojoId() != null
                 ? lugarRepository.findById(d.reserva.getLugarRecojoId()).orElse(null)
                 : lugarRepository.findAll().stream().filter(l -> "OFICINA".equals(l.getTipoLugar())).findFirst().orElse(null);
         return d;
     }
 
-    // ---------- Formato ----------
-
-    // Código oficial de la reserva (v11: KR-AAAA-000001); las reservas antiguas sin código usan R-0001
     private String codigo(Reserva r) {
         return r.getCodigoReserva() != null && !r.getCodigoReserva().isBlank()
                 ? r.getCodigoReserva() : "R-" + String.format("%04d", r.getReservaId());
     }
 
-    // Hora de recojo = hora de inicio del paquete - minutos de anticipación del punto
     private String horaRecojo(Datos d) {
         String inicio = d.paquete.getHoraInicio();
         if (inicio == null || !inicio.matches("\\d{1,2}:\\d{2}")) return null;
@@ -235,7 +222,6 @@ public class BoletaServiceImpl implements IBoletaService {
                 + "Kampu Tour Manager · " + agenciaEmail + " · " + agenciaTelefono;
     }
 
-    // HTML con estilos en línea y tablas: es lo que mejor soportan Gmail y Outlook.
     private String construirHtml(Datos d, String srcLogo, boolean navegador) {
         Reserva r = d.reserva;
         BigDecimal pagado = pagado(r);
@@ -454,11 +440,10 @@ public class BoletaServiceImpl implements IBoletaService {
                 r.getFechaReserva() == null ? "—" : r.getFechaReserva().format(FECHA_HORA));
     }
 
-    // Punto y hora de recojo (v10): lo que el pasajero necesita el día del viaje
     private String bloqueRecojo(Datos d) {
         String hora = horaRecojo(d);
         if (d.recojo == null && d.paquete.getHoraInicio() == null) return "";
-        if (d.recojo == null) hora = null;   // sin punto asignado no hay hora de recojo
+        if (d.recojo == null) hora = null;
         String lugar = d.recojo == null ? "Por definir: la agencia te lo confirmará" : esc(d.recojo.getNombre())
                 + (d.recojo.getDireccion() == null || d.recojo.getDireccion().isBlank() ? "" : " · " + esc(d.recojo.getDireccion()));
         return """
@@ -473,7 +458,6 @@ public class BoletaServiceImpl implements IBoletaService {
                 d.paquete.getHoraInicio() == null ? "" : "El tour empieza a las " + esc(d.paquete.getHoraInicio()) + " h. Llega unos minutos antes.");
     }
 
-    // Desglose: paquete, adicionales y descuento (si los hay), total y pagado
     private String filasResumen(Datos d, BigDecimal pagado) {
         Reserva r = d.reserva;
         BigDecimal unitario = r.getPrecioUnitario() == null ? BigDecimal.ZERO : r.getPrecioUnitario();
@@ -495,7 +479,6 @@ public class BoletaServiceImpl implements IBoletaService {
                 + "<td align=\"right\" style=\"padding:3px 0;color:" + color + ";font-weight:700;white-space:nowrap;" + borde + "\">" + monto + "</td></tr>";
     }
 
-    // Lista de pasajeros; si aún no se registran, un aviso en lugar de una tabla vacía
     private String bloquePasajeros(Datos d, String filas) {
         if (d.pasajeros.isEmpty()) {
             return titulo("Pasajeros") + "<div style=\"border:1px dashed #E6E4DA;border-radius:12px;padding:12px 16px;font-size:13px;line-height:1.55;color:#7A7668;\">"

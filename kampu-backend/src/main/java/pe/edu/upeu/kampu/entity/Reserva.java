@@ -5,8 +5,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.hibernate.annotations.DynamicUpdate;
 
-// RESERVAS (v10): una reserva = un paquete en una fecha (salida). Se crea con PKG_RESERVAS.reservar.
-// Montos, estados, codigo y precio los mantiene la BD (PKG_RESERVAS y TRG_RESERVAS_BIU): solo lectura en JPA.
 @Entity
 @DynamicUpdate
 @Table(name = "RESERVAS")
@@ -37,7 +35,6 @@ public class Reserva {
     @Column(name = "monto_total", insertable = false, updatable = false)
     private BigDecimal montoTotal;
 
-    // (v11) Servicios adicionales de la cotizacion: los fija PKG_RESERVAS.reservar y no cambian
     @Column(name = "monto_adicionales", insertable = false, updatable = false)
     private BigDecimal montoAdicionales;
 

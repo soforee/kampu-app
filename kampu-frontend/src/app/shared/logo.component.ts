@@ -11,7 +11,6 @@ export class LogoComponent {
   @Input() alto = 32;
   @Input() colorCarpa?: string;
 
-  // Verde oliva de la marca; "oscuro" = versión clara para fondos oscuros o fotos
   get marca() { return this.colorCarpa ?? (this.oscuro ? '#FDF8E6' : '#4B5B1D'); }
   get texto() { return this.oscuro ? '#FDF8E6' : '#4B5B1D'; }
 }

@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { AfterViewInit, Component, HostListener, OnDestroy, computed, inject, signal } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { PaqueteTour, SalidaProgramada } from '../../core/models';
 import { API } from '../../core/utils/api';
 import { hoy } from '../../core/utils/date.util';
@@ -29,7 +29,6 @@ import { Contacto, FiltroBusqueda, TipoTour, TourCard } from './landing.models';
 export class LandingComponent implements AfterViewInit, OnDestroy {
   private http = inject(HttpClient);
 
-  // Navegación por secciones a pantalla completa: puntos a la derecha con la sección visible resaltada
   secciones = [
     { id: 'inicio', texto: 'Inicio' }, { id: 'tours', texto: 'Destinos' }, { id: 'nosotros', texto: 'Nosotros' },
     { id: 'como-funciona', texto: 'Cómo funciona' }, { id: 'galeria', texto: 'Galería' },
@@ -37,17 +36,10 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
   ];
   seccionActiva = signal('inicio');
   indiceActivo = computed(() => this.secciones.findIndex(s => s.id === this.seccionActiva()));
-  // Pantallas con foto o fondo oscuro: la barra superior y los puntos se vuelven claros sobre ellas
   private oscuras = ['inicio', 'nosotros', 'galeria', 'contacto'];
   fondoOscuro = computed(() => this.modoPaginas() ? this.oscuras.includes(this.seccionActiva()) : null);
   private observador?: IntersectionObserver;
 
-  /*
-   * Desplazamiento por páginas completas (escritorio, ventanas de 1024 px o más):
-   * cada giro de la rueda, flecha, Av Pág o deslizamiento lleva a la sección siguiente o anterior con una animación
-   * propia (requestAnimationFrame con aceleración suave). La sección que llega entra con su contenido animado.
-   * En celular y tablet se mantiene el scroll normal con ajuste suave.
-   */
   modoPaginas = signal(false);
   private animando = false;
   private toqueY: number | null = null;
@@ -58,7 +50,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     this.evaluarModo();
     window.addEventListener('wheel', this.rueda, { passive: false });
     if (typeof IntersectionObserver === 'undefined') return;
-    // Una sección está activa cuando cruza la línea media de la ventana
     this.observador = new IntersectionObserver(entradas => {
       for (const e of entradas) if (e.isIntersecting) this.seccionActiva.set(e.target.id);
     }, { rootMargin: '-50% 0px -50% 0px' });
@@ -74,17 +65,14 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     this.observador?.disconnect();
   }
 
-  @HostListener('window:resize')
   evaluarModo() {
     const paginas = window.innerWidth >= 1024 && window.innerHeight >= 600;
     this.modoPaginas.set(paginas);
     const html = document.documentElement.classList;
-    html.toggle('paginas', paginas);      // sin barra de scroll ni ajuste nativo: lo controla la animación
-    html.toggle('secciones', !paginas);   // celular y tablet: ajuste suave nativo (scroll-snap)
+    html.toggle('paginas', paginas);
+    html.toggle('secciones', !paginas);
   }
 
-  // Rueda del ratón o panel táctil: un gesto = una página. Si la sección es más alta que la ventana, primero se recorre.
-  // Se registra a mano con passive: false (con @HostListener el navegador la trata como pasiva y no se puede detener)
   private rueda = (e: WheelEvent) => {
     if (!this.modoPaginas() || e.ctrlKey) return;
     if ((e.target as HTMLElement).closest('.carrusel') && Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
@@ -93,7 +81,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     this.paso(e.deltaY > 0 ? 1 : -1, e.deltaY);
   };
 
-  @HostListener('window:keydown', ['$event'])
   tecla(e: KeyboardEvent) {
     if (!this.modoPaginas()) return;
     const objetivo = e.target as HTMLElement;
@@ -109,10 +96,8 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     else this.paso(abajo ? 1 : -1);
   }
 
-  @HostListener('window:touchstart', ['$event'])
   toqueInicio(e: TouchEvent) { this.toqueY = e.touches[0]?.clientY ?? null; }
 
-  @HostListener('window:touchend', ['$event'])
   toqueFin(e: TouchEvent) {
     if (!this.modoPaginas() || this.toqueY === null || this.animando) return;
     const dy = this.toqueY - (e.changedTouches[0]?.clientY ?? this.toqueY);
@@ -120,8 +105,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     if (Math.abs(dy) > 50) this.paso(dy > 0 ? 1 : -1);
   }
 
-  // Enlaces internos (#tours, puntos, botones): en modo páginas usan la misma animación
-  @HostListener('document:click', ['$event'])
   enlace(e: MouseEvent) {
     if (!this.modoPaginas() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
     const a = (e.target as HTMLElement).closest('a[href^="#"]') as HTMLAnchorElement | null;
@@ -139,7 +122,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     return Math.min(max, Math.max(0, el ? el.getBoundingClientRect().top + window.scrollY : 0));
   }
 
-  // Parada actual: la última cuyo inicio ya se alcanzó
   private actual() {
     const y = window.scrollY + 2;
     let i = 0;
@@ -149,12 +131,10 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 
   private paso(dir: number, delta = 0) {
     const i = this.actual();
-    // Sección más alta que la ventana: se recorre dentro de ella antes de pasar a la siguiente
     const el = document.getElementById(this.paradas[i]);
     if (el && delta) {
       const fin = this.posicion(i) + el.offsetHeight - window.innerHeight;
       const y = window.scrollY;
-      // Solo si sobra algo visible (más de 40 px): un excedente mínimo no debe "gastar" un giro de la rueda
       if (fin - this.posicion(i) > 40 && ((dir > 0 && y < fin - 2) || (dir < 0 && y > this.posicion(i) + 2))) {
         window.scrollTo({ top: Math.min(fin, Math.max(this.posicion(i), y + delta)), behavior: 'instant' as ScrollBehavior });
         return;
@@ -170,24 +150,22 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     const id = this.paradas[i];
     if (this.sinMovimiento) { window.scrollTo({ top: hasta, behavior: 'instant' as ScrollBehavior }); return; }
 
-    // La sección que llega anima su contenido; la que se va se atenúa
     const sale = document.getElementById(this.paradas[this.actual()]);
     const entra = document.getElementById(id);
     sale?.classList.add('pagina-sale');
     entra?.classList.remove('pagina-entra');
-    void entra?.offsetWidth;   // reinicia la animación si se vuelve a la misma sección
+    void entra?.offsetWidth;
     entra?.classList.add('pagina-entra', hasta > desde ? 'desde-abajo' : 'desde-arriba');
     entra?.classList.remove(hasta > desde ? 'desde-arriba' : 'desde-abajo');
 
     this.animando = true;
     const duracion = 950, inicio = performance.now();
-    const curva = (t: number) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;   // easeInOutCubic
+    const curva = (t: number) => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const cuadro = (ahora: number) => {
       const t = Math.min(1, (ahora - inicio) / duracion);
       window.scrollTo({ top: desde + (hasta - desde) * curva(t), behavior: 'instant' as ScrollBehavior });
       if (t < 1) { requestAnimationFrame(cuadro); return; }
       sale?.classList.remove('pagina-sale');
-      // Pausa breve: los panel táctiles siguen enviando giros por inercia después del gesto
       setTimeout(() => { this.animando = false; }, 350);
     };
     requestAnimationFrame(cuadro);
@@ -198,13 +176,10 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     'from-emerald-600 to-zinc-900', 'from-brand-600 to-zinc-900', 'from-earth-400 to-zinc-900'
   ];
 
-  // Contacto de la agencia: lo define el backend (kampu.contacto en application.yaml)
   contacto = signal<Contacto>({ email: '', telefono: '', ciudad: '' });
-  // wa.me necesita solo dígitos con el código de país
   whatsapp = computed(() => this.contacto().telefono.replace(/\D/g, ''));
 
   paquetes = signal<PaqueteTour[]>([]);
-  // (v11) "Cotizar" abre el cotizador completo: sin cuenta, con adicionales, guardado y seguimiento
   private router = inject(Router);
   cotizar(p: PaqueteTour) { this.router.navigate(['/cotizar', p.paqueteId]); }
   salidas = signal<SalidaProgramada[]>([]);
@@ -218,7 +193,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
 
   destinos = computed(() => this.paquetes().filter(p => p.estado === 'ACTIVO').map(p => p.nombre));
 
-  // Paquetes activos que cumplen destino y fecha (sin la categoría): base de las tarjetas y de los conteos por pestaña
   private candidatos = computed(() => {
     const f = this.filtro();
     const texto = this.normalizar(f.destino.trim());
@@ -226,7 +200,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
       .filter(p => p.estado === 'ACTIVO')
       .filter(p => !texto || this.normalizar(p.nombre).includes(texto) || this.normalizar(p.descripcion ?? '').includes(texto))
       .map(p => ({ p, fecha: this.proximaFecha(p, f.fecha) }))
-      // Con fecha elegida solo quedan los paquetes que se pueden reservar desde ese día
       .filter(x => !f.fecha || x.fecha.fecha !== null);
   });
 
@@ -244,7 +217,6 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
       }));
   });
 
-  // Cantidad de tours por pestaña con el destino y la fecha actuales
   conteos = computed<Record<string, number>>(() => {
     const c = this.candidatos();
     return Object.fromEntries((['', 'FULL_DAY', 'ESCAPADA', 'EXPEDICION'] as TipoTour[])
@@ -266,18 +238,15 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  // El buscador cambia destino y fecha; la categoría la manejan las pestañas
   buscar(f: FiltroBusqueda) {
     this.filtro.set({ ...f, tipo: this.filtro().tipo });
     document.getElementById('tours')?.scrollIntoView({ behavior: 'smooth' });
   }
 
-  // Pestañas de categorías: cambian solo el tipo de tour y conservan destino y fecha
   cambiarCategoria(tipo: TipoTour) {
     this.filtro.set({ ...this.filtro(), tipo });
   }
 
-  // Cifras reales para la presentación: salidas abiertas con cupos desde hoy y sus cupos libres
   private salidasAbiertas = computed(() => {
     const hoyStr = hoy();
     return this.salidas().filter(x => (x.estado === 'PROGRAMADA' || x.estado === 'GARANTIZADA') && x.fechaInicio >= hoyStr && x.cuposDisponibles > 0);
@@ -303,19 +272,9 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     return `${dias} · ${p.noches === 1 ? '1 noche' : p.noches + ' noches'}`;
   }
 
-  // Primera salida con cupos desde la fecha elegida (o desde hoy).
-  /*
-   * Próxima fecha reservable desde "desde" (o desde hoy), como PKG_RESERVAS en la base:
-   *  1) una salida ya programada (PROGRAMADA o GARANTIZADA) con cupos libres;
-   *  2) si no hay, el próximo día en que opera el paquete (dias_operacion = L M M J V S D)
-   *     respetando la anticipación mínima; al reservar esa fecha la base crea la salida.
-   * Se usa la que llegue primero.
-   */
   private proximaFecha(p: PaqueteTour, desde: string): { fecha: string | null; cupos: number | null; existente: boolean } {
     const hoyStr = hoy();
     const inicio = desde && desde > hoyStr ? desde : hoyStr;
-    // Anticipación mínima para reservar por la web, con la misma regla que la base (PKG_RESERVAS):
-    // (fecha a las 00:00 - ahora) en horas >= anticipacion_min_horas
     const minimo = Date.now() + (p.anticipacionMinHoras ?? 0) * 3600_000;
     const reservable = (fecha: string) => new Date(`${fecha}T00:00:00`).getTime() >= minimo;
 
@@ -337,12 +296,10 @@ export class LandingComponent implements AfterViewInit, OnDestroy {
     return { fecha: null, cupos: null, existente: false };
   }
 
-
   private iso(d: Date) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
 
-  // Búsqueda sin tildes ni mayúsculas: "clasico" encuentra "Clásico"
   private normalizar(t: string) {
     return t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
