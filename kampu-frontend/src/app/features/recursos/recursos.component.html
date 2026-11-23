@@ -1,6 +1,6 @@
 <app-page-header [titulo]="encabezado.titulo" [subtitulo]="encabezado.subtitulo">
   @if (puedeEditar() && seccion !== 'personal') {
-    <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> Nuevo {{ actual.singular }}</button>
+    <button type="button" class="btn-dark" (click)="nuevo()"><app-icon name="plus" size="w-4 h-4" /> {{ actual.nueva ? 'Nueva' : 'Nuevo' }} {{ actual.singular }}</button>
   }
 </app-page-header>
 
@@ -12,7 +12,7 @@
       }
     </div>
   }
-  @if (!propio && (tab() === 'personal' || tab() === 'vehiculos')) {
+  @if (!propio && (tab() === 'personal' || tab() === 'vehiculos' || tab() === 'habitaciones')) {
     <select class="field w-full sm:!w-auto sm:min-w-[220px]" [ngModel]="filtroProveedor()" (ngModelChange)="filtroProveedor.set($event)" aria-label="Filtrar por proveedor">
       <option [ngValue]="null">Todos los proveedores</option>
       @for (p of store.proveedores(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> }
@@ -140,6 +140,46 @@
     </div>
   }
 
+  @case ('habitaciones') {
+    <div class="card overflow-hidden">
+      <div class="relative overflow-x-auto">
+        <table class="tbl tbl-tarjetas">
+          <thead><tr><th class="th">Habitación</th><th class="th">Proveedor</th><th class="th text-right">Precio por noche</th><th class="th">Se cobra</th><th class="th">Estado</th>@if (puedeEditar()) { <th class="th col-acciones"></th> }</tr></thead>
+          <tbody>
+            @for (h of habitacionesFiltradas(); track h.habitacionId) {
+              <tr [class.opacity-60]="h.estado === 'INACTIVO'">
+                <td data-label="Habitación" class="td">
+                  <div class="flex items-center gap-3">
+                    @if (h.imagen) { <img [src]="imagenes.url(h.imagen)" alt="" class="h-10 w-14 shrink-0 rounded-md object-cover"> }
+                    <div class="min-w-0">
+                      <div class="text-zinc-900">{{ h.nombre }}</div>
+                      @if (h.descripcion) { <div class="text-xs text-zinc-500">{{ h.descripcion }}</div> }
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Proveedor" class="td text-zinc-700">{{ h.proveedor }}</td>
+                <td data-label="Precio por noche" class="td text-right whitespace-nowrap tabular-nums text-zinc-900">S/ {{ h.precioNoche | number:'1.2-2' }}</td>
+                <td data-label="Se cobra" class="td text-zinc-700">{{ h.modalidadPrecio === 'POR_PERSONA' ? 'Por persona' : 'Por grupo' }}</td>
+                <td data-label="Estado" class="td"><app-badge [estado]="h.estado" /></td>
+                @if (puedeEditar()) {
+              <td data-label="" class="td col-acciones whitespace-nowrap text-right">
+                <div class="actions">
+                  <button type="button" class="icon-btn" data-tip="Editar" aria-label="Editar" (click)="editarHabitacion(h.habitacionId)"><app-icon name="edit" size="w-4 h-4" /></button>
+                  <button type="button" class="icon-btn-danger" data-tip="Eliminar" aria-label="Eliminar" (click)="eliminar(h.habitacionId)"><app-icon name="trash" size="w-4 h-4" /></button>
+                </div>
+              </td>
+            }
+              </tr>
+            } @empty {
+              <tr><td colspan="6"><div class="empty">Aún no hay habitaciones de hotel. Regístralas para que el visitante elija dónde hospedarse al cotizar.</div></td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="hint mt-3">Las habitaciones ACTIVAS de proveedores de hospedaje activos aparecen en la cotización de los paquetes con noches.</p>
+  }
+
   @case ('lugares') {
     <div class="card overflow-hidden">
       <div class="relative overflow-x-auto">
@@ -150,9 +190,7 @@
               @for (l of g.lugares; track l.lugarId) {
                 <tr>
                   <td data-label="Lugar" class="td text-zinc-900">{{ l.nombre }}</td>
-                  <td data-label="Tipo" class="td text-zinc-700">{{ etiqueta(l.tipoLugar) }}
-                    @if (l.precioNoche) { <div class="text-xs text-zinc-500">S/ {{ l.precioNoche }} por noche · {{ l.modalidadPrecio === 'POR_PERSONA' ? 'por persona' : 'por grupo' }} · {{ store.nombreProveedor(l.proveedorId) }}</div> }
-                  </td>
+                  <td data-label="Tipo" class="td text-zinc-700">{{ etiqueta(l.tipoLugar) }}</td>
                   <td data-label="Ciudad" class="td text-zinc-700">{{ l.ciudad }}</td>
                   <td data-label="Coordenadas" class="td whitespace-nowrap">
                     @if (l.latitud !== null) { <span class="tabular-nums text-zinc-500">{{ l.latitud }}, {{ l.longitud }}</span> }
@@ -180,7 +218,7 @@
 }
 
 @if (abierto()) {
-  <app-modal [icono]="actual.icono" [subtitulo]="encabezado.titulo" [titulo]="(editId ? 'Editar ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
+  <app-modal [icono]="actual.icono" [subtitulo]="encabezado.titulo" [titulo]="(editId ? 'Editar ' : actual.nueva ? 'Nueva ' : 'Nuevo ') + actual.singular" (cerrar)="abierto.set(false)">
     <div class="space-y-4">
       <p class="text-xs text-zinc-500">Los campos con <span class="text-rose-500">*</span> son obligatorios.</p>
       <div class="form-section">
@@ -260,6 +298,45 @@
               <div><label class="label req">Estado</label><select class="field" [(ngModel)]="vehiculo.estado">@for (s of estadosVehiculo; track s) { <option [value]="s">{{ etiqueta(s) }}</option> }</select></div>
             </div>
           }
+          @case ('habitaciones') {
+            <div class="form-section-title">Datos de la habitación</div>
+            <div><label class="label req">Proveedor de hospedaje</label>
+              <select class="field" [(ngModel)]="habitacion.proveedorId" (ngModelChange)="v.tocar('hProveedor')" [class.field-invalid]="v.error('hProveedor')">
+                <option [ngValue]="null" disabled>Elige el proveedor</option>
+                @for (p of proveedoresHospedaje(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> }
+              </select>@if (v.error('hProveedor'); as e) { <p class="field-error">{{ e }}</p> } @else if (!proveedoresHospedaje().length) { <p class="hint">Primero marca «Hospedaje» en un proveedor activo.</p> }
+            </div>
+            <div><label class="label req">Nombre</label><input class="field" maxlength="150" [(ngModel)]="habitacion.nombre" placeholder="Habitación doble, familiar, suite…" (blur)="v.tocar('hNombre')" [class.field-invalid]="v.error('hNombre')">@if (v.error('hNombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div><label class="label">Descripción <span class="opt">Opcional</span></label><input class="field" maxlength="300" [(ngModel)]="habitacion.descripcion" placeholder="Cama matrimonial, baño privado, desayuno…" (blur)="v.tocar('hDescripcion')" [class.field-invalid]="v.error('hDescripcion')">@if (v.error('hDescripcion'); as e) { <p class="field-error">{{ e }}</p> }</div>
+            <div class="form-section-title pt-2">Tarifa</div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div><label class="label req">Precio por noche (S/)</label>
+                <input type="number" min="0" step="0.01" class="field tabular-nums" [(ngModel)]="habitacion.precioNoche" (blur)="v.tocar('hPrecio')" [class.field-invalid]="v.error('hPrecio')" (wheel)="rueda($event)" inputmode="decimal">@if (v.error('hPrecio'); as e) { <p class="field-error">{{ e }}</p> }
+              </div>
+              <div><label class="label req">Se cobra</label>
+                <select class="field" [(ngModel)]="habitacion.modalidadPrecio">
+                  <option value="POR_PERSONA">Por persona</option>
+                  <option value="POR_GRUPO">Por grupo</option>
+                </select>
+              </div>
+              <div><label class="label req">Estado</label>
+                <select class="field" [(ngModel)]="habitacion.estado">
+                  <option value="ACTIVO">{{ etiqueta('ACTIVO') }}</option>
+                  <option value="INACTIVO">{{ etiqueta('INACTIVO') }}</option>
+                </select>
+              </div>
+            </div>
+            <p class="hint">Por persona: precio × noches × pasajeros. Por grupo: precio × noches.</p>
+            <div><label class="label">Foto <span class="opt">Opcional</span></label>
+              <div class="flex items-center gap-3">
+                @if (vistaFoto(); as src) { <img [src]="src" alt="" class="h-16 w-24 rounded-lg object-cover"> }
+                <label class="btn-light btn-sm cursor-pointer"><app-icon name="upload" size="w-4 h-4" /> {{ vistaFoto() ? 'Cambiar foto' : 'Subir foto' }}
+                  <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" (change)="elegirFoto($event)"></label>
+                @if (vistaFoto()) { <button type="button" class="btn-light btn-sm" (click)="quitarFoto()">Quitar</button> }
+              </div>
+              <p class="hint">Se muestra al visitante en la cotización. JPG, PNG o WebP de hasta 10 MB.</p>
+            </div>
+          }
           @case ('lugares') {
             <div class="form-section-title">Datos del lugar</div>
             <div><label class="label req">Nombre</label><input class="field" maxlength="150" [(ngModel)]="lugar.nombre" placeholder="Aeropuerto, hotel, atractivo…" (blur)="v.tocar('lNombre')" [class.field-invalid]="v.error('lNombre')">@if (v.error('lNombre'); as e) { <p class="field-error">{{ e }}</p> }</div>
@@ -273,38 +350,6 @@
             </div>
             <p class="hint">Cópialas de Google Maps (clic derecho sobre el lugar). Con ellas se calcula la duración de los traslados.</p>
             <div><label class="label">Dirección <span class="opt">Opcional</span></label><input class="field" maxlength="200" [(ngModel)]="lugar.direccion" placeholder="Referencia para el conductor" (blur)="v.tocar('lDireccion')" [class.field-invalid]="v.error('lDireccion')">@if (v.error('lDireccion'); as e) { <p class="field-error">{{ e }}</p> }</div>
-            @if (lugar.tipoLugar === 'HOTEL') {
-              <div class="form-section-title pt-2">Tarifa para la cotización <span class="opt">Opcional</span></div>
-              <p class="hint">Con proveedor, precio y modalidad, el hotel aparece en la sección «Hotel» del cotizador.</p>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div><label class="label">Proveedor de hospedaje</label>
-                  <select class="field" [(ngModel)]="lugar.proveedorId" (ngModelChange)="v.tocar('lTarifa')">
-                    <option [ngValue]="null">Sin proveedor</option>
-                    @for (p of proveedoresHospedaje(); track p.proveedorId) { <option [ngValue]="p.proveedorId">{{ p.nombreComercial }}</option> }
-                  </select>
-                </div>
-                <div><label class="label">Precio por noche (S/)</label>
-                  <input type="number" min="0" step="0.01" class="field tabular-nums" [(ngModel)]="lugar.precioNoche" (blur)="v.tocar('lTarifa')" (wheel)="rueda($event)" inputmode="decimal">
-                </div>
-                <div><label class="label">Se cobra</label>
-                  <select class="field" [(ngModel)]="lugar.modalidadPrecio" (ngModelChange)="v.tocar('lTarifa')">
-                    <option value="">Elige</option>
-                    <option value="POR_PERSONA">Por persona</option>
-                    <option value="POR_GRUPO">Por grupo</option>
-                  </select>
-                </div>
-              </div>
-              @if (v.error('lTarifa'); as e) { <p class="field-error">{{ e }}</p> }
-              <div><label class="label">Foto del hotel <span class="opt">Opcional</span></label>
-                <div class="flex items-center gap-3">
-                  @if (vistaFoto(); as src) { <img [src]="src" alt="" class="h-16 w-24 rounded-lg object-cover"> }
-                  <label class="btn-light btn-sm cursor-pointer"><app-icon name="upload" size="w-4 h-4" /> {{ vistaFoto() ? 'Cambiar foto' : 'Subir foto' }}
-                    <input type="file" accept="image/jpeg,image/png,image/webp" class="sr-only" (change)="elegirFoto($event)"></label>
-                  @if (vistaFoto()) { <button type="button" class="btn-light btn-sm" (click)="quitarFoto()">Quitar</button> }
-                </div>
-                <p class="hint">Se muestra al visitante en la cotización. JPG, PNG o WebP de hasta 10 MB.</p>
-              </div>
-            }
             <div class="form-section-title pt-2">Punto de recojo</div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div class="flex flex-col justify-center">

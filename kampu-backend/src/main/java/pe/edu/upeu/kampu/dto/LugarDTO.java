@@ -13,17 +13,11 @@ public record LugarDTO(
         BigDecimal longitud,
         String direccion,
         boolean esPuntoRecojo,
-        Integer minutosAntesRecojo,
-        // Hotel: proveedor de hospedaje, precio por noche (POR_PERSONA / POR_GRUPO) e imagen
-        Long proveedorId,
-        BigDecimal precioNoche,
-        String modalidadPrecio,
-        String imagen
+        Integer minutosAntesRecojo
 ) {
     public static LugarDTO desde(Lugar l) {
         return new LugarDTO(l.getLugarId(), l.getNombre(), l.getTipoLugar(), l.getCiudad(), l.getLatitud(), l.getLongitud(),
                 l.getDireccion() == null ? "" : l.getDireccion(), Integer.valueOf(1).equals(l.getEsPuntoRecojo()),
-                l.getMinutosAntesRecojo() == null ? 0 : l.getMinutosAntesRecojo(),
-                l.getProveedorId(), l.getPrecioNoche(), l.getModalidadPrecio(), l.getImagen() == null ? "" : l.getImagen());
+                l.getMinutosAntesRecojo() == null ? 0 : l.getMinutosAntesRecojo());
     }
 }

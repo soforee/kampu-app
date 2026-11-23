@@ -94,7 +94,7 @@ public class CotizacionPdfService {
         fila(viaje, "Pasajeros", c.adultos() + (c.adultos() == 1 ? " adulto" : " adultos")
                 + (c.ninos() > 0 ? " y " + c.ninos() + (c.ninos() == 1 ? " niño" : " niños") : ""), negrita, normal);
         fila(viaje, "Punto de recojo", "Lo define la agencia al confirmar la reserva", negrita, normal);
-        if (c.hotel() != null) fila(viaje, "Hotel", c.hotel().nombre() + " (" + c.hotel().ciudad() + ")", negrita, normal);
+        if (c.habitacion() != null) fila(viaje, "Hospedaje", c.habitacion().nombre() + " - " + c.habitacion().hotel(), negrita, normal);
         if (c.nombreContacto() != null) fila(viaje, "A nombre de", c.nombreContacto(), negrita, normal);
         doc.add(viaje);
         doc.add(new Paragraph(" "));
@@ -112,10 +112,10 @@ public class CotizacionPdfService {
             linea(det, l.nombre() + ("POR_GRUPO".equals(l.modalidad()) ? " (por grupo)" : " (por persona)"),
                     l.cantidad(), l.precioUnitario(), l.subtotal(), normal);
         }
-        if (c.hotel() != null) {
-            var h = c.hotel();
+        if (c.habitacion() != null) {
+            var h = c.habitacion();
             boolean persona = "POR_PERSONA".equals(h.modalidad());
-            linea(det, "Hotel " + h.nombre() + " · " + h.noches() + " noche(s)" + (persona ? " (por persona)" : " (por grupo)"),
+            linea(det, h.nombre() + " (" + h.hotel() + ")" + " · " + h.noches() + " noche(s)" + (persona ? " (por persona)" : " (por grupo)"),
                     persona ? c.cantidad() * h.noches() : h.noches(), h.precioNoche(), h.subtotal(), normal);
         }
         PdfPCell etq = new PdfPCell(new Phrase("TOTAL", negrita));
