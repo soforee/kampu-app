@@ -23,6 +23,9 @@ public record VehiculoRequestDTO(
         LocalDate proxMantenimiento,
         @NotNull(message = "El estado es obligatorio.")
         @Pattern(regexp = "OPERATIVO|MANTENIMIENTO|INACTIVO", message = "El estado debe ser OPERATIVO, MANTENIMIENTO o INACTIVO.")
-        String estado
+        String estado,
+        // Opcionales: vencimiento del SOAT y de la revisión técnica
+        LocalDate vencSoat,
+        LocalDate vencRevision
 ) {
 }
