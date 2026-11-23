@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Disponibilidad, Incidencia, MiVehiculo, Notificacion, PasajeroTraslado, TipoIncidencia, TrasladoConductor } from '../models';
+import { AsistenciaSalida, Disponibilidad, EstadoAsistencia, EstadoCampo, Incidencia, MisAsignaciones, TransporteSalida, MiVehiculo, Notificacion, PasajeroTraslado, TipoIncidencia, TrasladoConductor } from '../models';
 import { API } from '../utils/api';
 
 // Panel de campo (guía y conductor): todo pasa por PKG_CAMPO, que solo actúa sobre lo asignado a la sesión
@@ -19,6 +19,35 @@ export class CampoService {
   }
   abordaje(operacionId: number, pasajeroId: number, abordo: boolean): Observable<TrasladoConductor> {
     return this.http.put<TrasladoConductor>(`${this.url}/traslados/${operacionId}/pasajeros/${pasajeroId}`, { abordo });
+  }
+
+  // Guía: salida en campo
+  transporte(salidaId: number): Observable<TransporteSalida[]> {
+    return this.http.get<TransporteSalida[]>(`${this.url}/salidas/${salidaId}/transporte`);
+  }
+  asistencia(salidaId: number): Observable<AsistenciaSalida> {
+    return this.http.get<AsistenciaSalida>(`${this.url}/salidas/${salidaId}/asistencia`);
+  }
+  marcarAsistencia(salidaId: number, pasajeroId: number, dia: number, estado: EstadoAsistencia | null): Observable<void> {
+    return this.http.put<void>(`${this.url}/salidas/${salidaId}/asistencia`, { pasajeroId, dia, estado });
+  }
+  estadoSalida(salidaId: number, estado: EstadoCampo, observacion = ''): Observable<MisAsignaciones['salidas'][number]> {
+    return this.http.post<MisAsignaciones['salidas'][number]>(`${this.url}/salidas/${salidaId}/estado`, { estado, observacion });
+  }
+  manifiestoPdf(salidaId: number): Observable<Blob> {
+    return this.http.get(`${this.url}/salidas/${salidaId}/manifiesto.pdf`, { responseType: 'blob' });
+  }
+  historialTours(desde?: string, hasta?: string): Observable<MisAsignaciones['salidas']> {
+    const params: { [k: string]: string } = {};
+    if (desde) params['desde'] = desde;
+    if (hasta) params['hasta'] = hasta;
+    return this.http.get<MisAsignaciones['salidas']>(`${this.url}/historial-tours`, { params });
+  }
+  certificaciones(): Observable<{ carneGuia: string | null; vencCarne: string | null; idiomas: string | null }> {
+    return this.http.get<{ carneGuia: string | null; vencCarne: string | null; idiomas: string | null }>(`${this.url}/certificaciones`);
+  }
+  guardarCertificaciones(d: { carneGuia: string; vencCarne: string | null; idiomas: string }) {
+    return this.http.put<{ carneGuia: string | null; vencCarne: string | null; idiomas: string | null }>(`${this.url}/certificaciones`, d);
   }
 
   historial(f: { desde?: string; hasta?: string; ruta?: string; placa?: string }): Observable<TrasladoConductor[]> {

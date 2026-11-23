@@ -48,6 +48,7 @@ export class ShellComponent {
     { ruta: '/dashboard', texto: 'Panel', icono: 'chart', permiso: 'VER_RESUMEN' },
     { ruta: '/mis-asignaciones', texto: 'Mis asignaciones', icono: 'flag', permiso: 'VER_ASIGNACIONES_PROPIAS' },
     { ruta: '/historial-viajes', texto: 'Historial de viajes', icono: 'clock', permiso: 'VER_ASIGNACIONES_PROPIAS', rol: 'CONDUCTOR' },
+    { ruta: '/historial-tours', texto: 'Historial de tours', icono: 'clock', permiso: 'VER_ASIGNACIONES_PROPIAS', rol: 'GUIA' },
     { ruta: '/mi-vehiculo', texto: 'Mi vehículo', icono: 'truck', permiso: 'VER_ASIGNACIONES_PROPIAS', rol: 'CONDUCTOR' },
     { ruta: '/mis-novedades', texto: 'Reportar novedad', icono: 'alert', permiso: 'VER_ASIGNACIONES_PROPIAS' },
     { ruta: '/disponibilidad', texto: 'Disponibilidad', icono: 'calendar', permiso: 'VER_ASIGNACIONES_PROPIAS' },

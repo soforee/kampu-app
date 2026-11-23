@@ -122,6 +122,10 @@ export interface Personal {
   vencLicencia: string | null;
   estado: EstadoPersonal;
   usuario: string | null;           // personal propio: usuario de su cuenta
+  // Guía: carné DIRCETUR / MINCETUR, su vencimiento e idiomas
+  carneGuia: string | null;
+  vencCarne: string | null;
+  idiomas: string | null;
 }
 
 export interface Lugar {
@@ -532,6 +536,9 @@ export interface PersonalForm {
   catLicencia: CategoriaLicencia | '';
   vencLicencia: string;
   estado: EstadoPersonal;
+  carneGuia: string;
+  vencCarne: string;
+  idiomas: string;
 }
 
 export interface LugarForm {
@@ -788,11 +795,29 @@ export interface MisAsignaciones {
   salidas: {
     salidaId: number; paqueteId: number; paqueteNombre: string; dias: number; noches: number; horaInicio: string;
     fechaInicio: string; fechaFin: string; estado: EstadoSalida; pasajeros: number; traslados: number;
+    // Lo marca el guía: EN_CURSO, EN_ATRACTIVO, FINALIZADA
+    estadoCampo: EstadoCampo | null; inicioReal: string | null; finReal: string | null; observacionCierre: string | null; atendidos: number;
   }[];
   traslados: TrasladoConductor[];
 }
 
 // ---------- Panel de campo (conductor y guía) ----------
+export type EstadoCampo = 'EN_CURSO' | 'EN_ATRACTIVO' | 'FINALIZADA';
+export type EstadoAsistencia = 'PRESENTE' | 'NO_SHOW' | 'REZAGO';
+export interface PasajeroAsistencia {
+  pasajeroId: number; pasajero: string; tipoDocumento: string; numeroDocumento: string; nacionalidad: string | null;
+  edadAlViajar: number | null; codigoReserva: string; puntoRecojo: string | null; horaRecojo: string | null;
+  titular: string; telefonoTitular: string | null;
+}
+export interface AsistenciaSalida {
+  pasajeros: PasajeroAsistencia[];
+  marcas: { pasajeroId: number; dia: number; estado: EstadoAsistencia }[];
+}
+export interface TransporteSalida {
+  operacionId: number; codigoOperacion: string; horaSalida: string; horaLlegada: string; estado: EstadoOperacion; paxProgramados: number;
+  origen: string; destino: string; placa: string | null; marcaModelo: string | null; tipoVehiculo: string | null;
+  conductor: string | null; conductorTelefono: string | null;
+}
 export interface TrasladoConductor {
   operacionId: number; codigoOperacion: string; salidaId: number | null; paqueteNombre: string | null;
   horaSalida: string; horaLlegada: string; estado: EstadoOperacion; paxProgramados: number;
