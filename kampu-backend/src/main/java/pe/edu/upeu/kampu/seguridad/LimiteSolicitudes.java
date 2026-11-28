@@ -41,4 +41,25 @@ public class LimiteSolicitudes {
             registros.clear();
         }
     }
+
+    public synchronized void comprobar(String accion, String clave, int maximo, Duration ventana, String mensaje) {
+        List<Long> marcas = registros.get(accion + "|" + clave);
+        if (marcas == null) return;
+        long desde = System.currentTimeMillis() - ventana.toMillis();
+        marcas.removeIf(marca -> marca < desde);
+        if (marcas.size() >= maximo) {
+            throw new DemasiadasSolicitudesException(mensaje);
+        }
+    }
+
+    public synchronized void anotar(String accion, String clave) {
+        if (registros.size() > 10000) {
+            registros.clear();
+        }
+        registros.computeIfAbsent(accion + "|" + clave, k -> new ArrayList<>()).add(System.currentTimeMillis());
+    }
+
+    public synchronized void olvidar(String accion, String clave) {
+        registros.remove(accion + "|" + clave);
+    }
 }

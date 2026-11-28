@@ -11,18 +11,21 @@ import pe.edu.upeu.kampu.dto.SesionDTO;
 import pe.edu.upeu.kampu.entity.Cliente;
 import pe.edu.upeu.kampu.entity.UsuarioSistema;
 import pe.edu.upeu.kampu.exception.BusinessException;
+import pe.edu.upeu.kampu.exception.DemasiadasSolicitudesException;
 import pe.edu.upeu.kampu.exception.LoginFallidoException;
 import pe.edu.upeu.kampu.repository.ClienteRepository;
 import pe.edu.upeu.kampu.repository.PkgSeguridadRepository;
 import pe.edu.upeu.kampu.repository.PortalJdbc;
 import pe.edu.upeu.kampu.repository.UsuarioSistemaRepository;
 import pe.edu.upeu.kampu.seguridad.JwtService;
+import pe.edu.upeu.kampu.seguridad.LimiteSolicitudes;
 import pe.edu.upeu.kampu.seguridad.SesionActual;
 import pe.edu.upeu.kampu.seguridad.SesionUsuario;
 import pe.edu.upeu.kampu.seguridad.UsuarioPrincipal;
 
 import java.sql.CallableStatement;
 import java.sql.Types;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +34,7 @@ import java.util.Optional;
 public class AuthServiceImpl implements IAuthService {
     private static final String CREDENCIALES = "Usuario o contraseña incorrectos. Si eres cliente y aún no activaste tu cuenta web, usa \"Registrarse\".";
     private static final int MAX_INTENTOS = 5;
+    private static final Duration BLOQUEO_TEMPORAL = Duration.ofMinutes(15);
 
     private final UsuarioSistemaRepository usuarioRepository;
     private final ClienteRepository clienteRepository;
@@ -39,10 +43,11 @@ public class AuthServiceImpl implements IAuthService {
     private final AuditoriaService auditoria;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final LimiteSolicitudes limite;
 
     public AuthServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
                            PortalJdbc portal, PkgSeguridadRepository seguridad, AuditoriaService auditoria,
-                           JwtService jwtService, PasswordEncoder passwordEncoder) {
+                           JwtService jwtService, PasswordEncoder passwordEncoder, LimiteSolicitudes limite) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.portal = portal;
@@ -50,18 +55,30 @@ public class AuthServiceImpl implements IAuthService {
         this.auditoria = auditoria;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.limite = limite;
     }
 
     @Override
     public SesionDTO login(LoginRequestDTO dto) {
         String id = dto.username().trim();
+        String clave = id.toLowerCase();
+        try {
+            limite.comprobar("login-usuario", clave, MAX_INTENTOS, BLOQUEO_TEMPORAL,
+                    "Demasiados intentos fallidos para este usuario. Espera 15 minutos e inténtalo de nuevo.");
+        } catch (DemasiadasSolicitudesException ex) {
+            auditoria.registrarIndependiente(new RegistroAuditoria("LOGIN_FALLIDO", "SESION", null, null, null, null,
+                    "Bloqueo temporal por intentos fallidos.", id, null));
+            throw ex;
+        }
         try {
             SesionDTO s = autenticar(id, dto.password());
+            limite.olvidar("login-usuario", clave);
             Long entidadId = s.usuarioId() != null ? s.usuarioId() : s.clienteId();
             auditoria.registrarIndependiente(new RegistroAuditoria("LOGIN", "SESION", entidadId, null, null, null,
                     "Inicio de sesión (" + s.rol() + ")", s.username(), s.rol()));
             return s;
         } catch (LoginFallidoException ex) {
+            limite.anotar("login-usuario", clave);
             auditoria.registrarIndependiente(new RegistroAuditoria("LOGIN_FALLIDO", "SESION", null, null, null, null,
                     ex.getMotivo(), id, null));
             throw ex;
