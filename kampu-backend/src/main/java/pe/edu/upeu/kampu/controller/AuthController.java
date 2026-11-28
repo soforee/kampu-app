@@ -5,7 +5,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import pe.edu.upeu.kampu.dto.ConfirmacionCorreoRequestDTO;
 import pe.edu.upeu.kampu.dto.LoginRequestDTO;
+import pe.edu.upeu.kampu.dto.ReenvioConfirmacionRequestDTO;
+import pe.edu.upeu.kampu.dto.RegistroPendienteDTO;
 import pe.edu.upeu.kampu.dto.RegistroRequestDTO;
 import pe.edu.upeu.kampu.dto.SesionDTO;
 import pe.edu.upeu.kampu.seguridad.LimiteSolicitudes;
@@ -31,9 +34,23 @@ public class AuthController {
     }
 
     @PostMapping("/registro")
-    public ResponseEntity<SesionDTO> registrar(@Valid @RequestBody RegistroRequestDTO dto, HttpServletRequest req) {
+    public ResponseEntity<RegistroPendienteDTO> registrar(@Valid @RequestBody RegistroRequestDTO dto, HttpServletRequest req) {
         limite.verificar("registro", req.getRemoteAddr(), 10, Duration.ofHours(1));
-        return new ResponseEntity<>(authService.registrar(dto), HttpStatus.CREATED);
+        return new ResponseEntity<>(authService.registrar(dto), HttpStatus.ACCEPTED);
+    }
+
+    @PostMapping("/confirmar")
+    public ResponseEntity<SesionDTO> confirmar(@Valid @RequestBody ConfirmacionCorreoRequestDTO dto, HttpServletRequest req) {
+        limite.verificar("confirmar", req.getRemoteAddr(), 20, Duration.ofMinutes(15));
+        return ResponseEntity.ok(authService.confirmarCorreo(dto.token()));
+    }
+
+    @PostMapping("/reenviar-confirmacion")
+    public ResponseEntity<Void> reenviarConfirmacion(@Valid @RequestBody ReenvioConfirmacionRequestDTO dto, HttpServletRequest req) {
+        limite.verificar("reenviar", req.getRemoteAddr(), 5, Duration.ofHours(1));
+        limite.verificar("reenviar-email", dto.email().trim().toLowerCase(), 3, Duration.ofHours(1));
+        authService.reenviarConfirmacion(dto.email());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/logout")

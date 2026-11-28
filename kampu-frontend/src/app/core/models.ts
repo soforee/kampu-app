@@ -568,6 +568,10 @@ export interface PasajeroDraft {
   fechaNacimiento: string;
 }
 
+export interface RegistroPendiente {
+  email: string;
+}
+
 export interface Sesion {
   usuarioId: number | null;
   clienteId: number | null;

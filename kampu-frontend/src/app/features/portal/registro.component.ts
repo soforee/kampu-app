@@ -4,7 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { RegistroForm, TipoDocumento } from '../../core/models';
 import { AuthService } from '../../core/services/auth.service';
 import { mensajeError } from '../../core/utils/api';
-import { leerReservaPendiente } from '../../core/utils/reserva-pendiente';
+import { guardarReservaPendienteLocal, leerReservaPendiente } from '../../core/utils/reserva-pendiente';
 import { filtrarEscritura, filtrarPegado } from '../../core/utils/filtro';
 import { errorTelefonoPais } from '../../core/utils/paises';
 import { FormValidacion, V } from '../../core/utils/validacion';
@@ -31,6 +31,9 @@ export class RegistroComponent {
   ver = signal(false);
   cargando = signal(false);
   error = signal('');
+  enviadoA = signal('');
+  reenviando = signal(false);
+  aviso = signal('');
 
   v = new FormValidacion(() => ({
     nombre: V.nombrePersona(this.form.nombreCompleto, 'Tu nombre'),
@@ -69,13 +72,31 @@ export class RegistroComponent {
       email: this.form.email.trim().toLowerCase()
     };
     this.auth.registrar(datos).subscribe({
-      next: sesion => {
-        this.auth.guardarSesion(sesion);
-        this.router.navigate(['/mi-cuenta'], { queryParams: { bienvenido: 1, ...(this.pendiente ?? {}) } });
+      next: r => {
+        guardarReservaPendienteLocal(this.pendiente);
+        this.enviadoA.set(r.email);
+        this.cargando.set(false);
       },
       error: err => {
         this.error.set(mensajeError(err));
         this.cargando.set(false);
+      }
+    });
+  }
+
+  reenviar() {
+    const email = this.enviadoA();
+    if (!email || this.reenviando()) return;
+    this.reenviando.set(true);
+    this.aviso.set('');
+    this.auth.reenviarConfirmacion(email).subscribe({
+      next: () => {
+        this.aviso.set('Te enviamos un nuevo enlace. Revisa también la carpeta de spam.');
+        this.reenviando.set(false);
+      },
+      error: err => {
+        this.aviso.set(mensajeError(err));
+        this.reenviando.set(false);
       }
     });
   }

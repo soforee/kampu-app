@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Permiso, RegistroForm, Sesion } from '../models';
+import { Permiso, RegistroForm, RegistroPendiente, Sesion } from '../models';
 import { API } from '../utils/api';
 
 const KEY = 'tm4_session';
@@ -36,8 +36,16 @@ export class AuthService {
     return this.http.post<Sesion>(`${API}/auth/login`, { username: username.trim(), password: password });
   }
 
-  registrar(d: RegistroForm): Observable<Sesion> {
-    return this.http.post<Sesion>(`${API}/auth/registro`, d);
+  registrar(d: RegistroForm): Observable<RegistroPendiente> {
+    return this.http.post<RegistroPendiente>(`${API}/auth/registro`, d);
+  }
+
+  confirmarCorreo(token: string): Observable<Sesion> {
+    return this.http.post<Sesion>(`${API}/auth/confirmar`, { token });
+  }
+
+  reenviarConfirmacion(email: string): Observable<void> {
+    return this.http.post<void>(`${API}/auth/reenviar-confirmacion`, { email });
   }
 
   guardarSesion(s: Sesion) {

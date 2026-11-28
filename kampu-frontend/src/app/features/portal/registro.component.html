@@ -2,6 +2,28 @@
   <app-portal-header />
 
   <main class="mx-auto max-w-xl px-4 py-8 sm:px-6 sm:py-10">
+    @if (enviadoA()) {
+    <section class="card overflow-hidden" aria-live="polite">
+      <div class="flex items-center gap-3 border-b border-zinc-100 px-6 py-5">
+        <span class="ico-tile-lg"><app-icon name="check" size="w-5 h-5" /></span>
+        <div>
+          <h1 class="text-lg font-semibold tracking-tight text-zinc-900">Revisa tu correo</h1>
+          <p class="text-xs text-zinc-500">Falta un paso para activar tu cuenta.</p>
+        </div>
+      </div>
+      <div class="space-y-4 px-6 py-5 text-sm text-zinc-700">
+        <p>Te enviamos un enlace de confirmación a <strong class="text-zinc-900">{{ enviadoA() }}</strong>. Ábrelo para activar tu cuenta; vence en 24 horas.</p>
+        <p class="text-zinc-500">Si no lo ves en unos minutos, revisa la carpeta de spam o pide otro enlace.</p>
+        @if (aviso()) { <p class="alert-info" role="status">{{ aviso() }}</p> }
+      </div>
+      <div class="flex flex-col-reverse items-stretch gap-3 border-t border-zinc-100 bg-zinc-50/60 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <a routerLink="/login" class="link text-center text-sm sm:text-left">Ir a iniciar sesión</a>
+        <button type="button" class="btn-light" (click)="reenviar()" [disabled]="reenviando()">
+          @if (reenviando()) { Enviando… } @else { Reenviar enlace }
+        </button>
+      </div>
+    </section>
+    } @else {
     <form class="card overflow-hidden" (ngSubmit)="registrar()" novalidate>
       <div class="flex items-center gap-3 border-b border-zinc-100 px-6 py-5">
         <span class="ico-tile-lg"><app-icon name="users" size="w-5 h-5" /></span>
@@ -91,5 +113,6 @@
         </button>
       </div>
     </form>
+    }
   </main>
 </div>

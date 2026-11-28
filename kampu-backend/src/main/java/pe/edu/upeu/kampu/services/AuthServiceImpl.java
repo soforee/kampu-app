@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import pe.edu.upeu.kampu.auditoria.AuditoriaService;
 import pe.edu.upeu.kampu.auditoria.RegistroAuditoria;
 import pe.edu.upeu.kampu.dto.LoginRequestDTO;
+import pe.edu.upeu.kampu.dto.RegistroPendienteDTO;
 import pe.edu.upeu.kampu.dto.RegistroRequestDTO;
 import pe.edu.upeu.kampu.dto.Reglas;
 import pe.edu.upeu.kampu.dto.SesionDTO;
@@ -44,10 +45,13 @@ public class AuthServiceImpl implements IAuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final LimiteSolicitudes limite;
+    private final CorreoConfirmacionService correoConfirmacion;
 
     public AuthServiceImpl(UsuarioSistemaRepository usuarioRepository, ClienteRepository clienteRepository,
                            PortalJdbc portal, PkgSeguridadRepository seguridad, AuditoriaService auditoria,
-                           JwtService jwtService, PasswordEncoder passwordEncoder, LimiteSolicitudes limite) {
+                           JwtService jwtService, PasswordEncoder passwordEncoder, LimiteSolicitudes limite,
+                           CorreoConfirmacionService correoConfirmacion) {
+        this.correoConfirmacion = correoConfirmacion;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.portal = portal;
@@ -96,10 +100,24 @@ public class AuthServiceImpl implements IAuthService {
         } else {
             cliente = clienteRepository.findFirstByNumeroDocumentoIgnoreCase(id);
         }
+        if (cliente.isEmpty() || cliente.get().getPasswordHash() == null) {
+            exigirCorreoConfirmado(id, password);
+        }
         if (cliente.isEmpty()) {
             throw new LoginFallidoException(CREDENCIALES, "El usuario no existe.");
         }
         return autenticarCliente(cliente.get(), password);
+    }
+
+    private void exigirCorreoConfirmado(String id, String password) {
+        List<String> pendientes = portal.jdbc().queryForList("SELECT password_hash FROM REGISTROS_PENDIENTES "
+                + "WHERE (email = LOWER(?) OR numero_documento = UPPER(?)) AND vence > SYSTIMESTAMP", String.class, id, id);
+        for (String hash : pendientes) {
+            if (coincide(password, hash)) {
+                throw new LoginFallidoException("Aún no confirmas tu correo. Abre el enlace que te enviamos o regístrate otra vez para recibir uno nuevo.",
+                        "Correo sin confirmar.");
+            }
+        }
     }
 
     private SesionDTO autenticarPersonal(UsuarioSistema u, String password) {
@@ -156,7 +174,7 @@ public class AuthServiceImpl implements IAuthService {
     }
 
     @Override
-    public SesionDTO registrar(RegistroRequestDTO dto) {
+    public RegistroPendienteDTO registrar(RegistroRequestDTO dto) {
         if (!dto.password().equals(dto.confirmacion())) throw new BusinessException("Las contraseñas no coinciden.");
         if (dto.password().isBlank() || dto.password().trim().length() < 8) {
             throw new BusinessException("La contraseña debe tener al menos 8 caracteres.");
@@ -166,22 +184,58 @@ public class AuthServiceImpl implements IAuthService {
         if (errorTelefono != null) throw new BusinessException(errorTelefono);
 
         String hash = passwordEncoder.encode(dto.password());
-        Long clienteId = portal.ejecutar(con -> {
-            try (CallableStatement cs = con.prepareCall("{call SP_REGISTRAR_CLIENTE_EXTERNO(?, ?, ?, ?, ?, ?, ?)}")) {
+        String token = CorreoConfirmacionService.nuevoToken();
+        String email = dto.email().trim().toLowerCase();
+        portal.ejecutar(con -> {
+            try (CallableStatement cs = con.prepareCall("{call SP_SOLICITAR_REGISTRO_CLIENTE(?, ?, ?, ?, ?, ?, ?, ?)}")) {
                 cs.setString(1, dto.nombreCompleto().trim());
                 cs.setString(2, dto.tipoDocumento());
                 cs.setString(3, dto.numeroDocumento().trim());
-                cs.setString(4, dto.email().trim());
+                cs.setString(4, email);
                 cs.setString(5, dto.telefono().trim());
                 cs.setString(6, hash);
-                cs.registerOutParameter(7, Types.NUMERIC);
+                cs.setString(7, CorreoConfirmacionService.hash(token));
+                cs.setInt(8, CorreoConfirmacionService.HORAS_VIGENCIA);
                 cs.execute();
-                return cs.getLong(7);
+                return null;
+            }
+        });
+        correoConfirmacion.enviar(email, dto.nombreCompleto().trim(), token);
+        return new RegistroPendienteDTO(email);
+    }
+
+    @Override
+    public SesionDTO confirmarCorreo(String token) {
+        Long clienteId = portal.ejecutar(con -> {
+            try (CallableStatement cs = con.prepareCall("{call SP_CONFIRMAR_REGISTRO_CLIENTE(?, ?)}")) {
+                cs.setString(1, CorreoConfirmacionService.hash(token));
+                cs.registerOutParameter(2, Types.NUMERIC);
+                cs.execute();
+                return cs.getLong(2);
             }
         });
         Cliente c = clienteRepository.findById(clienteId)
                 .orElseThrow(() -> new BusinessException("No se pudo completar el registro."));
         return sesion(null, c.getClienteId(), c.getEmail(), c.getNombreCompleto(), "CLIENTE", "ACTIVO");
+    }
+
+    @Override
+    public void reenviarConfirmacion(String email) {
+        String correo = email.trim().toLowerCase();
+        String token = CorreoConfirmacionService.nuevoToken();
+        String nombre = portal.ejecutar(con -> {
+            try (CallableStatement cs = con.prepareCall("{call SP_RENOVAR_REGISTRO_CLIENTE(?, ?, ?, ?)}")) {
+                cs.setString(1, correo);
+                cs.setString(2, CorreoConfirmacionService.hash(token));
+                cs.setInt(3, CorreoConfirmacionService.HORAS_VIGENCIA);
+                cs.registerOutParameter(4, Types.VARCHAR);
+                cs.execute();
+                return cs.getString(4);
+            }
+        });
+        if (nombre != null) {
+            correoConfirmacion.enviar(correo, nombre, token);
+        }
     }
 
     @Override

@@ -54,6 +54,7 @@ security:
     expiration-time: 36000000
 
 kampu:
+  frontend-url: ${KAMPU_FRONTEND_URL:http://localhost:4200}
   mapas:
     buscador-url: https://photon.komoot.io
     osrm-url: https://router.project-osrm.org
