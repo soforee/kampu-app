@@ -6,6 +6,27 @@ export interface ReservaPendiente {
   cantidad?: number;
 }
 
+const CLAVE_LOCAL = 'kampu_reserva_pendiente';
+
+export function guardarReservaPendienteLocal(p: ReservaPendiente | null) {
+  try {
+    if (p) localStorage.setItem(CLAVE_LOCAL, JSON.stringify(p));
+    else localStorage.removeItem(CLAVE_LOCAL);
+  } catch {
+  }
+}
+
+export function tomarReservaPendienteLocal(): ReservaPendiente | null {
+  try {
+    const texto = localStorage.getItem(CLAVE_LOCAL);
+    localStorage.removeItem(CLAVE_LOCAL);
+    const p = texto ? JSON.parse(texto) : null;
+    return p && Number.isInteger(p.reservar) && p.reservar > 0 ? p : null;
+  } catch {
+    return null;
+  }
+}
+
 export function leerReservaPendiente(q: ParamMap): ReservaPendiente | null {
   const reservar = Number(q.get('reservar'));
   if (!Number.isInteger(reservar) || reservar <= 0) return null;

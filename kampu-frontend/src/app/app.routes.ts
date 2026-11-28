@@ -14,6 +14,7 @@ export const routes: Routes = [
   { path: 'cotizacion/:codigo/reserva', loadComponent: () => import('./features/portal/paquete-cliente.component').then(m => m.PaqueteClienteComponent) },
   { path: 'seguimiento', loadComponent: () => import('./features/cotizar/seguimiento.component').then(m => m.SeguimientoComponent) },
   { path: 'registro', loadComponent: () => import('./features/portal/registro.component').then(m => m.RegistroComponent) },
+  { path: 'confirmar-correo', loadComponent: () => import('./features/portal/confirmar-correo.component').then(m => m.ConfirmarCorreoComponent) },
   { path: 'mi-cuenta', loadComponent: () => import('./features/portal/mis-paquetes.component').then(m => m.MisPaquetesComponent), canActivate: [clienteGuard] },
   { path: 'mi-cuenta/paquetes/:id', loadComponent: () => import('./features/portal/paquete-cliente.component').then(m => m.PaqueteClienteComponent), canActivate: [clienteGuard] },
   {
